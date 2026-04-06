@@ -30,8 +30,7 @@ body {
     background-color: var(--bg-color);
     color: var(--text-primary);
     min-height: 100vh;
-    overflow-x: hidden;
-    overflow-y: auto; /* Allow scrolling */
+    overflow: hidden; /* Lock to viewport for neat app UX */
     position: relative;
 }
 
@@ -70,7 +69,7 @@ body {
 
 .dashboard-container {
     display: flex;
-    min-height: 100%;
+    height: 100vh;
     padding: 24px;
     gap: 24px;
     max-width: 1800px;
@@ -95,9 +94,6 @@ body {
     flex-direction: column;
     gap: 40px;
     flex-shrink: 0;
-    position: sticky;
-    top: 24px;
-    height: calc(100vh - 48px);
 }
 
 .logo-area h1 {
@@ -106,6 +102,7 @@ body {
     line-height: 1.1;
     letter-spacing: -0.5px;
     background: linear-gradient(135deg, #1e293b, #64748b);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -203,6 +200,23 @@ body {
     flex-direction: column;
     overflow: hidden; /* For scrolling lists */
 }
+.icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.icon-btn:hover {
+    color: var(--text-primary);
+    background: rgba(0,0,0,0.05);
+    transform: rotate(30deg);
+}
 .upcoming-events ul {
     list-style: none;
     display: flex;
@@ -237,7 +251,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 24px;
-    min-width: 0; /* Prevent flex overflow */
+    min-width: 0;
+    min-height: 0; /* Prevent vertical overflow */
 }
 
 .top-header {
@@ -302,6 +317,7 @@ body {
     padding: 24px;
     display: flex;
     flex-direction: column;
+    min-height: 0; /* Prevent vertical overflow */
 }
 
 .calendar-header {
@@ -320,9 +336,10 @@ body {
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(5, minmax(130px, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
     gap: 12px;
     flex: 1;
+    min-height: 0; /* Important for flex child to not expand over bounds */
 }
 
 .cal-day {
@@ -359,19 +376,40 @@ body {
 
 /* Premium Event Pills */
 .event {
-    font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 4px;
+    row-gap: 2px;
+    font-size: 12px;
     font-weight: 700;
     line-height: 1.35;
     letter-spacing: -0.3px;
-    padding: 6px 8px;
-    margin-bottom: 6px;
+    padding: 5px 6px;
+    margin-bottom: 5px;
     border-radius: 6px;
     cursor: pointer;
-    white-space: normal;
     word-break: keep-all;
     transition: all 0.2s ease;
     border-left: 4px solid;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.e-comp {
+    font-weight: 800;
+    font-size: 10px;
+    opacity: 0.75;
+}
+.e-time {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    background: rgba(0,0,0,0.08);
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+.e-title {
+    opacity: 0.95;
+    flex: 1; /* allow it to take remaining space elegantly */
 }
 .event:hover {
     transform: scale(1.02);
@@ -487,4 +525,82 @@ body {
     width: 60px;
     display: inline-block;
     flex-shrink: 0;
+}
+
+/* Upload Review Modal specifically */
+.review-modal-content {
+    width: 800px;
+    max-width: 90vw;
+}
+.review-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 0;
+    margin-top: 16px;
+    background: white;
+}
+.review-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.review-table th {
+    background: #f1f5f9;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-bottom: 2px solid #e2e8f0;
+}
+.review-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.review-table input {
+    width: 100%;
+    border: 1px solid transparent;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-primary);
+    transition: all 0.2s;
+    background: transparent;
+}
+.review-table input:hover, .review-table input:focus {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    outline: none;
+}
+.review-table .del-row-btn {
+    background: transparent;
+    border: none;
+    color: #f43f5e;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 900;
+    padding: 4px;
+    transition: transform 0.2s;
+}
+.review-table .del-row-btn:hover {
+    transform: scale(1.2);
+}
+
+.save-btn {
+    background: linear-gradient(135deg, var(--color-group), #2563eb);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+.save-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }

@@ -3,47 +3,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     const upcomingList = document.getElementById('upcomingList');
     const searchInput = document.getElementById('searchInput');
     const filterBtns = document.querySelectorAll('.filter-btn');
-    
-    // Modal elements
+
+    // Event Detail Modal
     const eventModal = document.getElementById('eventModal');
     const closeModal = document.getElementById('closeModal');
     const modalCompany = document.getElementById('modalCompany');
     const modalTitle = document.getElementById('modalTitle');
     const modalDate = document.getElementById('modalDate');
 
-    let allEvents = window.fallbackEvents || [];
+    // Review Modal
+    const reviewModal = document.getElementById('reviewModal');
+    const closeReviewModal = document.getElementById('closeReviewModal');
+    const reviewTableBody = document.getElementById('reviewTableBody');
+    const confirmReviewBtn = document.getElementById('confirmReviewBtn');
+
+    // Settings Modal
+    const settingsModal = document.getElementById('settingsModal');
+    const openSettingsBtn = document.getElementById('openSettingsBtn');
+    const closeSettingsModal = document.getElementById('closeSettingsModal');
+
+    let pendingUploadEvents = [];
     let currentFilter = 'all';
     let currentSearch = '';
 
-    // Dynamic Calendar State
+    // ========== SUPABASE CONFIG ==========
+    const SUPABASE_URL = 'https://heguvoklrdzcjbifzqsc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlZ3V2b2tscmR6Y2piaWZ6cXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMzA1NjAsImV4cCI6MjA5MDkwNjU2MH0.nlaMAjSqlz7ZcP-4hrO6kWKSv6AQ3YyT8rIu95ggFVs';
+
+    // Safely detect Supabase client (UMD export varies by version)
+    let sb = null;
+    try {
+        const _sb = window.supabase;
+        if (_sb && typeof _sb.createClient === 'function') {
+            sb = _sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        } else if (_sb && _sb.supabase && typeof _sb.supabase.createClient === 'function') {
+            sb = _sb.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+    } catch (initErr) {
+        console.warn('Supabase 클라이언트 초기화 실패:', initErr);
+    }
+
+    // ========== DATA LAYER (Supabase + fallback) ==========
+    let allEvents = [];
+    if (sb) {
+        try {
+            const { data, error } = await sb
+                .from('schedules')
+                .select('id, company, date, title')
+                .order('date', { ascending: true });
+            if (error) throw error;
+            allEvents = data || [];
+            console.log(`✅ Supabase에서 ${allEvents.length}건 로드 완료`);
+        } catch (e) {
+            console.warn('Supabase 쿼리 실패, data.js 폴백 사용:', e.message);
+            allEvents = window.fallbackEvents || [];
+        }
+    } else {
+        console.warn('Supabase 미연결 → data.js 폴백 사용');
+        allEvents = window.fallbackEvents || [];
+    }
+    allEvents.sort((a, b) => a.date.localeCompare(b.date));
+
+    // ========== CALENDAR STATE ==========
     let today = new Date();
-    // Default to April 2026 since the provided Excel data is for April 2026.
-    // If the user wants this to be strictly 'today', we can use today.getFullYear() and today.getMonth().
-    // The instructions say "처음화면은 그달 조회화면으로 뜨게 수정" (show the current month of the real world).
     let currentYear = today.getFullYear();
     let currentMonth = today.getMonth();
 
-    try {
-        const response = await fetch('schedules.json?t=' + new Date().getTime());
-        if (response.ok) {
-            allEvents = await response.json();
-            allEvents.sort((a, b) => a.date.localeCompare(b.date));
-        } else {
-            console.warn('Server fetch did not return OK. Using static data.js fallback.');
-        }
-    } catch (e) {
-        console.warn('Running locally via file:// without server. Using fully loaded static data.js fallback.');
-    }
-
+    // ========== RENDER ==========
     function renderCalendar() {
         calendarGrid.innerHTML = '';
-        
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
 
         document.getElementById('monthTitle').textContent = `${currentYear}. ${String(currentMonth + 1).padStart(2, '0')}`;
 
-        // Empty slots for days before 1st
         for (let i = 0; i < firstDayIndex; i++) {
             const emptyDiv = document.createElement('div');
             emptyDiv.className = 'cal-day empty';
@@ -53,31 +86,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (let day = 1; day <= daysInMonth; day++) {
             const dayDiv = document.createElement('div');
             dayDiv.className = 'cal-day';
-            
+
             const dateSpan = document.createElement('span');
             dateSpan.className = 'date-num';
-            if ((firstDayIndex + day - 1) % 7 === 0) {
-                dateSpan.classList.add('sun');
-            }
+            if ((firstDayIndex + day - 1) % 7 === 0) dateSpan.classList.add('sun');
             dateSpan.textContent = day;
             dayDiv.appendChild(dateSpan);
 
             const dayString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            
-            // Render events for this day
             const dayEvents = allEvents.filter(e => e.date === dayString);
-            
+
             dayEvents.forEach(evt => {
-                // Apply filters
                 if (currentFilter !== 'all' && evt.company !== currentFilter) return;
                 if (currentSearch && !evt.title.toLowerCase().includes(currentSearch)) return;
 
                 const eventDiv = document.createElement('div');
                 eventDiv.className = `event ${evt.company}`;
-                eventDiv.textContent = `[${evt.company}] ${evt.title}`;
-                eventDiv.title = `[${evt.company}] ${evt.title}`;
-                
-                // Click handler for modal
+
+                let timeStr = "";
+                let contentStr = evt.title;
+                const timeMatch = evt.title.match(/^(\d{2}):?(\d{2})\s*(.*)$/);
+                if (timeMatch) {
+                    timeStr = `${timeMatch[1]}:${timeMatch[2]}`;
+                    contentStr = timeMatch[3];
+                }
+
+                const showComp = currentFilter === 'all';
+                const compHtml = showComp ? `<span class="e-comp">[${evt.company}]</span>` : '';
+
+                if (timeStr) {
+                    eventDiv.innerHTML = `${compHtml}<span class="e-time">${timeStr}</span><span class="e-title">${contentStr}</span>`;
+                } else {
+                    eventDiv.innerHTML = `${compHtml}<span class="e-title">${contentStr}</span>`;
+                }
+                eventDiv.title = `${showComp ? '[' + evt.company + '] ' : ''}${timeStr ? timeStr + ' ' : ''}${contentStr}`;
+
                 eventDiv.addEventListener('click', () => {
                     modalCompany.className = `company-badge ${evt.company}`;
                     modalCompany.textContent = evt.company;
@@ -85,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     modalDate.textContent = evt.date;
                     eventModal.classList.add('active');
                 });
-                
+
                 dayDiv.appendChild(eventDiv);
             });
 
@@ -95,8 +138,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderUpcoming() {
         upcomingList.innerHTML = '';
-        // Only show up to 10 events from a specific date logic or random top ones
-        // For prototype, we show first 7 events that match filters
         const filtered = allEvents.filter(evt => {
             if (currentFilter !== 'all' && evt.company !== currentFilter) return false;
             if (currentSearch && !evt.title.toLowerCase().includes(currentSearch)) return false;
@@ -111,8 +152,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         filtered.forEach(evt => {
             const li = document.createElement('li');
             li.className = `upcoming-item ${evt.company}`;
+            const showComp = currentFilter === 'all' ? ` &middot; ${evt.company}` : '';
             li.innerHTML = `
-                <span class="upcoming-date">${evt.date} &middot; ${evt.company}</span>
+                <span class="upcoming-date">${evt.date}${showComp}</span>
                 <span class="upcoming-title">${evt.title}</span>
             `;
             upcomingList.appendChild(li);
@@ -124,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderUpcoming();
     }
 
-    // Event Listeners
+    // ========== EVENT LISTENERS ==========
     filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             filterBtns.forEach(b => b.classList.remove('active'));
@@ -139,98 +181,305 @@ document.addEventListener('DOMContentLoaded', async () => {
         update();
     });
 
-    closeModal.addEventListener('click', () => {
-        eventModal.classList.remove('active');
-    });
+    // Detail modal
+    closeModal.addEventListener('click', () => eventModal.classList.remove('active'));
+    eventModal.addEventListener('click', (e) => { if (e.target === eventModal) eventModal.classList.remove('active'); });
 
-    eventModal.addEventListener('click', (e) => {
-        if (e.target === eventModal) {
-            eventModal.classList.remove('active');
+    // Review modal
+    closeReviewModal.addEventListener('click', () => { reviewModal.classList.remove('active'); pendingUploadEvents = []; });
+    reviewModal.addEventListener('click', (e) => { if (e.target === reviewModal) { reviewModal.classList.remove('active'); pendingUploadEvents = []; } });
+
+    // Settings modal
+    openSettingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
+    closeSettingsModal.addEventListener('click', () => settingsModal.classList.remove('active'));
+    settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.remove('active'); });
+
+    // Confirm review → save to Supabase
+    confirmReviewBtn.addEventListener('click', async () => {
+        // Read edited values from the table
+        const rows = reviewTableBody.querySelectorAll('tr');
+        const finalEvents = [];
+        rows.forEach(row => {
+            const dateInput = row.querySelector('.edit-date');
+            const titleInput = row.querySelector('.edit-title');
+            const compInput = row.querySelector('.edit-company');
+            if (dateInput && titleInput) {
+                finalEvents.push({
+                    id: (compInput ? compInput.value : 'Group') + '-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+                    company: compInput ? compInput.value : 'Group',
+                    date: dateInput.value,
+                    title: titleInput.value
+                });
+            }
+        });
+
+        if (finalEvents.length === 0) {
+            alert("반영할 일정이 없습니다.");
+            return;
+        }
+
+        confirmReviewBtn.textContent = '저장 중...';
+        confirmReviewBtn.disabled = true;
+
+        try {
+            // Upsert to Supabase (if connected)
+            if (sb) {
+                const { error } = await sb
+                    .from('schedules')
+                    .upsert(finalEvents, { onConflict: 'id' });
+                if (error) throw error;
+            }
+
+            // Merge locally too
+            const seen = new Set(allEvents.map(e => `${e.company}|${e.date}|${e.title}`));
+            let addedCount = 0;
+            finalEvents.forEach(ne => {
+                const key = `${ne.company}|${ne.date}|${ne.title}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    allEvents.push(ne);
+                    addedCount++;
+                }
+            });
+            allEvents.sort((a, b) => a.date.localeCompare(b.date));
+
+            reviewModal.classList.remove('active');
+            update();
+            alert(`✅ ${addedCount}개의 새로운 일정이 Supabase 클라우드에 저장되었습니다.`);
+        } catch (err) {
+            console.error(err);
+            alert('Supabase 저장 오류: ' + err.message);
+        } finally {
+            confirmReviewBtn.textContent = '최종 캘린더 반영하기';
+            confirmReviewBtn.disabled = false;
         }
     });
 
+    // Month navigation
     document.getElementById('prevMonth').addEventListener('click', () => {
         currentMonth--;
-        if (currentMonth < 0) {
-            currentMonth = 11;
-            currentYear--;
-        }
+        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
         update();
     });
-
     document.getElementById('nextMonth').addEventListener('click', () => {
         currentMonth++;
-        if (currentMonth > 11) {
-            currentMonth = 0;
-            currentYear++;
-        }
+        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
         update();
     });
 
-    // Initial render
+    // ========== INITIAL RENDER ==========
     update();
 
-    // File Upload / Drop Logic
+    // ========== FILE UPLOAD (Browser-only, no server!) ==========
     const uploadZone = document.getElementById('uploadZone');
     const fileInput = document.getElementById('fileInput');
 
     uploadZone.addEventListener('click', () => fileInput.click());
-
-    uploadZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadZone.classList.add('dragover');
-    });
-
-    uploadZone.addEventListener('dragleave', () => {
-        uploadZone.classList.remove('dragover');
-    });
-
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
     uploadZone.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadZone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) {
-            handleFile(e.dataTransfer.files[0]);
-        }
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
     });
 
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length) {
-            handleFile(e.target.files[0]);
-        }
-    });
+    function getCompanyFromFilename(name) {
+        const upper = name.toUpperCase();
+        if (upper.includes('NBT')) return 'NBT';
+        if (upper.includes('BIO')) return 'BIO';
+        return 'Group';
+    }
 
     function handleFile(file) {
-        if (!file.name.endsWith('.pdf') && !file.name.endsWith('.xls') && !file.name.endsWith('.xlsx')) {
+        const name = file.name.toLowerCase();
+        if (!name.endsWith('.pdf') && !name.endsWith('.xls') && !name.endsWith('.xlsx')) {
             alert('지원하지 않는 파일 형식입니다. (PDF 또는 엑셀 등록 가능)');
             return;
         }
 
-        const formData = new FormData();
-        formData.append('file', file);
+        settingsModal.classList.remove('active');
+        const company = getCompanyFromFilename(file.name);
 
-        fetch('/upload', {
-            method: 'POST',
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert(data.message);
-                // Reload schedules from server completely
-                fetch('schedules.json?t=' + new Date().getTime())
-                .then(r => r.json())
-                .then(events => {
-                    allEvents = events;
-                    allEvents.sort((a, b) => a.date.localeCompare(b.date));
-                    update();
+        if (name.endsWith('.xls') || name.endsWith('.xlsx')) {
+            parseExcelFile(file, company);
+        } else if (name.endsWith('.pdf')) {
+            parsePdfFile(file, company);
+        }
+    }
+
+    // ========== EXCEL PARSING (SheetJS, client-side) ==========
+    function parseExcelFile(file, company) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const newEvents = [];
+
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+                    for (let r = 0; r < rows.length; r++) {
+                        const row = rows[r];
+                        for (let c = 0; c < row.length; c++) {
+                            let cellVal = row[c];
+                            let dateVal = null;
+
+                            if (typeof cellVal === 'number' && cellVal >= 1 && cellVal <= 31) {
+                                dateVal = Math.floor(cellVal);
+                            } else if (typeof cellVal === 'string' && cellVal.trim().match(/^\d+$/) && parseInt(cellVal) >= 1 && parseInt(cellVal) <= 31) {
+                                dateVal = parseInt(cellVal.trim());
+                            }
+
+                            if (dateVal !== null) {
+                                for (let offset = 1; offset <= 6; offset++) {
+                                    if (r + offset >= rows.length) break;
+                                    const eventCell = rows[r + offset][c];
+                                    if (eventCell === '' || eventCell === undefined || eventCell === null) continue;
+                                    const eventText = String(eventCell).trim();
+                                    if (eventText === '' || eventText.match(/^[\d.]+$/) || ['일','월','화','수','목','금','토'].includes(eventText)) break;
+
+                                    newEvents.push({
+                                        id: `${company}-${dateVal}-${offset}-xls`,
+                                        company: company,
+                                        date: `2026-04-${String(dateVal).padStart(2,'0')}`,
+                                        title: eventText
+                                    });
+                                }
+                            }
+                        }
+                    }
                 });
-            } else {
-                alert('업로드 오류: ' + data.message);
+
+                if (newEvents.length === 0) {
+                    alert('엑셀에서 일정을 추출하지 못했습니다. 표 구조를 확인해주세요.');
+                    return;
+                }
+                showReviewModal(newEvents, company);
+            } catch(err) {
+                console.error(err);
+                alert('엑셀 파일 읽기 오류: ' + err.message);
             }
-        })
-        .catch(err => {
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // ========== PDF PARSING (PDF.js, client-side) ==========
+    async function parsePdfFile(file, company) {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const newEvents = [];
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+
+                // Group text items by approximate Y position (rows)
+                const items = textContent.items;
+                const rowMap = {};
+                items.forEach(item => {
+                    const y = Math.round(item.transform[5]);
+                    if (!rowMap[y]) rowMap[y] = [];
+                    rowMap[y].push({ text: item.str, x: item.transform[4] });
+                });
+
+                // Sort rows top to bottom (descending Y in PDF coords)
+                const sortedYs = Object.keys(rowMap).map(Number).sort((a, b) => b - a);
+
+                let currentDate = null;
+                sortedYs.forEach(y => {
+                    const rowTexts = rowMap[y].sort((a, b) => a.x - b.x).map(i => i.text.trim()).filter(t => t.length > 0);
+                    const fullRow = rowTexts.join(' ');
+
+                    // Check if line starts with a day number (1-31)
+                    const dayMatch = fullRow.match(/^(\d{1,2})\b/);
+                    if (dayMatch) {
+                        const d = parseInt(dayMatch[1]);
+                        if (d >= 1 && d <= 31) {
+                            currentDate = d;
+                            // Rest might be event text
+                            const rest = fullRow.replace(/^\d{1,2}\s*/, '').trim();
+                            if (rest.length > 2 && !rest.match(/^(일|월|화|수|목|금|토)$/)) {
+                                newEvents.push({
+                                    id: `${company}-${d}-0-pdf`,
+                                    company: company,
+                                    date: `2026-04-${String(d).padStart(2,'0')}`,
+                                    title: rest
+                                });
+                            }
+                        }
+                    } else if (currentDate && fullRow.length > 2 && !fullRow.match(/^(일|월|화|수|목|금|토|SUN|MON|TUE|WED|THU|FRI|SAT)$/i)) {
+                        // Continuation event under a date
+                        newEvents.push({
+                            id: `${company}-${currentDate}-${newEvents.length}-pdf`,
+                            company: company,
+                            date: `2026-04-${String(currentDate).padStart(2,'0')}`,
+                            title: fullRow
+                        });
+                    }
+                });
+            }
+
+            if (newEvents.length === 0) {
+                alert('PDF에서 일정을 추출하지 못했습니다. PDF 표 구조가 복잡할 수 있습니다.');
+                return;
+            }
+            showReviewModal(newEvents, company);
+        } catch (err) {
             console.error(err);
-            alert('서버와 통신하는 중 문제가 발생했습니다. 파이썬 서버가 켜져 있는지 확인해주세요!');
+            alert('PDF 파일 읽기 오류: ' + err.message);
+        }
+    }
+
+    // ========== REVIEW MODAL ==========
+    function showReviewModal(events, company) {
+        pendingUploadEvents = events;
+        reviewTableBody.innerHTML = '';
+
+        events.forEach((evt, idx) => {
+            const tr = document.createElement('tr');
+
+            const tdDate = document.createElement('td');
+            const inputDate = document.createElement('input');
+            inputDate.type = 'text';
+            inputDate.value = evt.date;
+            inputDate.className = 'edit-date';
+            tdDate.appendChild(inputDate);
+
+            const tdTitle = document.createElement('td');
+            const inputTitle = document.createElement('input');
+            inputTitle.type = 'text';
+            inputTitle.value = evt.title;
+            inputTitle.className = 'edit-title';
+            tdTitle.appendChild(inputTitle);
+
+            // Hidden company field
+            const hiddenComp = document.createElement('input');
+            hiddenComp.type = 'hidden';
+            hiddenComp.value = evt.company;
+            hiddenComp.className = 'edit-company';
+            tdTitle.appendChild(hiddenComp);
+
+            const tdDel = document.createElement('td');
+            const btnDel = document.createElement('button');
+            btnDel.innerHTML = '&times;';
+            btnDel.className = 'del-row-btn';
+            btnDel.onclick = () => tr.remove();
+            tdDel.style.textAlign = 'center';
+            tdDel.appendChild(btnDel);
+
+            tr.appendChild(tdDate);
+            tr.appendChild(tdTitle);
+            tr.appendChild(tdDel);
+            reviewTableBody.appendChild(tr);
         });
+
+        document.getElementById('reviewTitle').textContent = `추출된 일정 검토 (${company}) — ${events.length}건`;
+        reviewModal.classList.add('active');
     }
 });
