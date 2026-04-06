@@ -247,7 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function update() {
         renderCalendar();
         renderUpcoming();
-        if (panelLeave && panelLeave.style.display !== 'none') renderLeaveCalendar();
+        if (panelLeave && panelLeave.style.display === 'flex') renderLeaveCalendar();
     }
 
     // ========== EVENT LISTENERS ==========
@@ -298,7 +298,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     function switchToLeave() {
         tabLeave.classList.add('active');
         tabMenu.classList.remove('active');
-        panelLeave.style.display = '';
+        panelLeave.style.display = 'flex';
+        panelLeave.style.flexDirection = 'column';
         panelCalendar.style.display = 'none';
         panelMenuView.style.display = 'none';
         renderLeaveCalendar();
@@ -310,7 +311,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     tabLeave.addEventListener('click', () => {
-        if (panelLeave.style.display !== 'none') switchToCalendar();
+        if (panelLeave.style.display === 'flex') switchToCalendar();
         else switchToLeave();
     });
 
@@ -985,8 +986,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             allLeaves = data || [];
             console.log(`✅ leave_plans ${allLeaves.length}건 로드`);
         } catch(e) {
-            console.warn('leave_plans 로드 실패 (테이블 생성 필요):', e.message);
+            console.warn('leave_plans 로드 실패:', e.message);
             allLeaves = [];
+            // 연차 패널에 오류 안내 표시
+            const grid = document.getElementById('leaveGrid');
+            if (grid) grid.innerHTML =
+                '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#f43f5e;font-weight:600;">Supabase leave_plans 테이블 연결 오류<br><span style="font-size:12px;color:#94a3b8;">' + e.message + '</span></div>';
         }
     }
 
@@ -1119,7 +1124,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function deleteLeave(id, dateStr) {
         if (sb) {
             const { error } = await sb.from('leave_plans').delete().eq('id', id);
-            if (error) { alert('삭제 오류: ' + error.message); return; }
+            if (error) {
+                console.error('연차 삭제 오류:', error);
+                alert('삭제 오류: ' + error.message);
+                return;
+            }
         }
         allLeaves = allLeaves.filter(l => l.id !== id);
         renderLeaveModalEntries(dateStr);
@@ -1135,6 +1144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const note  = document.getElementById('leaveNoteInput').value.trim();
 
         if (!team || !name) { alert('팀과 이름을 입력해주세요.'); return; }
+        if (!leaveModalDate) { alert('날짜를 선택해주세요.'); return; }
 
         const payload = {
             date: leaveModalDate,
@@ -1145,11 +1155,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const btn = document.getElementById('leaveAddBtn');
+        const origLabel = btn.textContent;
+        btn.textContent = '저장 중...';
         btn.disabled = true;
 
         try {
             if (sb) {
-                const { data, error } = await sb.from('leave_plans').insert(payload).select().single();
+                // insert 후 select로 저장된 레코드 반환
+                const { data, error } = await sb
+                    .from('leave_plans')
+                    .insert(payload)
+                    .select('*')
+                    .single();
                 if (error) throw error;
                 allLeaves.push(data);
             } else {
@@ -1163,8 +1180,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderLeaveModalEntries(leaveModalDate);
             renderLeaveCalendar();
         } catch(err) {
-            alert('저장 오류: ' + err.message);
+            console.error('연차 저장 오류:', err);
+            alert('저장 오류: ' + (err.message || '알 수 없는 오류'));
         } finally {
+            btn.textContent = origLabel;
             btn.disabled = false;
         }
     });
