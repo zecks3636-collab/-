@@ -173,13 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 eventDiv.title = `${showComp ? '[' + evt.company + '] ' : ''}${timeStr ? timeStr + ' ' : ''}${contentStr}`;
 
-                eventDiv.addEventListener('click', () => {
-                    modalCompany.className = `company-badge ${evt.company}`;
-                    modalCompany.textContent = evt.company;
-                    modalTitle.textContent = evt.title;
-                    modalDate.textContent = evt.date;
-                    eventModal.classList.add('active');
-                });
+                eventDiv.addEventListener('click', () => openEventModal(evt));
 
                 dayDiv.appendChild(eventDiv);
             });
@@ -261,15 +255,138 @@ document.addEventListener('DOMContentLoaded', async () => {
         update();
     });
 
-    // Detail modal
-    closeModal.addEventListener('click', () => eventModal.classList.remove('active'));
-    eventModal.addEventListener('click', (e) => { if (e.target === eventModal) eventModal.classList.remove('active'); });
+    // ========== DETAIL / EDIT / DELETE MODAL ==========
+    let currentEventId = null; // tracks the event being viewed/edited
+
+    function openEventModal(evt) {
+        currentEventId = evt.id;
+        modalCompany.className = `company-badge ${evt.company}`;
+        modalCompany.textContent = evt.company;
+        document.getElementById('modalTitle').textContent = evt.title;
+        document.getElementById('modalDate').textContent = evt.date;
+        document.getElementById('modalViewMode').style.display = '';
+        document.getElementById('modalEditMode').style.display = 'none';
+        eventModal.classList.add('active');
+    }
+
+    function closeEventModal() {
+        eventModal.classList.remove('active');
+        currentEventId = null;
+    }
+
+    closeModal.addEventListener('click', closeEventModal);
+    eventModal.addEventListener('click', (e) => { if (e.target === eventModal) closeEventModal(); });
+
+    // Edit button → switch to edit mode
+    document.getElementById('editEventBtn').addEventListener('click', () => {
+        const evt = allEvents.find(e => e.id === currentEventId);
+        if (!evt) return;
+        document.getElementById('editCompanyInput').value = evt.company;
+        document.getElementById('editDateInput').value = evt.date;
+        document.getElementById('editTitleInput').value = evt.title;
+        document.getElementById('modalViewMode').style.display = 'none';
+        document.getElementById('modalEditMode').style.display = '';
+    });
+
+    // Cancel edit
+    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+        document.getElementById('modalViewMode').style.display = '';
+        document.getElementById('modalEditMode').style.display = 'none';
+    });
+
+    // Save edit
+    document.getElementById('saveEditBtn').addEventListener('click', async () => {
+        const company = document.getElementById('editCompanyInput').value;
+        const date = document.getElementById('editDateInput').value;
+        const title = document.getElementById('editTitleInput').value.trim();
+        if (!date || !title) { alert('날짜와 일정 내용을 입력해주세요.'); return; }
+
+        const idx = allEvents.findIndex(e => e.id === currentEventId);
+        if (idx === -1) return;
+
+        const updated = { ...allEvents[idx], company, date, title };
+
+        try {
+            if (sb) {
+                const { error } = await sb.from('schedules').upsert(updated, { onConflict: 'id' });
+                if (error) throw error;
+            }
+            allEvents[idx] = updated;
+            allEvents.sort((a, b) => a.date.localeCompare(b.date));
+            closeEventModal();
+            update();
+        } catch (err) {
+            alert('저장 오류: ' + err.message);
+        }
+    });
+
+    // Delete button
+    document.getElementById('deleteEventBtn').addEventListener('click', async () => {
+        if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+        try {
+            if (sb) {
+                const { error } = await sb.from('schedules').delete().eq('id', currentEventId);
+                if (error) throw error;
+            }
+            allEvents = allEvents.filter(e => e.id !== currentEventId);
+            closeEventModal();
+            update();
+        } catch (err) {
+            alert('삭제 오류: ' + err.message);
+        }
+    });
+
+    // ========== SETTINGS TABS ==========
+    const tabUpload = document.getElementById('tabUpload');
+    const tabDirect = document.getElementById('tabDirect');
+    const panelUpload = document.getElementById('panelUpload');
+    const panelDirect = document.getElementById('panelDirect');
+
+    tabUpload.addEventListener('click', () => {
+        tabUpload.classList.add('active'); tabDirect.classList.remove('active');
+        panelUpload.style.display = ''; panelDirect.style.display = 'none';
+    });
+    tabDirect.addEventListener('click', () => {
+        tabDirect.classList.add('active'); tabUpload.classList.remove('active');
+        panelDirect.style.display = ''; panelUpload.style.display = 'none';
+        // Default date to today
+        const today = new Date();
+        const dd = document.getElementById('directDate');
+        if (!dd.value) dd.value = today.toISOString().slice(0,10);
+    });
+
+    // Direct save
+    document.getElementById('directSaveBtn').addEventListener('click', async () => {
+        const company = document.getElementById('directCompany').value;
+        const date = document.getElementById('directDate').value;
+        const title = document.getElementById('directTitle').value.trim();
+        if (!date || !title) { alert('날짜와 일정 내용을 모두 입력해주세요.'); return; }
+
+        const newEvt = {
+            id: `${company}-direct-${Date.now()}`,
+            company, date, title
+        };
+        try {
+            if (sb) {
+                const { error } = await sb.from('schedules').upsert(newEvt, { onConflict: 'id' });
+                if (error) throw error;
+            }
+            allEvents.push(newEvt);
+            allEvents.sort((a, b) => a.date.localeCompare(b.date));
+            document.getElementById('directTitle').value = '';
+            settingsModal.classList.remove('active');
+            update();
+            alert(`✅ [${company}] ${date} 일정이 추가되었습니다.`);
+        } catch (err) {
+            alert('저장 오류: ' + err.message);
+        }
+    });
 
     // Review modal
     closeReviewModal.addEventListener('click', () => { reviewModal.classList.remove('active'); pendingUploadEvents = []; });
     reviewModal.addEventListener('click', (e) => { if (e.target === reviewModal) { reviewModal.classList.remove('active'); pendingUploadEvents = []; } });
 
-    // Settings modal
+    // Settings modal open/close
     openSettingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
     closeSettingsModal.addEventListener('click', () => settingsModal.classList.remove('active'));
     settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.remove('active'); });

@@ -615,3 +615,46 @@ body {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
+
+/* Form inputs inside modals */
+.form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: #f8fafc;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+}
+.form-input:focus {
+    border-color: var(--color-group);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+    background: #fff;
+}
+
+/* Tab buttons in modals */
+.tab-btn {
+    flex: 1;
+    padding: 10px 0;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.tab-btn.active {
+    background: var(--color-group);
+    color: white;
+    border-color: var(--color-group);
+    box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+}
+.tab-btn:not(.active):hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
