@@ -255,6 +255,154 @@ document.addEventListener('DOMContentLoaded', async () => {
         update();
     });
 
+    // ========== MAIN TABS (Calendar / Menu) ==========
+    const tabCalendar = document.getElementById('tabCalendar');
+    const tabMenu = document.getElementById('tabMenu');
+    const panelCalendar = document.getElementById('panelCalendar');
+    const panelMenuView = document.getElementById('panelMenuView');
+
+    tabCalendar.addEventListener('click', () => {
+        tabCalendar.classList.add('active');
+        tabMenu.classList.remove('active');
+        panelCalendar.style.display = '';
+        panelMenuView.style.display = 'none';
+    });
+
+    tabMenu.addEventListener('click', () => {
+        tabMenu.classList.add('active');
+        tabCalendar.classList.remove('active');
+        panelMenuView.style.display = 'flex';
+        panelMenuView.style.flexDirection = 'column';
+        panelCalendar.style.display = 'none';
+        renderMenuWeek();
+    });
+
+    // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
+    const HARDCODED_WEEK = '2026-04-06'; // 하드코딩 테이블이 있는 주 (월요일 기준)
+
+    // localStorage에서 업로드 이력 로드
+    let menuStore = {};
+    try {
+        const saved = localStorage.getItem('menuWeekStore');
+        if (saved) menuStore = JSON.parse(saved);
+    } catch(e) {}
+
+    // 현재 표시 중인 주 (월요일 기준 Date)
+    let currentMenuMonday = new Date('2026-04-06T00:00:00');
+
+    function menuWeekKey(d) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function getMenuWeekInfo(monday) {
+        const year = monday.getFullYear();
+        const month = monday.getMonth() + 1;
+        const firstDayOfMonth = new Date(year, monday.getMonth(), 1).getDay(); // 0=Sun
+        const weekNum = Math.ceil((monday.getDate() + firstDayOfMonth) / 7);
+        const names = ['첫째', '둘째', '셋째', '넷째', '다섯째'];
+        const friday = new Date(monday.getTime() + 4 * 86400000);
+        const fmt = d => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+        return {
+            title: `${year}년 ${month}월 ${names[Math.min(weekNum-1, 4)]} 주`,
+            range: `${fmt(monday)} ~ ${fmt(friday)}`
+        };
+    }
+
+    function renderMenuWeek() {
+        const key = menuWeekKey(currentMenuMonday);
+        const info = getMenuWeekInfo(currentMenuMonday);
+
+        document.getElementById('menuWeekLabel').textContent = '창조경제혁신센터 주간 메뉴';
+        document.getElementById('menuWeekSub').textContent = `${info.title} (${info.range}) · (주)멜리에프에스`;
+
+        const tableEl  = document.getElementById('menuContentTable');
+        const imageEl  = document.getElementById('menuContentImage');
+        const emptyEl  = document.getElementById('menuContentEmpty');
+        const noticeEl = document.getElementById('menuNotice');
+
+        tableEl.style.display = 'none';
+        imageEl.style.display = 'none';
+        emptyEl.style.display = 'none';
+
+        if (menuStore[key]) {
+            // 업로드된 이미지 표시
+            document.getElementById('menuUploadedImg').src = menuStore[key].dataUrl;
+            imageEl.style.display = 'block';
+            noticeEl.style.display = '';
+        } else if (key === HARDCODED_WEEK) {
+            // 하드코딩 테이블 표시
+            tableEl.style.display = '';
+            noticeEl.style.display = '';
+        } else {
+            // 빈 상태
+            emptyEl.style.display = 'flex';
+            noticeEl.style.display = 'none';
+        }
+    }
+
+    // 이전/다음 주 이동
+    document.getElementById('prevWeekBtn').addEventListener('click', () => {
+        currentMenuMonday = new Date(currentMenuMonday.getTime() - 7 * 86400000);
+        renderMenuWeek();
+    });
+    document.getElementById('nextWeekBtn').addEventListener('click', () => {
+        currentMenuMonday = new Date(currentMenuMonday.getTime() + 7 * 86400000);
+        renderMenuWeek();
+    });
+
+    // PDF 업로드 처리
+    const menuPdfInput = document.getElementById('menuPdfInput');
+    const triggerMenuUpload = () => menuPdfInput.click();
+
+    document.getElementById('menuUploadBtn').addEventListener('click', triggerMenuUpload);
+    document.getElementById('menuEmptyUploadBtn').addEventListener('click', triggerMenuUpload);
+
+    menuPdfInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        menuPdfInput.value = '';
+
+        const btn = document.getElementById('menuUploadBtn');
+        const origLabel = btn.textContent;
+        btn.textContent = '⏳ 처리 중...';
+        btn.disabled = true;
+
+        try {
+            const ab = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            const page = await pdf.getPage(1);
+            const vp = page.getViewport({ scale: 2.0 });
+            const canvas = document.createElement('canvas');
+            canvas.width = vp.width;
+            canvas.height = vp.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+            const key = menuWeekKey(currentMenuMonday);
+            menuStore[key] = { dataUrl, uploadedAt: new Date().toISOString(), fileName: file.name };
+            try { localStorage.setItem('menuWeekStore', JSON.stringify(menuStore)); } catch(e) {}
+            renderMenuWeek();
+        } catch(err) {
+            alert('PDF 처리 중 오류가 발생했습니다: ' + err.message);
+        } finally {
+            btn.textContent = origLabel;
+            btn.disabled = false;
+        }
+    });
+
+    // 업로드 메뉴 삭제
+    document.getElementById('menuDeleteBtn').addEventListener('click', () => {
+        const key = menuWeekKey(currentMenuMonday);
+        if (!menuStore[key]) return;
+        if (!confirm('이 주의 업로드된 메뉴를 삭제할까요?')) return;
+        delete menuStore[key];
+        try { localStorage.setItem('menuWeekStore', JSON.stringify(menuStore)); } catch(e) {}
+        renderMenuWeek();
+    });
+
+    // 초기 렌더링
+    renderMenuWeek();
+
     // ========== DETAIL / EDIT / DELETE MODAL ==========
     let currentEventId = null; // tracks the event being viewed/edited
 
