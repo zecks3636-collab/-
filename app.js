@@ -243,6 +243,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== EVENT LISTENERS ==========
     filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            // 식단표 보는 중이면 캘린더로 자동 전환
+            if (panelMenuView.style.display === 'flex') switchToCalendar();
             filterBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentFilter = btn.dataset.company;
@@ -256,25 +258,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ========== MAIN TABS (Calendar / Menu) ==========
-    const tabCalendar = document.getElementById('tabCalendar');
     const tabMenu = document.getElementById('tabMenu');
     const panelCalendar = document.getElementById('panelCalendar');
     const panelMenuView = document.getElementById('panelMenuView');
 
-    tabCalendar.addEventListener('click', () => {
-        tabCalendar.classList.add('active');
+    function switchToCalendar() {
         tabMenu.classList.remove('active');
         panelCalendar.style.display = '';
         panelMenuView.style.display = 'none';
-    });
+    }
 
-    tabMenu.addEventListener('click', () => {
+    function switchToMenu() {
         tabMenu.classList.add('active');
-        tabCalendar.classList.remove('active');
         panelMenuView.style.display = 'flex';
         panelMenuView.style.flexDirection = 'column';
         panelCalendar.style.display = 'none';
         renderMenuWeek();
+    }
+
+    tabMenu.addEventListener('click', () => {
+        if (panelMenuView.style.display === 'flex') {
+            switchToCalendar();
+        } else {
+            switchToMenu();
+        }
     });
 
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
