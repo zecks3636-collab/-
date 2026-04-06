@@ -69,6 +69,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentYear = today.getFullYear();
     let currentMonth = today.getMonth();
 
+    // ========== HOLIDAYS ==========
+    const holidays = {
+        "01-01": "신정",
+        "03-01": "삼일절",
+        "05-05": "어린이날",
+        "06-06": "현충일",
+        "08-15": "광복절",
+        "10-03": "개천절",
+        "10-09": "한글날",
+        "12-25": "성탄절",
+        // 2026 Lunar & Election
+        "2026-02-16": "설연휴",
+        "2026-02-17": "설날",
+        "2026-02-18": "설연휴",
+        "2026-05-24": "부처님오신날",
+        "2026-06-03": "지방선거",
+        "2026-09-24": "추석연휴",
+        "2026-09-25": "추석",
+        "2026-09-26": "추석연휴"
+    };
+
+    function getHolidayName(y, m, d) {
+        const mm = String(m).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        return holidays[`${y}-${mm}-${dd}`] || holidays[`${mm}-${dd}`] || null;
+    }
+
     // ========== RENDER ==========
     function renderCalendar() {
         calendarGrid.innerHTML = '';
@@ -89,8 +116,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const dateSpan = document.createElement('span');
             dateSpan.className = 'date-num';
-            if ((firstDayIndex + day - 1) % 7 === 0) dateSpan.classList.add('sun');
+            
+            const isSunday = (firstDayIndex + day - 1) % 7 === 0;
+            const isSaturday = (firstDayIndex + day - 1) % 7 === 6;
+            const holidayName = getHolidayName(currentYear, currentMonth + 1, day);
+            
+            if (isSunday || holidayName) dateSpan.classList.add('sun');
+            if (isSaturday) dateSpan.classList.add('sat');
+            if (holidayName) dayDiv.classList.add('holiday-day');
+            if (isSaturday) dayDiv.classList.add('saturday-day');
+            
             dateSpan.textContent = day;
+            if (holidayName) {
+                const hl = document.createElement('span');
+                hl.textContent = holidayName;
+                hl.style.fontSize = '10px';
+                hl.style.marginLeft = '5px';
+                hl.style.fontWeight = '600';
+                hl.style.opacity = '0.85';
+                dateSpan.appendChild(hl);
+            }
+            
             dayDiv.appendChild(dateSpan);
 
             const dayString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;

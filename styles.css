@@ -373,6 +373,17 @@ body {
     color: var(--text-secondary);
 }
 .date-num.sun { color: #f43f5e; }
+.date-num.sat { color: #3b82f6; }
+
+/* Holiday & Weekend cell tints */
+.cal-day.holiday-day {
+    background: #fff5f5;
+    border-color: rgba(244, 63, 94, 0.2);
+}
+.cal-day.saturday-day {
+    background: #f0f6ff;
+    border-color: rgba(59, 130, 246, 0.15);
+}
 
 /* Premium Event Pills */
 .event {
