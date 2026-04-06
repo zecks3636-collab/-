@@ -953,13 +953,16 @@ document.addEventListener('DOMContentLoaded', async () => {
      * CREATE POLICY "leave_all" ON public.leave_plans FOR ALL USING (true) WITH CHECK (true);
      */
 
-    const RANK_ORDER = { 팀장:1, 수석:2, 책임:3, 선임:4, 주임:5, 사원:6 };
+    const RANK_ORDER = { 임원:1, 부장:2, 과장:3, 대리:4, 사원:5 };
     const LEAVE_TYPE_CLASS = {
-        '연차': 'ltype-연차',
+        '연차':       'ltype-연차',
         '반차(오전)': 'ltype-반차오전',
         '반차(오후)': 'ltype-반차오후',
-        '특별휴가': 'ltype-특별휴가',
-        '병가': 'ltype-병가'
+        '반반차(오전)':'ltype-반반차오전',
+        '반반차(오후)':'ltype-반반차오후',
+        '교육':       'ltype-교육',
+        '특별휴가':   'ltype-특별휴가',
+        '병가':       'ltype-병가'
     };
 
     let allLeaves = [];

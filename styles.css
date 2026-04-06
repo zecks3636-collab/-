@@ -1002,11 +1002,14 @@ body {
 }
 
 /* 연차 유형별 색상 */
-.ltype-연차      { background: rgba(59,130,246,0.12);  color: #1d4ed8; }
-.ltype-반차오전  { background: rgba(16,185,129,0.12);  color: #047857; }
-.ltype-반차오후  { background: rgba(20,184,166,0.13);  color: #0f766e; }
-.ltype-특별휴가  { background: rgba(139,92,246,0.12);  color: #6d28d9; }
-.ltype-병가      { background: rgba(244,63,94,0.12);   color: #be123c; }
+.ltype-연차        { background: rgba(59,130,246,0.12);  color: #1d4ed8; }
+.ltype-반차오전    { background: rgba(16,185,129,0.12);  color: #047857; }
+.ltype-반차오후    { background: rgba(20,184,166,0.13);  color: #0f766e; }
+.ltype-반반차오전  { background: rgba(132,204,22,0.13);  color: #4d7c0f; }
+.ltype-반반차오후  { background: rgba(234,179,8,0.13);   color: #92400e; }
+.ltype-교육        { background: rgba(249,115,22,0.12);  color: #c2410c; }
+.ltype-특별휴가    { background: rgba(139,92,246,0.12);  color: #6d28d9; }
+.ltype-병가        { background: rgba(244,63,94,0.12);   color: #be123c; }
 
 /* ===== 연차 모달 ===== */
 .leave-form-label {
