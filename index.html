@@ -25,6 +25,8 @@
             
             <!-- 주간식단표 탭 버튼 -->
             <button class="sidebar-menu-tab" id="tabMenu">🍽️ 주간식단표</button>
+            <!-- 연차계획 탭 버튼 -->
+            <button class="sidebar-menu-tab" id="tabLeave">📋 연차계획</button>
 
             <div class="filters">
                 <h3>회사별 일정 보기</h3>
@@ -313,7 +315,74 @@
 
                 <p class="menu-notice" id="menuNotice">※ 상단 메뉴는 시장 상황에 따라 바뀔 수 있습니다. &nbsp;|&nbsp; 문의: 영양사 사무실</p>
             </div>
+            <!-- Leave / 연차계획 Panel -->
+            <div id="panelLeave" class="calendar-wrapper glass-panel" style="display:none;">
+                <div class="calendar-header">
+                    <div class="sun">SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
+                </div>
+                <div class="calendar-grid leave-grid" id="leaveGrid"></div>
+            </div>
         </main>
+    </div>
+
+    <!-- Leave Input Modal -->
+    <div class="modal-overlay" id="leaveModal">
+        <div class="modal-content glass-panel" style="width:500px; max-height:82vh; overflow-y:auto; display:flex; flex-direction:column; gap:0;">
+            <button class="close-btn" id="closeLeaveModal">&times;</button>
+            <div class="modal-header">
+                <h3 style="font-size:16px;font-weight:800;color:#0f172a;">📋 연차 입력</h3>
+                <p class="subtitle" id="leaveModalDateLabel" style="margin-top:6px;font-size:13px;font-weight:600;"></p>
+            </div>
+            <!-- 기존 항목 목록 -->
+            <div id="leaveModalEntries" style="margin:14px 0 0;"></div>
+            <!-- 새 항목 추가 폼 -->
+            <div style="border-top:1px solid #f1f5f9;padding-top:16px;margin-top:14px;">
+                <p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">새 항목 추가</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div>
+                        <label class="leave-form-label">팀</label>
+                        <input list="leaveTeamList" id="leaveTeamInput" class="form-input" placeholder="팀명 입력">
+                        <datalist id="leaveTeamList">
+                            <option value="경영관리팀"><option value="인사팀"><option value="재무팀">
+                            <option value="기획팀"><option value="R&D팀"><option value="마케팅팀">
+                            <option value="영업팀"><option value="생산팀"><option value="품질팀"><option value="구매팀">
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="leave-form-label">직급</label>
+                        <select id="leaveRankInput" class="form-input">
+                            <option value="팀장">팀장</option>
+                            <option value="수석">수석</option>
+                            <option value="책임">책임</option>
+                            <option value="선임">선임</option>
+                            <option value="주임">주임</option>
+                            <option value="사원">사원</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="leave-form-label">이름</label>
+                        <input type="text" id="leaveNameInput" class="form-input" placeholder="성명">
+                    </div>
+                    <div>
+                        <label class="leave-form-label">구분</label>
+                        <select id="leaveTypeInput" class="form-input">
+                            <option value="연차">연차</option>
+                            <option value="반차(오전)">반차(오전)</option>
+                            <option value="반차(오후)">반차(오후)</option>
+                            <option value="특별휴가">특별휴가</option>
+                            <option value="병가">병가</option>
+                        </select>
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <label class="leave-form-label">비고 (선택)</label>
+                        <input type="text" id="leaveNoteInput" class="form-input" placeholder="메모">
+                    </div>
+                </div>
+                <div style="margin-top:14px;text-align:right;">
+                    <button id="leaveAddBtn" class="save-btn" style="font-size:13px;padding:9px 22px;">➕ 추가</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Event Detail / Edit Modal -->

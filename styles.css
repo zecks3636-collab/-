@@ -957,3 +957,104 @@ body {
     background: #f1f5f9;
     border-color: #cbd5e1;
 }
+
+/* ===== 연차계획 캘린더 ===== */
+.leave-grid {
+    /* 기존 calendar-grid 상속, 동일 레이아웃 */
+}
+.leave-cal-day {
+    cursor: pointer;
+    min-height: 80px;
+}
+.leave-cal-day:hover {
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 2px 12px rgba(59,130,246,0.08);
+}
+
+/* 연차 칩 */
+.leave-chip {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-weight: 600;
+    margin-top: 2px;
+    line-height: 1.5;
+    cursor: pointer;
+    overflow: hidden;
+    transition: opacity 0.15s;
+}
+.leave-chip:hover { opacity: 0.8; }
+.lc-name {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 52px;
+}
+.lc-type {
+    font-size: 9.5px;
+    opacity: 0.72;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 연차 유형별 색상 */
+.ltype-연차      { background: rgba(59,130,246,0.12);  color: #1d4ed8; }
+.ltype-반차오전  { background: rgba(16,185,129,0.12);  color: #047857; }
+.ltype-반차오후  { background: rgba(20,184,166,0.13);  color: #0f766e; }
+.ltype-특별휴가  { background: rgba(139,92,246,0.12);  color: #6d28d9; }
+.ltype-병가      { background: rgba(244,63,94,0.12);   color: #be123c; }
+
+/* ===== 연차 모달 ===== */
+.leave-form-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    display: block;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.leave-entry-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: #f8fafc;
+    margin-bottom: 6px;
+    gap: 8px;
+}
+.leave-entry-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 13px;
+}
+.leave-entry-badge {
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.leave-entry-team  { font-weight: 600; color: #475569; }
+.leave-entry-rank  { font-size: 12px; color: #94a3b8; }
+.leave-entry-name  { font-weight: 800; color: #0f172a; }
+.leave-entry-note  { font-size: 11px; color: #94a3b8; font-style: italic; }
+.leave-entry-del {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.leave-entry-del:hover { background: #fee2e2; color: #f43f5e; }

@@ -238,13 +238,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     function update() {
         renderCalendar();
         renderUpcoming();
+        if (panelLeave && panelLeave.style.display !== 'none') renderLeaveCalendar();
     }
 
     // ========== EVENT LISTENERS ==========
     filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // 식단표 보는 중이면 캘린더로 자동 전환
-            if (panelMenuView.style.display === 'flex') switchToCalendar();
+            // 식단표/연차 보는 중이면 캘린더로 자동 전환
+            if (panelMenuView.style.display === 'flex' ||
+                document.getElementById('panelLeave').style.display !== 'none') {
+                switchToCalendar();
+            }
             filterBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentFilter = btn.dataset.company;
@@ -257,31 +261,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         update();
     });
 
-    // ========== MAIN TABS (Calendar / Menu) ==========
-    const tabMenu = document.getElementById('tabMenu');
+    // ========== MAIN TABS (Calendar / Menu / Leave) ==========
+    const tabMenu   = document.getElementById('tabMenu');
+    const tabLeave  = document.getElementById('tabLeave');
     const panelCalendar = document.getElementById('panelCalendar');
     const panelMenuView = document.getElementById('panelMenuView');
+    const panelLeave    = document.getElementById('panelLeave');
 
     function switchToCalendar() {
         tabMenu.classList.remove('active');
+        tabLeave.classList.remove('active');
         panelCalendar.style.display = '';
         panelMenuView.style.display = 'none';
+        panelLeave.style.display = 'none';
     }
 
     function switchToMenu() {
         tabMenu.classList.add('active');
+        tabLeave.classList.remove('active');
         panelMenuView.style.display = 'flex';
         panelMenuView.style.flexDirection = 'column';
         panelCalendar.style.display = 'none';
+        panelLeave.style.display = 'none';
         renderMenuWeek();
     }
 
+    function switchToLeave() {
+        tabLeave.classList.add('active');
+        tabMenu.classList.remove('active');
+        panelLeave.style.display = '';
+        panelCalendar.style.display = 'none';
+        panelMenuView.style.display = 'none';
+        renderLeaveCalendar();
+    }
+
     tabMenu.addEventListener('click', () => {
-        if (panelMenuView.style.display === 'flex') {
-            switchToCalendar();
-        } else {
-            switchToMenu();
-        }
+        if (panelMenuView.style.display === 'flex') switchToCalendar();
+        else switchToMenu();
+    });
+
+    tabLeave.addEventListener('click', () => {
+        if (panelLeave.style.display !== 'none') switchToCalendar();
+        else switchToLeave();
     });
 
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
@@ -914,4 +935,225 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('reviewTitle').textContent = `추출된 일정 검토 (${company}) — ${events.length}건`;
         reviewModal.classList.add('active');
     }
+
+    // ========== 연차계획 관리 ==========
+    /*
+     * Supabase 테이블 생성 SQL (최초 1회 실행 필요):
+     * CREATE TABLE public.leave_plans (
+     *   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+     *   date date NOT NULL,
+     *   team text NOT NULL,
+     *   rank text NOT NULL,
+     *   employee_name text NOT NULL,
+     *   leave_type text NOT NULL DEFAULT '연차',
+     *   note text,
+     *   created_at timestamptz DEFAULT now()
+     * );
+     * ALTER TABLE public.leave_plans ENABLE ROW LEVEL SECURITY;
+     * CREATE POLICY "leave_all" ON public.leave_plans FOR ALL USING (true) WITH CHECK (true);
+     */
+
+    const RANK_ORDER = { 팀장:1, 수석:2, 책임:3, 선임:4, 주임:5, 사원:6 };
+    const LEAVE_TYPE_CLASS = {
+        '연차': 'ltype-연차',
+        '반차(오전)': 'ltype-반차오전',
+        '반차(오후)': 'ltype-반차오후',
+        '특별휴가': 'ltype-특별휴가',
+        '병가': 'ltype-병가'
+    };
+
+    let allLeaves = [];
+    let leaveModalDate = '';
+
+    async function loadLeaves() {
+        if (!sb) { allLeaves = []; return; }
+        try {
+            const { data, error } = await sb.from('leave_plans').select('*').order('date');
+            if (error) throw error;
+            allLeaves = data || [];
+            console.log(`✅ leave_plans ${allLeaves.length}건 로드`);
+        } catch(e) {
+            console.warn('leave_plans 로드 실패 (테이블 생성 필요):', e.message);
+            allLeaves = [];
+        }
+    }
+
+    await loadLeaves();
+
+    // ---- 연차 캘린더 렌더링 ----
+    function renderLeaveCalendar() {
+        const leaveGrid = document.getElementById('leaveGrid');
+        if (!leaveGrid) return;
+        leaveGrid.innerHTML = '';
+
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+        document.getElementById('monthTitle').textContent =
+            `${currentYear}. ${String(currentMonth + 1).padStart(2, '0')}`;
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            const d = document.createElement('div');
+            d.className = 'cal-day empty';
+            leaveGrid.appendChild(d);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'cal-day leave-cal-day';
+
+            const isSunday  = (firstDayIndex + day - 1) % 7 === 0;
+            const isSaturday = (firstDayIndex + day - 1) % 7 === 6;
+            const holidayName = getHolidayName(currentYear, currentMonth + 1, day);
+
+            if (isSaturday) dayDiv.classList.add('saturday-day');
+            if (isSunday || holidayName) dayDiv.classList.add('holiday-day');
+
+            const dateSpan = document.createElement('span');
+            dateSpan.className = 'date-num';
+            if (isSunday || holidayName) dateSpan.classList.add('sun');
+            if (isSaturday) dateSpan.classList.add('sat');
+            dateSpan.textContent = day;
+            if (holidayName) {
+                const hl = document.createElement('span');
+                hl.textContent = holidayName;
+                hl.style.cssText = 'font-size:10px;margin-left:4px;font-weight:600;opacity:0.85;';
+                dateSpan.appendChild(hl);
+            }
+            dayDiv.appendChild(dateSpan);
+
+            // 해당 날짜 연차: 팀→직급→이름 정렬
+            const dayLeaves = allLeaves
+                .filter(l => (l.date || '').slice(0, 10) === dateStr)
+                .sort((a, b) => {
+                    const tc = a.team.localeCompare(b.team, 'ko');
+                    if (tc !== 0) return tc;
+                    const rd = (RANK_ORDER[a.rank] || 9) - (RANK_ORDER[b.rank] || 9);
+                    if (rd !== 0) return rd;
+                    return a.employee_name.localeCompare(b.employee_name, 'ko');
+                });
+
+            dayLeaves.forEach(leave => {
+                const chip = document.createElement('div');
+                chip.className = `leave-chip ${LEAVE_TYPE_CLASS[leave.leave_type] || 'ltype-연차'}`;
+                chip.innerHTML = `<span class="lc-name">${leave.employee_name}</span><span class="lc-type">${leave.leave_type}</span>`;
+                chip.title = `[${leave.team}] ${leave.rank} ${leave.employee_name} · ${leave.leave_type}${leave.note ? ' / ' + leave.note : ''}`;
+                chip.addEventListener('click', e => { e.stopPropagation(); openLeaveModal(dateStr); });
+                dayDiv.appendChild(chip);
+            });
+
+            dayDiv.addEventListener('click', () => openLeaveModal(dateStr));
+            leaveGrid.appendChild(dayDiv);
+        }
+    }
+
+    // ---- 연차 모달 열기/닫기 ----
+    function openLeaveModal(dateStr) {
+        leaveModalDate = dateStr;
+        const d = new Date(dateStr + 'T00:00:00');
+        const days = ['일','월','화','수','목','금','토'];
+        document.getElementById('leaveModalDateLabel').textContent =
+            `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+        renderLeaveModalEntries(dateStr);
+        document.getElementById('leaveModal').classList.add('active');
+    }
+
+    document.getElementById('closeLeaveModal').addEventListener('click', () => {
+        document.getElementById('leaveModal').classList.remove('active');
+    });
+    document.getElementById('leaveModal').addEventListener('click', e => {
+        if (e.target === document.getElementById('leaveModal'))
+            document.getElementById('leaveModal').classList.remove('active');
+    });
+
+    // ---- 모달 내 기존 항목 렌더링 ----
+    function renderLeaveModalEntries(dateStr) {
+        const container = document.getElementById('leaveModalEntries');
+        const entries = allLeaves
+            .filter(l => (l.date || '').slice(0, 10) === dateStr)
+            .sort((a, b) => {
+                const tc = a.team.localeCompare(b.team, 'ko');
+                if (tc !== 0) return tc;
+                const rd = (RANK_ORDER[a.rank] || 9) - (RANK_ORDER[b.rank] || 9);
+                if (rd !== 0) return rd;
+                return a.employee_name.localeCompare(b.employee_name, 'ko');
+            });
+
+        if (entries.length === 0) {
+            container.innerHTML = '<p style="font-size:13px;color:#94a3b8;text-align:center;padding:6px 0;">등록된 연차가 없습니다</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        entries.forEach(leave => {
+            const row = document.createElement('div');
+            row.className = 'leave-entry-row';
+            const tc = LEAVE_TYPE_CLASS[leave.leave_type] || 'ltype-연차';
+            row.innerHTML = `
+                <div class="leave-entry-info">
+                    <span class="leave-entry-badge ${tc}">${leave.leave_type}</span>
+                    <span class="leave-entry-team">${leave.team}</span>
+                    <span class="leave-entry-rank">${leave.rank}</span>
+                    <span class="leave-entry-name">${leave.employee_name}</span>
+                    ${leave.note ? `<span class="leave-entry-note">· ${leave.note}</span>` : ''}
+                </div>
+                <button class="leave-entry-del" title="삭제">✕</button>`;
+            row.querySelector('.leave-entry-del').addEventListener('click', () => deleteLeave(leave.id, dateStr));
+            container.appendChild(row);
+        });
+    }
+
+    // ---- 연차 삭제 ----
+    async function deleteLeave(id, dateStr) {
+        if (sb) {
+            const { error } = await sb.from('leave_plans').delete().eq('id', id);
+            if (error) { alert('삭제 오류: ' + error.message); return; }
+        }
+        allLeaves = allLeaves.filter(l => l.id !== id);
+        renderLeaveModalEntries(dateStr);
+        renderLeaveCalendar();
+    }
+
+    // ---- 연차 추가 ----
+    document.getElementById('leaveAddBtn').addEventListener('click', async () => {
+        const team  = document.getElementById('leaveTeamInput').value.trim();
+        const rank  = document.getElementById('leaveRankInput').value;
+        const name  = document.getElementById('leaveNameInput').value.trim();
+        const type  = document.getElementById('leaveTypeInput').value;
+        const note  = document.getElementById('leaveNoteInput').value.trim();
+
+        if (!team || !name) { alert('팀과 이름을 입력해주세요.'); return; }
+
+        const payload = {
+            date: leaveModalDate,
+            team, rank,
+            employee_name: name,
+            leave_type: type,
+            note: note || null
+        };
+
+        const btn = document.getElementById('leaveAddBtn');
+        btn.disabled = true;
+
+        try {
+            if (sb) {
+                const { data, error } = await sb.from('leave_plans').insert(payload).select().single();
+                if (error) throw error;
+                allLeaves.push(data);
+            } else {
+                allLeaves.push({ ...payload, id: Date.now().toString(), created_at: new Date().toISOString() });
+            }
+            // 입력 초기화
+            document.getElementById('leaveTeamInput').value = '';
+            document.getElementById('leaveNameInput').value = '';
+            document.getElementById('leaveNoteInput').value = '';
+
+            renderLeaveModalEntries(leaveModalDate);
+            renderLeaveCalendar();
+        } catch(err) {
+            alert('저장 오류: ' + err.message);
+        } finally {
+            btn.disabled = false;
+        }
+    });
 });
