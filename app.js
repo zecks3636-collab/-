@@ -146,7 +146,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             dayDiv.appendChild(dateSpan);
 
             const dayString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const dayEvents = allEvents.filter(e => e.date === dayString);
+
+            // 시간 추출 함수 (HH:MM 형식 → 분 단위 숫자, 없으면 9999로 후순위)
+            const getTimeVal = title => {
+                const m = title.match(/^(\d{2}):?(\d{2})/);
+                return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : 9999;
+            };
+
+            const dayEvents = allEvents
+                .filter(e => e.date === dayString)
+                .sort((a, b) => getTimeVal(a.title) - getTimeVal(b.title));
 
             dayEvents.forEach(evt => {
                 if (currentFilter !== 'all' && evt.company !== currentFilter) return;
