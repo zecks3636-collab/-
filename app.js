@@ -287,12 +287,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
     const HARDCODED_WEEK = '2026-04-06'; // 하드코딩 테이블이 있는 주 (월요일 기준)
 
-    // localStorage에서 업로드 이력 로드
+    // Supabase에서 menu_weeks 로드 (fallback: localStorage)
     let menuStore = {};
-    try {
-        const saved = localStorage.getItem('menuWeekStore');
-        if (saved) menuStore = JSON.parse(saved);
-    } catch(e) {}
+
+    async function loadMenuStore() {
+        if (sb) {
+            try {
+                const { data, error } = await sb.from('menu_weeks').select('*');
+                if (error) throw error;
+                menuStore = {};
+                (data || []).forEach(row => {
+                    const key = typeof row.week_key === 'string'
+                        ? row.week_key.slice(0, 10)
+                        : row.week_key;
+                    const { data: urlData } = sb.storage
+                        .from('menu-images')
+                        .getPublicUrl(row.storage_path);
+                    menuStore[key] = {
+                        imageUrl: urlData.publicUrl,
+                        fileName: row.file_name,
+                        uploadedAt: row.uploaded_at,
+                        storagePath: row.storage_path
+                    };
+                });
+                console.log(`✅ menu_weeks ${Object.keys(menuStore).length}건 로드`);
+            } catch(e) {
+                console.warn('menu_weeks 로드 실패, localStorage 폴백:', e.message);
+                try {
+                    const saved = localStorage.getItem('menuWeekStore');
+                    if (saved) menuStore = JSON.parse(saved);
+                } catch(_) {}
+            }
+        } else {
+            try {
+                const saved = localStorage.getItem('menuWeekStore');
+                if (saved) menuStore = JSON.parse(saved);
+            } catch(_) {}
+        }
+    }
+
+    await loadMenuStore();
 
     // 현재 표시 중인 주 (월요일 기준 Date)
     let currentMenuMonday = new Date('2026-04-06T00:00:00');
@@ -332,8 +366,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         emptyEl.style.display = 'none';
 
         if (menuStore[key]) {
-            // 업로드된 이미지 표시
-            document.getElementById('menuUploadedImg').src = menuStore[key].dataUrl;
+            // 업로드된 이미지 표시 (Supabase Storage URL 또는 dataUrl 폴백)
+            document.getElementById('menuUploadedImg').src = menuStore[key].imageUrl || menuStore[key].dataUrl || '';
             imageEl.style.display = 'block';
             noticeEl.style.display = '';
         } else if (key === HARDCODED_WEEK) {
@@ -375,6 +409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = true;
 
         try {
+            // PDF → Canvas 렌더링
             const ab = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
             const page = await pdf.getPage(1);
@@ -383,11 +418,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             canvas.width = vp.width;
             canvas.height = vp.height;
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
 
             const key = menuWeekKey(currentMenuMonday);
-            menuStore[key] = { dataUrl, uploadedAt: new Date().toISOString(), fileName: file.name };
-            try { localStorage.setItem('menuWeekStore', JSON.stringify(menuStore)); } catch(e) {}
+            const storagePath = `${key}.jpg`;
+
+            if (sb) {
+                // Supabase Storage에 업로드
+                const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+                const { error: upErr } = await sb.storage
+                    .from('menu-images')
+                    .upload(storagePath, blob, { upsert: true, contentType: 'image/jpeg' });
+                if (upErr) throw upErr;
+
+                // 공개 URL 취득
+                const { data: urlData } = sb.storage.from('menu-images').getPublicUrl(storagePath);
+
+                // menu_weeks 테이블 upsert
+                const { error: dbErr } = await sb.from('menu_weeks').upsert({
+                    week_key: key,
+                    file_name: file.name,
+                    storage_path: storagePath,
+                    uploaded_at: new Date().toISOString()
+                });
+                if (dbErr) throw dbErr;
+
+                menuStore[key] = {
+                    imageUrl: urlData.publicUrl,
+                    fileName: file.name,
+                    uploadedAt: new Date().toISOString(),
+                    storagePath
+                };
+            } else {
+                // Supabase 미연결 → localStorage 폴백
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                menuStore[key] = { imageUrl: dataUrl, fileName: file.name, uploadedAt: new Date().toISOString() };
+                try { localStorage.setItem('menuWeekStore', JSON.stringify(menuStore)); } catch(_) {}
+            }
+
             renderMenuWeek();
         } catch(err) {
             alert('PDF 처리 중 오류가 발생했습니다: ' + err.message);
@@ -398,12 +465,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 업로드 메뉴 삭제
-    document.getElementById('menuDeleteBtn').addEventListener('click', () => {
+    document.getElementById('menuDeleteBtn').addEventListener('click', async () => {
         const key = menuWeekKey(currentMenuMonday);
         if (!menuStore[key]) return;
         if (!confirm('이 주의 업로드된 메뉴를 삭제할까요?')) return;
+
+        const storagePath = menuStore[key].storagePath || `${key}.jpg`;
+
+        if (sb) {
+            try {
+                await sb.storage.from('menu-images').remove([storagePath]);
+                await sb.from('menu_weeks').delete().eq('week_key', key);
+            } catch(e) {
+                console.warn('삭제 오류:', e.message);
+            }
+        } else {
+            try { localStorage.setItem('menuWeekStore', JSON.stringify(menuStore)); } catch(_) {}
+        }
+
         delete menuStore[key];
-        try { localStorage.setItem('menuWeekStore', JSON.stringify(menuStore)); } catch(e) {}
         renderMenuWeek();
     });
 
