@@ -190,14 +190,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function renderUpcoming() {
         upcomingList.innerHTML = '';
+
+        // Compute current week range (Mon ~ Sun based on today)
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon...
+        const diffToMon = (dayOfWeek === 0) ? -6 : 1 - dayOfWeek;
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() + diffToMon);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+
+        const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const wsStr = fmt(weekStart);
+        const weStr = fmt(weekEnd);
+
+        // Update sidebar label to show week range
+        const h3 = upcomingList.closest('.upcoming-events').querySelector('h3');
+        if (h3) {
+            h3.textContent = `이번 주 주요 일정`;
+            h3.title = `${wsStr} ~ ${weStr}`;
+        }
+
         const filtered = allEvents.filter(evt => {
+            if (evt.date < wsStr || evt.date > weStr) return false;
             if (currentFilter !== 'all' && evt.company !== currentFilter) return false;
             if (currentSearch && !evt.title.toLowerCase().includes(currentSearch)) return false;
             return true;
-        }).slice(0, 7);
+        });
 
         if (filtered.length === 0) {
-            upcomingList.innerHTML = '<li style="color:#9ca3af;font-size:13px;">예정된 일정이 없습니다.</li>';
+            upcomingList.innerHTML = `<li style="color:#9ca3af;font-size:13px;">이번 주(${wsStr.slice(5)} ~ ${weStr.slice(5)}) 일정이 없습니다.</li>`;
             return;
         }
 
@@ -205,8 +229,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const li = document.createElement('li');
             li.className = `upcoming-item ${evt.company}`;
             const showComp = currentFilter === 'all' ? ` &middot; ${evt.company}` : '';
+            // Format date as M/D (요일)
+            const d = new Date(evt.date);
+            const dayNames = ['일','월','화','수','목','금','토'];
+            const dateLabel = `${d.getMonth()+1}/${d.getDate()}(${dayNames[d.getDay()]})`;
             li.innerHTML = `
-                <span class="upcoming-date">${evt.date}${showComp}</span>
+                <span class="upcoming-date">${dateLabel}${showComp}</span>
                 <span class="upcoming-title">${evt.title}</span>
             `;
             upcomingList.appendChild(li);
