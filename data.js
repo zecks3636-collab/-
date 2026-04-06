@@ -1,0 +1,302 @@
+window.fallbackEvents = [
+  {
+    "id": "Group-1-0-pdf",
+    "company": "Group",
+    "date": "2026-04-01",
+    "title": "0800 월례조회"
+  },
+  {
+    "id": "Group-1-1-pdf",
+    "company": "Group",
+    "date": "2026-04-01",
+    "title": "(조회사 : 강승현 원장)"
+  },
+  {
+    "id": "Group-1-2-pdf",
+    "company": "Group",
+    "date": "2026-04-01",
+    "title": "0850 영업회의(판교)"
+  },
+  {
+    "id": "Group-1-3-pdf",
+    "company": "Group",
+    "date": "2026-04-01",
+    "title": "1030 전략품목발표회(판교)"
+  },
+  {
+    "id": "NBT-1-1",
+    "company": "NBT",
+    "date": "2026-04-01",
+    "title": "08:30 월례조회(이천)"
+  },
+  {
+    "id": "NBT-1-2",
+    "company": "NBT",
+    "date": "2026-04-01",
+    "title": "10:00 영업회의(이천)"
+  },
+  {
+    "id": "BIO-3-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-03",
+    "title": "0900 S&OP회의(화상)"
+  },
+  {
+    "id": "NBT-6-1",
+    "company": "NBT",
+    "date": "2026-04-06",
+    "title": "08:30 국내 영업회의"
+  },
+  {
+    "id": "BIO-8-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-08",
+    "title": "0830 임원회의(판교)"
+  },
+  {
+    "id": "Group-9-0-pdf",
+    "company": "Group",
+    "date": "2026-04-09",
+    "title": "0900 확대경영회의(판교)"
+  },
+  {
+    "id": "BIO-10-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-10",
+    "title": "0900 S&OP회의(화상)"
+  },
+  {
+    "id": "NBT-10-1",
+    "company": "NBT",
+    "date": "2026-04-10",
+    "title": "08:00 확대경영회의(GB2 6층)"
+  },
+  {
+    "id": "Group-13-0-pdf",
+    "company": "Group",
+    "date": "2026-04-13",
+    "title": "0900 코스맥스/비티아이 경영위원회(판교)"
+  },
+  {
+    "id": "BIO-13-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-13",
+    "title": "1000 자동화회의(제천)"
+  },
+  {
+    "id": "Group-14-0-pdf",
+    "company": "Group",
+    "date": "2026-04-14",
+    "title": "0900 신제품전략회의(판교)"
+  },
+  {
+    "id": "Group-14-1-pdf",
+    "company": "Group",
+    "date": "2026-04-14",
+    "title": "1500 코스맥스펫 확대회의(판교)"
+  },
+  {
+    "id": "Group-14-2-pdf",
+    "company": "Group",
+    "date": "2026-04-14",
+    "title": "1600 코스맥스파마 확대회의(판교)"
+  },
+  {
+    "id": "Group-15-0-pdf",
+    "company": "Group",
+    "date": "2026-04-15",
+    "title": "(정기지급)"
+  },
+  {
+    "id": "NBT-15-1",
+    "company": "NBT",
+    "date": "2026-04-15",
+    "title": "14:00 생산협의회(이천)"
+  },
+  {
+    "id": "Group-16-0-pdf",
+    "company": "Group",
+    "date": "2026-04-16",
+    "title": "0800 코스맥스USA 확대경영회의(판교)"
+  },
+  {
+    "id": "Group-16-1-pdf",
+    "company": "Group",
+    "date": "2026-04-16",
+    "title": "1500 레시피회의(판교)"
+  },
+  {
+    "id": "BIO-16-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-16",
+    "title": "0900 부서회의(전략마케팅)"
+  },
+  {
+    "id": "Group-17-0-pdf",
+    "company": "Group",
+    "date": "2026-04-17",
+    "title": "0900 건기식 통합회의(판교)"
+  },
+  {
+    "id": "BIO-17-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-17",
+    "title": "0900 S&OP회의(화상)"
+  },
+  {
+    "id": "BIO-17-1-pdf",
+    "company": "BIO",
+    "date": "2026-04-17",
+    "title": "0900 건기식 통합회의(판교)"
+  },
+  {
+    "id": "NBT-17-1",
+    "company": "NBT",
+    "date": "2026-04-17",
+    "title": "09:00 건기식 통합회의(F동 9층)"
+  },
+  {
+    "id": "Group-20-0-pdf",
+    "company": "Group",
+    "date": "2026-04-20",
+    "title": "0900 화장품 관계사 경영회의(판교)"
+  },
+  {
+    "id": "BIO-20-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-20",
+    "title": "0900 영업팀장회의(국내)"
+  },
+  {
+    "id": "NBT-20-1",
+    "company": "NBT",
+    "date": "2026-04-20",
+    "title": "08:30 국내 영업회의"
+  },
+  {
+    "id": "Group-21-0-pdf",
+    "company": "Group",
+    "date": "2026-04-21",
+    "title": "0900 건기식 관계사 경영회의(판교)"
+  },
+  {
+    "id": "BIO-21-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-21",
+    "title": "0900 건기식 관계사경영회의(판교)"
+  },
+  {
+    "id": "NBT-21-1",
+    "company": "NBT",
+    "date": "2026-04-21",
+    "title": "09:00 관계사경영회의(F동 9층)"
+  },
+  {
+    "id": "Group-22-0-pdf",
+    "company": "Group",
+    "date": "2026-04-22",
+    "title": "0830 생산협의회(화성)"
+  },
+  {
+    "id": "Group-22-1-pdf",
+    "company": "Group",
+    "date": "2026-04-22",
+    "title": "0900 코스맥스네오 확대회의(판교)"
+  },
+  {
+    "id": "Group-22-2-pdf",
+    "company": "Group",
+    "date": "2026-04-22",
+    "title": "0930 제안심사위원회(화성)"
+  },
+  {
+    "id": "Group-22-3-pdf",
+    "company": "Group",
+    "date": "2026-04-22",
+    "title": "1000 믹스앤매치 확대회의(판교)"
+  },
+  {
+    "id": "Group-22-4-pdf",
+    "company": "Group",
+    "date": "2026-04-22",
+    "title": "1030 코스맥스 글로벌 생산기술교류회(화성)"
+  },
+  {
+    "id": "BIO-22-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-22",
+    "title": "0830 임원회의(판교)"
+  },
+  {
+    "id": "Group-23-0-pdf",
+    "company": "Group",
+    "date": "2026-04-23",
+    "title": "0900 임원회의(판교)"
+  },
+  {
+    "id": "BIO-23-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-23",
+    "title": "0900 신제품개발회의(판교)"
+  },
+  {
+    "id": "NBT-23-1",
+    "company": "NBT",
+    "date": "2026-04-23",
+    "title": "13:00 제안심사(GB2 6층)"
+  },
+  {
+    "id": "NBT-23-2",
+    "company": "NBT",
+    "date": "2026-04-23",
+    "title": "14:00 임원회의(GB2 6층)"
+  },
+  {
+    "id": "BIO-24-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-24",
+    "title": "0900 S&OP회의(화상)"
+  },
+  {
+    "id": "BIO-24-1-pdf",
+    "company": "BIO",
+    "date": "2026-04-24",
+    "title": "0900 연구회의(판교)"
+  },
+  {
+    "id": "BIO-27-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-27",
+    "title": "1330 생산업무회의(제천)"
+  },
+  {
+    "id": "BIO-27-1-pdf",
+    "company": "BIO",
+    "date": "2026-04-27",
+    "title": "1430 손익점검회의(화상)"
+  },
+  {
+    "id": "NBT-27-1",
+    "company": "NBT",
+    "date": "2026-04-27",
+    "title": "08:30 국내 신제품 설명회(GB2 6층)"
+  },
+  {
+    "id": "BIO-29-0-pdf",
+    "company": "BIO",
+    "date": "2026-04-29",
+    "title": "0900 트랜드 전략회의(판교)"
+  },
+  {
+    "id": "BIO-29-1-pdf",
+    "company": "BIO",
+    "date": "2026-04-29",
+    "title": "1000 원료최적화회의(판교)"
+  },
+  {
+    "id": "NBT-29-1",
+    "company": "NBT",
+    "date": "2026-04-29",
+    "title": "14:00 생산협의회(이천)"
+  }
+];
