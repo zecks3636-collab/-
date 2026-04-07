@@ -747,15 +747,15 @@ body {
 .event {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 6px 3px 5px;
+    gap: 5px;
+    padding: 3px 7px;
     margin-bottom: 2px;
     border-radius: 6px;
     cursor: pointer;
-    border-left: 3px solid;
-    white-space: nowrap;        /* 줄바꿈 금지 */
-    overflow: hidden;           /* 최소 크기 이하 텍스트만 말줄임 */
-    font-size: 11px;            /* JS가 이 값을 기준으로 축소 */
+    border-left: none;          /* border-left 제거 */
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: 11px;
     line-height: 1.4;
     transition: filter 0.15s ease, box-shadow 0.15s ease;
 }
@@ -764,7 +764,20 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.10);
 }
 
-/* 회사 이니셜 배지 */
+/* 왼쪽 단색 원형 도트 — 회사 구분 */
+.event::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.event.Group::before { background: #0284c7; }
+.event.NBT::before   { background: #16a34a; }
+.event.BIO::before   { background: #ea580c; }
+
+/* 회사 이니셜 배지 (전체보기 시) */
 .e-badge {
     display: inline-flex;
     align-items: center;
@@ -772,7 +785,7 @@ body {
     width: 13px;
     height: 13px;
     border-radius: 3px;
-    font-size: 8px;             /* 배지 크기는 고정 */
+    font-size: 8px;
     font-weight: 900;
     flex-shrink: 0;
     letter-spacing: 0;
@@ -797,27 +810,15 @@ body {
     font-size: inherit;
     font-weight: 600;
     overflow: hidden;
-    text-overflow: ellipsis;    /* 최소 폰트에서도 잘리면 말줄임 */
+    text-overflow: ellipsis;
     flex: 1;
     min-width: 0;
 }
 
-/* 회사별 색상 */
-.event.Group {
-    background: #eff8ff;
-    color: #0c5a8e;
-    border-left-color: #0284c7;
-}
-.event.NBT {
-    background: #f0fdf4;
-    color: #155724;
-    border-left-color: #16a34a;
-}
-.event.BIO {
-    background: #fff7ed;
-    color: #7c2d12;
-    border-left-color: #ea580c;
-}
+/* 회사별 배경·텍스트 색상 */
+.event.Group { background: #eff8ff; color: #0c5a8e; }
+.event.NBT   { background: #f0fdf4; color: #155724; }
+.event.BIO   { background: #fff7ed; color: #7c2d12; }
 .event.hidden { display: none !important; }
 
 /* 캘린더 패널 & 셀 스크롤바 */
