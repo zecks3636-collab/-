@@ -188,6 +188,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const eventDiv = document.createElement('div');
                 eventDiv.className = `event ${evt.company}`;
+                // 커스텀 색상 적용
+                const customColor = eventColorMap[evt.id];
+                if (customColor) {
+                    eventDiv.style.background = customColor.bg;
+                    eventDiv.style.color = customColor.text;
+                }
 
                 let timeStr = "";
                 let contentStr = evt.title;
@@ -626,6 +632,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== DETAIL / EDIT / DELETE MODAL ==========
     let currentEventId = null; // tracks the event being viewed/edited
 
+    // ── 이벤트 배경색 저장소 ──
+    const EVENT_COLOR_KEY = 'eventCustomColors';
+    let eventColorMap = {};
+    try { eventColorMap = JSON.parse(localStorage.getItem(EVENT_COLOR_KEY)) || {}; } catch { eventColorMap = {}; }
+
+    function saveEventColors() {
+        localStorage.setItem(EVENT_COLOR_KEY, JSON.stringify(eventColorMap));
+    }
+
+    // 배경 밝기에 따라 텍스트색 자동 결정 (WCAG 대비)
+    function contrastColor(hex) {
+        const r = parseInt(hex.slice(1,3),16);
+        const g = parseInt(hex.slice(3,5),16);
+        const b = parseInt(hex.slice(5,7),16);
+        const lum = 0.299*r + 0.587*g + 0.114*b;
+        return lum > 145 ? '#1e293b' : '#ffffff';
+    }
+
+    function applyEventColorToDiv(div, colorInfo) {
+        if (!colorInfo) { div.style.background = ''; div.style.color = ''; return; }
+        div.style.background = colorInfo.bg;
+        div.style.color = colorInfo.text;
+    }
+
+    function updateColorPreview(bg, titleText) {
+        const preview = document.getElementById('eventColorPreview');
+        const text = contrastColor(bg);
+        preview.style.background = bg;
+        preview.style.color = text;
+        preview.textContent = titleText || '미리보기';
+    }
+
+    function syncColorPickerUI(colorInfo, defaultBg) {
+        const picker = document.getElementById('eventColorPicker');
+        const presets = document.querySelectorAll('.preset-swatch');
+        const activeBg = colorInfo ? colorInfo.bg : defaultBg;
+        picker.value = activeBg;
+        presets.forEach(s => {
+            s.classList.toggle('selected', s.dataset.color === activeBg);
+        });
+    }
+
+    // 기본 배경색 (회사별)
+    const DEFAULT_EVENT_BG = { Group: '#eff8ff', NBT: '#f0fdf4', BIO: '#fff7ed' };
+
     function openEventModal(evt) {
         currentEventId = evt.id;
         modalCompany.className = `company-badge ${evt.company}`;
@@ -634,6 +685,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modalDate').textContent = evt.date;
         document.getElementById('modalViewMode').style.display = '';
         document.getElementById('modalEditMode').style.display = 'none';
+
+        // 색상 UI 초기화
+        const colorInfo = eventColorMap[evt.id];
+        const defaultBg = DEFAULT_EVENT_BG[evt.company] || '#f1f5f9';
+        syncColorPickerUI(colorInfo, defaultBg);
+        updateColorPreview(colorInfo ? colorInfo.bg : defaultBg, evt.title);
+
         eventModal.classList.add('active');
     }
 
@@ -644,6 +702,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     closeModal.addEventListener('click', closeEventModal);
     eventModal.addEventListener('click', (e) => { if (e.target === eventModal) closeEventModal(); });
+
+    // ── 색상 피커 이벤트 ──
+    function applyColorSelection(bg) {
+        if (!currentEventId) return;
+        const text = contrastColor(bg);
+        eventColorMap[currentEventId] = { bg, text };
+        saveEventColors();
+        syncColorPickerUI({ bg, text }, bg);
+        const evt = allEvents.find(e => e.id === currentEventId);
+        updateColorPreview(bg, evt ? evt.title : '미리보기');
+        renderCalendar(); // 캘린더 즉시 반영
+    }
+
+    document.getElementById('eventColorPicker').addEventListener('input', e => {
+        applyColorSelection(e.target.value);
+    });
+
+    document.getElementById('eventColorPresets').addEventListener('click', e => {
+        const swatch = e.target.closest('.preset-swatch');
+        if (!swatch) return;
+        applyColorSelection(swatch.dataset.color);
+    });
+
+    document.getElementById('eventColorResetBtn').addEventListener('click', () => {
+        if (!currentEventId) return;
+        delete eventColorMap[currentEventId];
+        saveEventColors();
+        const evt = allEvents.find(e => e.id === currentEventId);
+        const defaultBg = evt ? (DEFAULT_EVENT_BG[evt.company] || '#f1f5f9') : '#f1f5f9';
+        syncColorPickerUI(null, defaultBg);
+        updateColorPreview(defaultBg, evt ? evt.title : '미리보기');
+        renderCalendar();
+    });
 
     // Edit button → switch to edit mode
     document.getElementById('editEventBtn').addEventListener('click', () => {

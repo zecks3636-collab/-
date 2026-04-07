@@ -483,7 +483,31 @@
                 <div class="modal-body">
                     <p><strong>날짜:</strong> <span id="modalDate"></span></p>
                 </div>
-                <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+                <!-- 배경색 설정 -->
+                <div class="event-color-section">
+                    <div class="event-color-label">배경색 변경</div>
+                    <div class="event-color-row">
+                        <div class="event-color-presets" id="eventColorPresets">
+                            <button class="preset-swatch" data-color="#eff8ff" title="기본 파랑" style="background:#eff8ff;border:2px solid #bfdbfe;"></button>
+                            <button class="preset-swatch" data-color="#f0fdf4" title="기본 초록" style="background:#f0fdf4;border:2px solid #bbf7d0;"></button>
+                            <button class="preset-swatch" data-color="#fff7ed" title="기본 주황" style="background:#fff7ed;border:2px solid #fed7aa;"></button>
+                            <button class="preset-swatch" data-color="#1e293b" title="다크 네이비" style="background:#1e293b;border:2px solid #475569;"></button>
+                            <button class="preset-swatch" data-color="#7c3aed" title="보라" style="background:#7c3aed;border:2px solid #a78bfa;"></button>
+                            <button class="preset-swatch" data-color="#db2777" title="핑크" style="background:#db2777;border:2px solid #f9a8d4;"></button>
+                            <button class="preset-swatch" data-color="#0f766e" title="틸" style="background:#0f766e;border:2px solid #5eead4;"></button>
+                            <button class="preset-swatch" data-color="#b45309" title="황갈색" style="background:#b45309;border:2px solid #fde68a;"></button>
+                            <button class="preset-swatch" data-color="#dc2626" title="빨강" style="background:#dc2626;border:2px solid #fca5a5;"></button>
+                            <button class="preset-swatch" data-color="#111827" title="블랙" style="background:#111827;border:2px solid #6b7280;"></button>
+                        </div>
+                        <label class="event-color-custom-wrap" title="직접 선택">
+                            <input type="color" id="eventColorPicker" class="event-color-input">
+                            <span class="event-color-custom-label">직접</span>
+                        </label>
+                        <button id="eventColorResetBtn" class="event-color-reset-btn" title="기본색으로 복원">초기화</button>
+                    </div>
+                    <div id="eventColorPreview" class="event-color-preview">미리보기</div>
+                </div>
+                <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
                     <button id="editEventBtn" class="save-btn" style="background:linear-gradient(135deg,#10b981,#059669);font-size:13px;padding:9px 18px;">✏️ 수정</button>
                     <button id="deleteEventBtn" class="save-btn" style="background:linear-gradient(135deg,#f43f5e,#e11d48);font-size:13px;padding:9px 18px;">🗑️ 삭제</button>
                 </div>
