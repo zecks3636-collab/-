@@ -184,9 +184,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const compBadge = showComp ? `<span class="e-badge e-badge-${evt.company}">${compInitial}</span>` : '';
 
                 if (timeStr) {
-                    eventDiv.innerHTML = `${compBadge}<span class="e-time">${timeStr}</span><span class="e-title">${contentStr}</span>`;
+                    // 시간 있는 경우: 위 행(배지+시간) + 아래 행(제목)
+                    eventDiv.innerHTML =
+                        `<div class="e-meta">${compBadge}<span class="e-time">${timeStr}</span></div>` +
+                        `<div class="e-title">${contentStr}</div>`;
                 } else {
-                    eventDiv.innerHTML = `${compBadge}<span class="e-title">${contentStr}</span>`;
+                    // 시간 없는 경우: 배지+제목 한 줄
+                    eventDiv.innerHTML =
+                        `<div class="e-meta">${compBadge}<span class="e-title">${contentStr}</span></div>`;
                 }
                 eventDiv.title = `[${evt.company}] ${timeStr ? timeStr + ' ' : ''}${contentStr}`;
 
