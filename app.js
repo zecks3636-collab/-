@@ -1385,8 +1385,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 월 레이블
         const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-        const monthLabelEl = document.getElementById('requestMonthLabel');
-        if (monthLabelEl) monthLabelEl.textContent = `${currentYear}년 ${currentMonth + 1}월`;
 
         // PDF 이미지 업로드 토글 버튼 상태
         const toggleBtn = document.getElementById('requestViewToggleBtn');
