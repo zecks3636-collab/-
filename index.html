@@ -415,6 +415,7 @@
                             <option value="반차(오후)">반차(오후)</option>
                             <option value="반반차(오전)">반반차(오전)</option>
                             <option value="반반차(오후)">반반차(오후)</option>
+                            <option value="하기휴가">하기휴가</option>
                             <option value="교육">교육</option>
                             <option value="특별휴가">특별휴가</option>
                             <option value="병가">병가</option>
@@ -424,6 +425,26 @@
                         <label class="leave-form-label">비고 (선택)</label>
                         <input type="text" id="leaveNoteInput" class="form-input" placeholder="메모">
                     </div>
+                </div>
+                <!-- 기간 입력 토글 -->
+                <div class="leave-period-toggle-row">
+                    <label class="leave-period-toggle-label">
+                        <input type="checkbox" id="leavePeriodToggle">
+                        <span class="leave-period-toggle-text">기간으로 입력 (시작일 ~ 종료일)</span>
+                    </label>
+                </div>
+                <div id="leavePeriodSection" style="display:none;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+                        <div>
+                            <label class="leave-form-label">시작일</label>
+                            <input type="date" id="leaveStartDate" class="form-input">
+                        </div>
+                        <div>
+                            <label class="leave-form-label">종료일</label>
+                            <input type="date" id="leaveEndDate" class="form-input">
+                        </div>
+                    </div>
+                    <p id="leavePeriodPreview" class="leave-period-preview"></p>
                 </div>
                 <div style="margin-top:14px;text-align:right;">
                     <button id="leaveAddBtn" class="save-btn" style="font-size:13px;padding:9px 22px;">➕ 추가</button>

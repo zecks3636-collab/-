@@ -1230,6 +1230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         '반차(오후)': 'ltype-반차오후',
         '반반차(오전)':'ltype-반반차오전',
         '반반차(오후)':'ltype-반반차오후',
+        '하기휴가':   'ltype-하기휴가',
         '교육':       'ltype-교육',
         '특별휴가':   'ltype-특별휴가',
         '병가':       'ltype-병가'
@@ -1427,11 +1428,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         const name  = document.getElementById('leaveNameInput').value.trim();
         const type  = document.getElementById('leaveTypeInput').value;
         const note  = document.getElementById('leaveNoteInput').value.trim();
+        const isPeriod = document.getElementById('leavePeriodToggle').checked;
 
         if (!team) { alert('팀을 입력해주세요.'); document.getElementById('leaveTeamInput').focus(); return; }
         if (!name) { alert('이름을 입력해주세요.'); document.getElementById('leaveNameInput').focus(); return; }
-        if (!leaveModalDate) { alert('캘린더에서 날짜를 클릭해 선택해주세요.'); return; }
 
+        // 기간 모드
+        if (isPeriod) {
+            const s = document.getElementById('leaveStartDate').value;
+            const e = document.getElementById('leaveEndDate').value;
+            if (!s || !e) { alert('시작일과 종료일을 모두 입력해주세요.'); return; }
+            const dates = getDateRange(s, e);
+            if (dates.length === 0) { alert('유효한 기간이 없습니다. (주말만 선택되었거나 종료일이 시작일보다 빠릅니다.)'); return; }
+            if (!confirm(`${s} ~ ${e} 기간 중 평일 ${dates.length}일 모두 등록하시겠습니까?`)) return;
+
+            const btn = document.getElementById('leaveAddBtn');
+            btn.textContent = '저장 중...'; btn.disabled = true;
+            try {
+                const payloads = dates.map(date => ({
+                    id: crypto.randomUUID ? crypto.randomUUID() : `leave-${Date.now()}-${Math.random().toString(36).substr(2,4)}`,
+                    date, team, rank, employee_name: name, leave_type: type, note: note || null
+                }));
+                if (sb) {
+                    const { error } = await sb.from('leave_plans').insert(payloads);
+                    if (error) throw error;
+                }
+                payloads.forEach(p => allLeaves.push(p));
+                allLeaves.sort((a, b) => a.date.localeCompare(b.date));
+                renderLeaveCalendar();
+                renderLeaveModalEntries(leaveModalDate);
+                // 폼 초기화
+                document.getElementById('leaveTeamInput').value = '';
+                document.getElementById('leaveNameInput').value = '';
+                document.getElementById('leaveNoteInput').value = '';
+                document.getElementById('leavePeriodToggle').checked = false;
+                document.getElementById('leavePeriodSection').style.display = 'none';
+                alert(`✅ ${dates.length}일 등록 완료`);
+            } catch(err) {
+                console.error(err); alert('저장 오류: ' + err.message);
+            } finally {
+                btn.textContent = '➕ 추가'; btn.disabled = false;
+            }
+            return;
+        }
+
+        // 단일 날짜 모드
+        if (!leaveModalDate) { alert('캘린더에서 날짜를 클릭해 선택해주세요.'); return; }
         const payload = {
             date: leaveModalDate,
             team, rank,
@@ -1474,6 +1516,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     document.getElementById('leaveAddBtn').addEventListener('click', submitLeaveAdd);
+
+    // ── 기간 입력 토글 ──
+    const leavePeriodToggle  = document.getElementById('leavePeriodToggle');
+    const leavePeriodSection = document.getElementById('leavePeriodSection');
+    const leaveStartDate     = document.getElementById('leaveStartDate');
+    const leaveEndDate       = document.getElementById('leaveEndDate');
+    const leavePeriodPreview = document.getElementById('leavePeriodPreview');
+
+    leavePeriodToggle.addEventListener('change', () => {
+        leavePeriodSection.style.display = leavePeriodToggle.checked ? '' : 'none';
+        if (leavePeriodToggle.checked && leaveModalDate) {
+            leaveStartDate.value = leaveModalDate;
+            leaveEndDate.value   = leaveModalDate;
+            updatePeriodPreview();
+        }
+    });
+
+    function updatePeriodPreview() {
+        const s = leaveStartDate.value, e = leaveEndDate.value;
+        if (!s || !e) { leavePeriodPreview.textContent = ''; return; }
+        const days = getDateRange(s, e);
+        leavePeriodPreview.textContent =
+            days.length > 0
+            ? `📅 ${s} ~ ${e} (주말 제외 ${days.length}일 등록 예정)`
+            : '⚠️ 종료일이 시작일보다 빠릅니다.';
+    }
+
+    leaveStartDate.addEventListener('change', updatePeriodPreview);
+    leaveEndDate.addEventListener('change', updatePeriodPreview);
+
+    // 시작~종료일 사이 평일 날짜 배열 반환
+    function getDateRange(startStr, endStr) {
+        const result = [];
+        const cur = new Date(startStr + 'T00:00:00');
+        const end = new Date(endStr   + 'T00:00:00');
+        if (cur > end) return result;
+        while (cur <= end) {
+            const dow = cur.getDay();
+            if (dow !== 0 && dow !== 6) { // 주말 제외
+                result.push(cur.toISOString().slice(0, 10));
+            }
+            cur.setDate(cur.getDate() + 1);
+        }
+        return result;
+    }
 
     // Enter 키로 추가 지원 (이름·비고 입력란)
     ['leaveNameInput', 'leaveNoteInput'].forEach(id => {
