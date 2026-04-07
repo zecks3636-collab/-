@@ -120,30 +120,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dayDiv = document.createElement('div');
             dayDiv.className = 'cal-day';
 
-            const dateSpan = document.createElement('span');
-            dateSpan.className = 'date-num';
-            
-            const isSunday = (firstDayIndex + day - 1) % 7 === 0;
+            const isSunday   = (firstDayIndex + day - 1) % 7 === 0;
             const isSaturday = (firstDayIndex + day - 1) % 7 === 6;
             const holidayName = getHolidayName(currentYear, currentMonth + 1, day);
-            
-            if (isSunday || holidayName) dateSpan.classList.add('sun');
-            if (isSaturday) dateSpan.classList.add('sat');
+            const isToday = currentYear === today.getFullYear() &&
+                            currentMonth === today.getMonth() &&
+                            day === today.getDate();
+
             if (holidayName) dayDiv.classList.add('holiday-day');
             if (isSaturday) dayDiv.classList.add('saturday-day');
-            
+            if (isToday)    dayDiv.classList.add('today-day');
+
+            // 날짜 헤더 행
+            const dateRow = document.createElement('div');
+            dateRow.className = 'cal-date-row';
+
+            const dateSpan = document.createElement('span');
+            dateSpan.className = 'date-num';
+            if (isSunday || holidayName) dateSpan.classList.add('sun');
+            if (isSaturday) dateSpan.classList.add('sat');
+            if (isToday)    dateSpan.classList.add('today-num');
             dateSpan.textContent = day;
+            dateRow.appendChild(dateSpan);
+
             if (holidayName) {
                 const hl = document.createElement('span');
+                hl.className = 'holiday-label';
                 hl.textContent = holidayName;
-                hl.style.fontSize = '10px';
-                hl.style.marginLeft = '5px';
-                hl.style.fontWeight = '600';
-                hl.style.opacity = '0.85';
-                dateSpan.appendChild(hl);
+                dateRow.appendChild(hl);
             }
-            
-            dayDiv.appendChild(dateSpan);
+
+            dayDiv.appendChild(dateRow);
 
             const dayString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
@@ -173,14 +180,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 const showComp = currentFilter === 'all';
-                const compHtml = showComp ? `<span class="e-comp">[${evt.company}]</span>` : '';
+                const compInitial = evt.company === 'Group' ? 'G' : evt.company === 'NBT' ? 'N' : 'B';
+                const compBadge = showComp ? `<span class="e-badge e-badge-${evt.company}">${compInitial}</span>` : '';
 
                 if (timeStr) {
-                    eventDiv.innerHTML = `${compHtml}<span class="e-time">${timeStr}</span><span class="e-title">${contentStr}</span>`;
+                    eventDiv.innerHTML = `${compBadge}<span class="e-time">${timeStr}</span><span class="e-title">${contentStr}</span>`;
                 } else {
-                    eventDiv.innerHTML = `${compHtml}<span class="e-title">${contentStr}</span>`;
+                    eventDiv.innerHTML = `${compBadge}<span class="e-title">${contentStr}</span>`;
                 }
-                eventDiv.title = `${showComp ? '[' + evt.company + '] ' : ''}${timeStr ? timeStr + ' ' : ''}${contentStr}`;
+                eventDiv.title = `[${evt.company}] ${timeStr ? timeStr + ' ' : ''}${contentStr}`;
 
                 eventDiv.addEventListener('click', () => openEventModal(evt));
 
