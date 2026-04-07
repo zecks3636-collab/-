@@ -551,10 +551,11 @@
             </div>
             <div class="modal-body review-table-container">
                 <table class="review-table" id="reviewTable">
-                    <thead>
+                    <thead id="reviewTableHead">
                         <tr>
-                            <th style="width: 25%">날짜 (YYYY-MM-DD)</th>
-                            <th style="width: 65%">일정 상세 (형식 자유)</th>
+                            <th style="width: 22%">날짜 (YYYY-MM-DD)</th>
+                            <th id="reviewColCat" style="width: 22%; display:none;">카테고리</th>
+                            <th id="reviewColTitle" style="width: 56%">일정 상세</th>
                             <th style="width: 10%">삭제</th>
                         </tr>
                     </thead>
@@ -584,9 +585,39 @@
             </div>
             <!-- Upload Panel -->
             <div id="panelUpload" class="modal-body" style="background:transparent;border:none;padding:0;">
-                <div class="upload-zone" id="uploadZone">
-                    <p>PDF 또는 엑셀 파일 드래그 드롭<br/><span>표 안에 담긴 일정 자동 파싱 업데이트</span></p>
-                    <input type="file" id="fileInput" accept=".pdf,.xls,.xlsx" style="display:none">
+                <!-- Step 1: 대상 선택 -->
+                <div class="upload-dest-section">
+                    <div class="upload-dest-label">① 업로드 대상 선택</div>
+                    <div class="upload-dest-grid">
+                        <button class="upload-dest-btn" data-dest="Group">
+                            <span class="dest-dot" style="background:#0284c7;"></span>
+                            <span class="dest-name">그룹 일정</span>
+                            <span class="dest-sub">Group</span>
+                        </button>
+                        <button class="upload-dest-btn" data-dest="NBT">
+                            <span class="dest-dot" style="background:#16a34a;"></span>
+                            <span class="dest-name">엔비티 일정</span>
+                            <span class="dest-sub">NBT</span>
+                        </button>
+                        <button class="upload-dest-btn" data-dest="BIO">
+                            <span class="dest-dot" style="background:#ea580c;"></span>
+                            <span class="dest-name">바이오 일정</span>
+                            <span class="dest-sub">BIO</span>
+                        </button>
+                        <button class="upload-dest-btn" data-dest="Request">
+                            <span class="dest-dot" style="background:#7c3aed;"></span>
+                            <span class="dest-name">요청자료 일정</span>
+                            <span class="dest-sub">Request</span>
+                        </button>
+                    </div>
+                </div>
+                <!-- Step 2: 파일 업로드 -->
+                <div class="upload-file-section" id="uploadFileSection" style="display:none;">
+                    <div class="upload-dest-label">② 파일 업로드</div>
+                    <div class="upload-zone" id="uploadZone">
+                        <p id="uploadZoneText">PDF 또는 엑셀 파일 드래그 드롭<br/><span>표 안에 담긴 일정 자동 파싱 업데이트</span></p>
+                        <input type="file" id="fileInput" accept=".pdf,.xls,.xlsx" style="display:none">
+                    </div>
                 </div>
             </div>
             <!-- Direct Input Panel -->

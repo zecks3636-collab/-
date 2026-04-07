@@ -845,69 +845,88 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeReviewModal.addEventListener('click', () => { reviewModal.classList.remove('active'); pendingUploadEvents = []; });
     reviewModal.addEventListener('click', (e) => { if (e.target === reviewModal) { reviewModal.classList.remove('active'); pendingUploadEvents = []; } });
 
-    // Settings modal open/close
-    openSettingsBtn.addEventListener('click', () => settingsModal.classList.add('active'));
+    // Settings modal close only (open은 upload 섹션에서 초기화와 함께 처리)
     closeSettingsModal.addEventListener('click', () => settingsModal.classList.remove('active'));
     settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) settingsModal.classList.remove('active'); });
 
     // Confirm review → save to Supabase
     confirmReviewBtn.addEventListener('click', async () => {
-        // Read edited values from the table
         const rows = reviewTableBody.querySelectorAll('tr');
-        const finalEvents = [];
-        rows.forEach(row => {
-            const dateInput = row.querySelector('.edit-date');
-            const titleInput = row.querySelector('.edit-title');
-            const compInput = row.querySelector('.edit-company');
-            if (dateInput && titleInput) {
-                finalEvents.push({
-                    id: (compInput ? compInput.value : 'Group') + '-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-                    company: compInput ? compInput.value : 'Group',
-                    date: dateInput.value,
-                    title: titleInput.value
-                });
-            }
-        });
+        const isRequest = (uploadDestination === 'Request');
 
-        if (finalEvents.length === 0) {
-            alert("반영할 일정이 없습니다.");
-            return;
-        }
-
-        confirmReviewBtn.textContent = '저장 중...';
-        confirmReviewBtn.disabled = true;
-
-        try {
-            // Upsert to Supabase (if connected)
-            if (sb) {
-                const { error } = await sb
-                    .from('schedules')
-                    .upsert(finalEvents, { onConflict: 'id' });
-                if (error) throw error;
-            }
-
-            // Merge locally too
-            const seen = new Set(allEvents.map(e => `${e.company}|${e.date}|${e.title}`));
-            let addedCount = 0;
-            finalEvents.forEach(ne => {
-                const key = `${ne.company}|${ne.date}|${ne.title}`;
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    allEvents.push(ne);
-                    addedCount++;
+        if (isRequest) {
+            // ── 요청자료 일정 저장 ──
+            const finalItems = [];
+            rows.forEach(row => {
+                const dateInput = row.querySelector('.edit-date');
+                const titleInput = row.querySelector('.edit-title');
+                const catSelect  = row.querySelector('.edit-category');
+                if (dateInput && titleInput && catSelect) {
+                    finalItems.push({
+                        id: crypto.randomUUID ? crypto.randomUUID() : `req-${Date.now()}-${Math.random().toString(36).substr(2,4)}`,
+                        date: dateInput.value,
+                        category: catSelect.value,
+                        title: titleInput.value,
+                        note: ''
+                    });
                 }
             });
-            allEvents.sort((a, b) => a.date.localeCompare(b.date));
+            if (finalItems.length === 0) { alert('반영할 일정이 없습니다.'); return; }
 
-            reviewModal.classList.remove('active');
-            update();
-            alert(`✅ ${addedCount}개의 새로운 일정이 Supabase 클라우드에 저장되었습니다.`);
-        } catch (err) {
-            console.error(err);
-            alert('Supabase 저장 오류: ' + err.message);
-        } finally {
-            confirmReviewBtn.textContent = '최종 캘린더 반영하기';
-            confirmReviewBtn.disabled = false;
+            confirmReviewBtn.textContent = '저장 중...'; confirmReviewBtn.disabled = true;
+            try {
+                if (sb) {
+                    const { error } = await sb.from('request_schedules').insert(finalItems);
+                    if (error) throw error;
+                }
+                finalItems.forEach(item => allRequests.push(item));
+                reviewModal.classList.remove('active');
+                if (panelRequest && panelRequest.style.display === 'flex') renderRequestCalendar();
+                alert(`✅ ${finalItems.length}건의 요청자료 일정이 저장되었습니다.`);
+            } catch (err) {
+                console.error(err); alert('저장 오류: ' + err.message);
+            } finally {
+                confirmReviewBtn.textContent = '최종 캘린더 반영하기'; confirmReviewBtn.disabled = false;
+            }
+        } else {
+            // ── 회사 일정 저장 (Group / NBT / BIO) ──
+            const finalEvents = [];
+            rows.forEach(row => {
+                const dateInput = row.querySelector('.edit-date');
+                const titleInput = row.querySelector('.edit-title');
+                const compInput  = row.querySelector('.edit-company');
+                if (dateInput && titleInput) {
+                    finalEvents.push({
+                        id: (compInput ? compInput.value : uploadDestination) + '-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
+                        company: compInput ? compInput.value : (uploadDestination || 'Group'),
+                        date: dateInput.value,
+                        title: titleInput.value
+                    });
+                }
+            });
+            if (finalEvents.length === 0) { alert('반영할 일정이 없습니다.'); return; }
+
+            confirmReviewBtn.textContent = '저장 중...'; confirmReviewBtn.disabled = true;
+            try {
+                if (sb) {
+                    const { error } = await sb.from('schedules').upsert(finalEvents, { onConflict: 'id' });
+                    if (error) throw error;
+                }
+                const seen = new Set(allEvents.map(e => `${e.company}|${e.date}|${e.title}`));
+                let addedCount = 0;
+                finalEvents.forEach(ne => {
+                    const key = `${ne.company}|${ne.date}|${ne.title}`;
+                    if (!seen.has(key)) { seen.add(key); allEvents.push(ne); addedCount++; }
+                });
+                allEvents.sort((a, b) => a.date.localeCompare(b.date));
+                reviewModal.classList.remove('active');
+                update();
+                alert(`✅ ${addedCount}개의 새로운 일정이 저장되었습니다.`);
+            } catch (err) {
+                console.error(err); alert('Supabase 저장 오류: ' + err.message);
+            } finally {
+                confirmReviewBtn.textContent = '최종 캘린더 반영하기'; confirmReviewBtn.disabled = false;
+            }
         }
     });
 
@@ -927,8 +946,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     update();
 
     // ========== FILE UPLOAD (Browser-only, no server!) ==========
+    let uploadDestination = null; // 'Group' | 'NBT' | 'BIO' | 'Request'
+
     const uploadZone = document.getElementById('uploadZone');
-    const fileInput = document.getElementById('fileInput');
+    const fileInput  = document.getElementById('fileInput');
+    const uploadFileSection = document.getElementById('uploadFileSection');
+
+    // 대상 선택 버튼
+    document.querySelectorAll('.upload-dest-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.upload-dest-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            uploadDestination = btn.dataset.dest;
+            uploadFileSection.style.display = '';
+            const dest = uploadDestination;
+            const label = dest === 'Group' ? '그룹 일정 (Group)' :
+                          dest === 'NBT'   ? '엔비티 일정 (NBT)' :
+                          dest === 'BIO'   ? '바이오 일정 (BIO)' : '요청자료 일정';
+            document.getElementById('uploadZoneText').innerHTML =
+                `<b style="color:#2563eb;">[${label}]</b> 대상으로 업로드<br/><span>PDF 또는 엑셀 파일을 드래그하거나 클릭하세요</span>`;
+        });
+    });
+
+    // 설정 모달 열릴 때마다 선택 초기화
+    document.getElementById('openSettingsBtn').addEventListener('click', () => {
+        uploadDestination = null;
+        document.querySelectorAll('.upload-dest-btn').forEach(b => b.classList.remove('selected'));
+        uploadFileSection.style.display = 'none';
+        settingsModal.classList.add('active');
+    });
 
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
@@ -940,29 +986,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     fileInput.addEventListener('change', (e) => {
         if (e.target.files.length) handleFile(e.target.files[0]);
+        fileInput.value = '';
     });
 
-    function getCompanyFromFilename(name) {
-        const upper = name.toUpperCase();
-        if (upper.includes('NBT')) return 'NBT';
-        if (upper.includes('BIO')) return 'BIO';
-        return 'Group';
-    }
-
     function handleFile(file) {
+        if (!uploadDestination) {
+            alert('먼저 업로드 대상을 선택해주세요.');
+            return;
+        }
         const name = file.name.toLowerCase();
         if (!name.endsWith('.pdf') && !name.endsWith('.xls') && !name.endsWith('.xlsx')) {
             alert('지원하지 않는 파일 형식입니다. (PDF 또는 엑셀 등록 가능)');
             return;
         }
-
         settingsModal.classList.remove('active');
-        const company = getCompanyFromFilename(file.name);
-
         if (name.endsWith('.xls') || name.endsWith('.xlsx')) {
-            parseExcelFile(file, company);
-        } else if (name.endsWith('.pdf')) {
-            parsePdfFile(file, company);
+            parseExcelFile(file, uploadDestination);
+        } else {
+            parsePdfFile(file, uploadDestination);
         }
     }
 
@@ -999,11 +1040,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     const eventText = String(eventCell).trim();
                                     if (eventText === '' || eventText.match(/^[\d.]+$/) || ['일','월','화','수','목','금','토'].includes(eventText)) break;
 
+                                    const ym = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
                                     newEvents.push({
                                         id: `${company}-${dateVal}-${offset}-xls`,
                                         company: company,
-                                        date: `2026-04-${String(dateVal).padStart(2,'0')}`,
-                                        title: eventText
+                                        date: `${ym}-${String(dateVal).padStart(2,'0')}`,
+                                        title: eventText,
+                                        category: '정기요청자료'
                                     });
                                 }
                             }
@@ -1052,6 +1095,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const rowTexts = rowMap[y].sort((a, b) => a.x - b.x).map(i => i.text.trim()).filter(t => t.length > 0);
                     const fullRow = rowTexts.join(' ');
 
+                    const ym = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
                     // Check if line starts with a day number (1-31)
                     const dayMatch = fullRow.match(/^(\d{1,2})\b/);
                     if (dayMatch) {
@@ -1064,8 +1108,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 newEvents.push({
                                     id: `${company}-${d}-0-pdf`,
                                     company: company,
-                                    date: `2026-04-${String(d).padStart(2,'0')}`,
-                                    title: rest
+                                    date: `${ym}-${String(d).padStart(2,'0')}`,
+                                    title: rest,
+                                    category: '정기요청자료'
                                 });
                             }
                         }
@@ -1074,8 +1119,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         newEvents.push({
                             id: `${company}-${currentDate}-${newEvents.length}-pdf`,
                             company: company,
-                            date: `2026-04-${String(currentDate).padStart(2,'0')}`,
-                            title: fullRow
+                            date: `${ym}-${String(currentDate).padStart(2,'0')}`,
+                            title: fullRow,
+                            category: '정기요청자료'
                         });
                     }
                 });
@@ -1093,49 +1139,70 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========== REVIEW MODAL ==========
-    function showReviewModal(events, company) {
+    const REQUEST_CATEGORIES = ['통합회의및확대회의관련', '관계사경영회의관련', '정기요청자료'];
+
+    function showReviewModal(events, dest) {
         pendingUploadEvents = events;
         reviewTableBody.innerHTML = '';
 
-        events.forEach((evt, idx) => {
+        const isRequest = dest === 'Request';
+        // 카테고리 컬럼 표시/숨김
+        document.getElementById('reviewColCat').style.display   = isRequest ? '' : 'none';
+        document.getElementById('reviewColTitle').style.width   = isRequest ? '44%' : '56%';
+
+        events.forEach((evt) => {
             const tr = document.createElement('tr');
 
+            // 날짜
             const tdDate = document.createElement('td');
             const inputDate = document.createElement('input');
-            inputDate.type = 'text';
-            inputDate.value = evt.date;
-            inputDate.className = 'edit-date';
+            inputDate.type = 'text'; inputDate.value = evt.date; inputDate.className = 'edit-date';
             tdDate.appendChild(inputDate);
 
+            // 카테고리 (Request 전용)
+            if (isRequest) {
+                const tdCat = document.createElement('td');
+                const selCat = document.createElement('select');
+                selCat.className = 'edit-category';
+                selCat.style.cssText = 'width:100%;padding:4px 6px;border:1px solid #e2e8f0;border-radius:6px;font-size:11.5px;';
+                REQUEST_CATEGORIES.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat; opt.textContent = cat;
+                    if (evt.category === cat) opt.selected = true;
+                    selCat.appendChild(opt);
+                });
+                tdCat.appendChild(selCat);
+                tr.appendChild(tdDate);
+                tr.appendChild(tdCat);
+            } else {
+                tr.appendChild(tdDate);
+            }
+
+            // 제목
             const tdTitle = document.createElement('td');
             const inputTitle = document.createElement('input');
-            inputTitle.type = 'text';
-            inputTitle.value = evt.title;
-            inputTitle.className = 'edit-title';
-            tdTitle.appendChild(inputTitle);
-
-            // Hidden company field
+            inputTitle.type = 'text'; inputTitle.value = evt.title; inputTitle.className = 'edit-title';
+            // 숨은 필드: company (schedules용)
             const hiddenComp = document.createElement('input');
-            hiddenComp.type = 'hidden';
-            hiddenComp.value = evt.company;
-            hiddenComp.className = 'edit-company';
+            hiddenComp.type = 'hidden'; hiddenComp.value = evt.company || dest; hiddenComp.className = 'edit-company';
+            tdTitle.appendChild(inputTitle);
             tdTitle.appendChild(hiddenComp);
+            tr.appendChild(tdTitle);
 
+            // 삭제
             const tdDel = document.createElement('td');
             const btnDel = document.createElement('button');
-            btnDel.innerHTML = '&times;';
-            btnDel.className = 'del-row-btn';
+            btnDel.innerHTML = '&times;'; btnDel.className = 'del-row-btn';
             btnDel.onclick = () => tr.remove();
             tdDel.style.textAlign = 'center';
             tdDel.appendChild(btnDel);
-
-            tr.appendChild(tdDate);
-            tr.appendChild(tdTitle);
             tr.appendChild(tdDel);
+
             reviewTableBody.appendChild(tr);
         });
 
-        document.getElementById('reviewTitle').textContent = `추출된 일정 검토 (${company}) — ${events.length}건`;
+        const destLabel = dest === 'Group' ? '그룹' : dest === 'NBT' ? '엔비티' : dest === 'BIO' ? '바이오' : '요청자료';
+        document.getElementById('reviewTitle').textContent = `추출된 일정 검토 [${destLabel}] — ${events.length}건`;
         reviewModal.classList.add('active');
     }
 
