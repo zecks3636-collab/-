@@ -729,27 +729,25 @@ body {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.10), 0 2px 8px rgba(59,130,246,0.12);
 }
 
-/* ── Event Chips ── */
+/* ── Event Chips (단일 행, 폰트 자동 축소) ── */
 .event {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 4px;
     padding: 3px 6px 3px 5px;
     margin-bottom: 2px;
     border-radius: 6px;
     cursor: pointer;
     border-left: 3px solid;
+    white-space: nowrap;        /* 줄바꿈 금지 */
+    overflow: hidden;           /* 최소 크기 이하 텍스트만 말줄임 */
+    font-size: 11px;            /* JS가 이 값을 기준으로 축소 */
+    line-height: 1.4;
     transition: filter 0.15s ease, box-shadow 0.15s ease;
-    min-width: 0;
 }
 .event:hover {
     filter: brightness(0.92);
     box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-}
-
-/* 배지 + 시간 행 — 한 줄 레이아웃 */
-.e-meta {
-    display: contents; /* 자식을 .event flex 안으로 직접 배치 */
 }
 
 /* 회사 이니셜 배지 */
@@ -760,12 +758,11 @@ body {
     width: 13px;
     height: 13px;
     border-radius: 3px;
-    font-size: 8px;
+    font-size: 8px;             /* 배지 크기는 고정 */
     font-weight: 900;
     flex-shrink: 0;
     letter-spacing: 0;
     line-height: 1;
-    align-self: center;
 }
 .e-badge-Group { background: #0284c7; color: #fff; }
 .e-badge-NBT   { background: #16a34a; color: #fff; }
@@ -774,23 +771,21 @@ body {
 /* 시간 텍스트 */
 .e-time {
     font-weight: 700;
-    font-size: 10px;
+    font-size: inherit;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.3px;
     opacity: 0.70;
     flex-shrink: 0;
-    white-space: nowrap;
 }
 
 /* 일정 제목 */
 .e-title {
-    font-size: 11px;
+    font-size: inherit;
     font-weight: 600;
-    line-height: 1.35;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;    /* 최소 폰트에서도 잘리면 말줄임 */
     flex: 1;
+    min-width: 0;
 }
 
 /* 회사별 색상 */

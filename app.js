@@ -183,15 +183,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const compInitial = evt.company === 'Group' ? 'G' : evt.company === 'NBT' ? 'N' : 'B';
                 const compBadge = showComp ? `<span class="e-badge e-badge-${evt.company}">${compInitial}</span>` : '';
 
+                // 항상 한 줄: 배지 + 시간(있으면) + 제목
                 if (timeStr) {
-                    // 시간 있는 경우: 위 행(배지+시간) + 아래 행(제목)
-                    eventDiv.innerHTML =
-                        `<div class="e-meta">${compBadge}<span class="e-time">${timeStr}</span></div>` +
-                        `<div class="e-title">${contentStr}</div>`;
+                    eventDiv.innerHTML = `${compBadge}<span class="e-time">${timeStr}</span><span class="e-title">${contentStr}</span>`;
                 } else {
-                    // 시간 없는 경우: 배지+제목 한 줄
-                    eventDiv.innerHTML =
-                        `<div class="e-meta">${compBadge}<span class="e-title">${contentStr}</span></div>`;
+                    eventDiv.innerHTML = `${compBadge}<span class="e-title">${contentStr}</span>`;
                 }
                 eventDiv.title = `[${evt.company}] ${timeStr ? timeStr + ' ' : ''}${contentStr}`;
 
@@ -202,7 +198,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             calendarGrid.appendChild(dayDiv);
         }
+
+        // 렌더 후 폰트 자동 축소 (한 줄 보장)
+        fitEventText();
     }
+
+    // 이벤트 칩 글씨 자동 축소 — 한 줄에 맞도록 font-size 비율 계산
+    function fitEventText() {
+        requestAnimationFrame(() => {
+            const BASE_SIZE = 11; // px (CSS 기본값과 맞춰야 함)
+            const MIN_SIZE  = 7.5;
+            document.querySelectorAll('#calendarGrid .event').forEach(chip => {
+                chip.style.fontSize = ''; // 초기화
+                const avail = chip.clientWidth;
+                if (!avail || chip.scrollWidth <= avail) return; // 이미 맞으면 패스
+                const ratio = avail / chip.scrollWidth;
+                const fitted = Math.max(MIN_SIZE, BASE_SIZE * ratio);
+                chip.style.fontSize = fitted.toFixed(1) + 'px';
+            });
+        });
+    }
+
+    // 창 크기 변경 시 재계산 (debounce)
+    let _fitTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(_fitTimer);
+        _fitTimer = setTimeout(fitEventText, 120);
+    });
 
     function renderUpcoming() {
         upcomingList.innerHTML = '';
