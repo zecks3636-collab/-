@@ -1028,6 +1028,21 @@ body {
     border-color: #cbd5e1;
 }
 
+/* 패널 타이틀 행 */
+.panel-title-row {
+    display: flex;
+    align-items: center;
+    padding: 0 4px 10px;
+    flex-shrink: 0;
+}
+.panel-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.3px;
+    margin: 0;
+}
+
 /* ===== 연차계획 캘린더 ===== */
 .leave-grid {
     grid-auto-rows: 1fr;
