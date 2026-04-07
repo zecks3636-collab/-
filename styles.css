@@ -636,8 +636,7 @@ body {
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    /* 행 높이: 콘텐츠에 맞게 자동 확장, 최소 120px */
-    grid-auto-rows: minmax(120px, auto);
+    grid-auto-rows: 175px;   /* 고정 행 높이 → 셀 내부 스크롤 */
     gap: 8px;
 }
 
@@ -648,7 +647,9 @@ body {
     border: 1px solid #e9eef5;
     display: flex;
     flex-direction: column;
-    /* overflow 제거: 셀이 콘텐츠 높이만큼 자동 확장 */
+    overflow-y: auto;                    /* 셀 내부 스크롤 */
+    -webkit-overflow-scrolling: touch;   /* 모바일 모멘텀 스크롤 */
+    overscroll-behavior: contain;        /* 부모 스크롤 전파 방지 */
     transition: box-shadow 0.18s ease, border-color 0.18s ease;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
@@ -730,7 +731,7 @@ body {
     margin-bottom: 3px;
     border-radius: 8px;
     cursor: pointer;
-    overflow: hidden;
+    /* overflow 제거 → 텍스트 오른쪽 잘림 없음 */
     transition: filter 0.15s ease, box-shadow 0.15s ease;
     border-left: 3px solid;
 }
@@ -742,9 +743,10 @@ body {
 /* 배지 + 시간 행 */
 .e-meta {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 4px;
     line-height: 1;
+    min-width: 0;   /* flex shrink 허용 */
 }
 
 /* 회사 이니셜 배지 */
@@ -780,13 +782,11 @@ body {
     font-size: 11.5px;
     font-weight: 600;
     line-height: 1.4;
-    word-break: keep-all;
-    overflow-wrap: break-word;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    word-break: break-word;      /* 오른쪽 잘림 없이 자동 줄바꿈 */
+    overflow-wrap: anywhere;     /* 긴 단어도 셀 너비 안에서 줄바꿈 */
+    min-width: 0;
     letter-spacing: -0.1px;
+    flex: 1;
 }
 
 /* 회사별 색상 */
@@ -807,10 +807,15 @@ body {
 }
 .event.hidden { display: none !important; }
 
-/* 캘린더 패널 스크롤바 */
+/* 캘린더 패널 & 셀 스크롤바 */
 .calendar-wrapper::-webkit-scrollbar { width: 6px; }
 .calendar-wrapper::-webkit-scrollbar-track { background: transparent; }
 .calendar-wrapper::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 6px; }
+
+.cal-day::-webkit-scrollbar { width: 3px; }
+.cal-day::-webkit-scrollbar-track { background: transparent; }
+.cal-day::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+.cal-day::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
 
 /* Modal Detail (Polished) */
 .modal-overlay {
@@ -1025,11 +1030,16 @@ body {
 
 /* ===== 연차계획 캘린더 ===== */
 .leave-grid {
-    grid-auto-rows: minmax(90px, auto);
+    grid-auto-rows: 150px;
 }
 .leave-cal-day {
     cursor: pointer;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
+.leave-cal-day::-webkit-scrollbar { width: 3px; }
+.leave-cal-day::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
 .leave-cal-day:hover {
     background: rgba(255,255,255,0.92);
     box-shadow: 0 2px 12px rgba(59,130,246,0.08);
