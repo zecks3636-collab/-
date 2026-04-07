@@ -64,6 +64,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     allEvents.sort((a, b) => a.date.localeCompare(b.date));
 
+    // ========== BADGE COLOR SETTINGS ==========
+    const DEFAULT_COLORS = { Group: '#0284c7', NBT: '#16a34a', BIO: '#ea580c' };
+    const COLOR_STORAGE_KEY = 'dashboardBadgeColors';
+
+    function loadBadgeColors() {
+        try { return JSON.parse(localStorage.getItem(COLOR_STORAGE_KEY)) || {}; }
+        catch { return {}; }
+    }
+
+    function applyBadgeColors(colors) {
+        const root = document.documentElement;
+        // CSS 변수 업데이트 (dot, upcoming-item, company-badge 등에 반영)
+        if (colors.Group) {
+            root.style.setProperty('--color-group', colors.Group);
+            // e-badge 동적 스타일
+            document.getElementById('_badgeStyleEl') || (() => {
+                const s = document.createElement('style');
+                s.id = '_badgeStyleEl';
+                document.head.appendChild(s);
+            })();
+        }
+        if (colors.NBT) root.style.setProperty('--color-nbt', colors.NBT);
+        if (colors.BIO) root.style.setProperty('--color-bio', colors.BIO);
+
+        // e-badge 직접 오버라이드 (인라인 style 태그)
+        let styleEl = document.getElementById('_badgeStyleEl');
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = '_badgeStyleEl';
+            document.head.appendChild(styleEl);
+        }
+        const g = colors.Group || DEFAULT_COLORS.Group;
+        const n = colors.NBT   || DEFAULT_COLORS.NBT;
+        const b = colors.BIO   || DEFAULT_COLORS.BIO;
+        styleEl.textContent = `
+            .e-badge-Group { background: ${g} !important; }
+            .e-badge-NBT   { background: ${n} !important; }
+            .e-badge-BIO   { background: ${b} !important; }
+            .group-dot { background: ${g} !important; }
+            .nbt-dot   { background: ${n} !important; }
+            .bio-dot   { background: ${b} !important; }
+            .upcoming-item.Group { border-left-color: ${g} !important; }
+            .upcoming-item.NBT   { border-left-color: ${n} !important; }
+            .upcoming-item.BIO   { border-left-color: ${b} !important; }
+            .company-badge.Group { background: ${g} !important; }
+            .company-badge.NBT   { background: ${n} !important; }
+            .company-badge.BIO   { background: ${b} !important; }
+        `;
+    }
+
+    function syncColorInputs(colors) {
+        document.getElementById('colorGroup').value = colors.Group || DEFAULT_COLORS.Group;
+        document.getElementById('colorNbt').value   = colors.NBT   || DEFAULT_COLORS.NBT;
+        document.getElementById('colorBio').value   = colors.BIO   || DEFAULT_COLORS.BIO;
+    }
+
+    // 초기 로드 및 적용
+    const savedColors = loadBadgeColors();
+    applyBadgeColors({ ...DEFAULT_COLORS, ...savedColors });
+    syncColorInputs({ ...DEFAULT_COLORS, ...savedColors });
+
+    // 색상 변경 이벤트
+    ['colorGroup', 'colorNbt', 'colorBio'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            const colors = {
+                Group: document.getElementById('colorGroup').value,
+                NBT:   document.getElementById('colorNbt').value,
+                BIO:   document.getElementById('colorBio').value,
+            };
+            applyBadgeColors(colors);
+            localStorage.setItem(COLOR_STORAGE_KEY, JSON.stringify(colors));
+        });
+    });
+
+    // 기본값 복원
+    document.getElementById('resetColorsBtn').addEventListener('click', () => {
+        applyBadgeColors(DEFAULT_COLORS);
+        syncColorInputs(DEFAULT_COLORS);
+        localStorage.removeItem(COLOR_STORAGE_KEY);
+    });
+
     // ========== CALENDAR STATE ==========
     let today = new Date();
     let currentYear = today.getFullYear();

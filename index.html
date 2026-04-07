@@ -39,6 +39,24 @@
                 </button>
             </div>
 
+            <!-- 회사 색상 설정 -->
+            <div class="color-settings-panel">
+                <div class="color-settings-title">배지 색상 설정</div>
+                <div class="color-row">
+                    <input type="color" id="colorGroup" class="color-swatch" title="Group 색상">
+                    <span class="color-label">그룹 (Group)</span>
+                </div>
+                <div class="color-row">
+                    <input type="color" id="colorNbt" class="color-swatch" title="NBT 색상">
+                    <span class="color-label">엔비티 (NBT)</span>
+                </div>
+                <div class="color-row">
+                    <input type="color" id="colorBio" class="color-swatch" title="BIO 색상">
+                    <span class="color-label">바이오 (BIO)</span>
+                </div>
+                <button id="resetColorsBtn" class="color-reset-btn">기본값 복원</button>
+            </div>
+
             <div class="upcoming-events" style="flex: 1; min-height: 0;">
                 <h3>주요 하이라이트 일정</h3>
                 <ul id="upcomingList">
