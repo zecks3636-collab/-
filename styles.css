@@ -1049,15 +1049,24 @@ body {
 .leave-entry-name  { font-weight: 800; color: #0f172a; }
 .leave-entry-note  { font-size: 11px; color: #94a3b8; font-style: italic; }
 .leave-entry-del {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    border: none;
-    background: transparent;
-    color: #94a3b8;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #fca5a5;
+    background: #fff1f2;
+    color: #f43f5e;
     cursor: pointer;
-    font-size: 12px;
-    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
     transition: all 0.15s;
     flex-shrink: 0;
 }
-.leave-entry-del:hover { background: #fee2e2; color: #f43f5e; }
+.leave-entry-del:hover:not(:disabled) {
+    background: #f43f5e;
+    color: white;
+    border-color: #f43f5e;
+}
+.leave-entry-del:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

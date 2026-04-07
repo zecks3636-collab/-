@@ -1097,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
         if (entries.length === 0) {
-            container.innerHTML = '<p style="font-size:13px;color:#94a3b8;text-align:center;padding:6px 0;">등록된 연차가 없습니다</p>';
+            container.innerHTML = '<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0 4px;">등록된 연차가 없습니다</p>';
             return;
         }
 
@@ -1105,46 +1105,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         entries.forEach(leave => {
             const row = document.createElement('div');
             row.className = 'leave-entry-row';
+            row.dataset.id = leave.id;
             const tc = LEAVE_TYPE_CLASS[leave.leave_type] || 'ltype-연차';
-            row.innerHTML = `
-                <div class="leave-entry-info">
-                    <span class="leave-entry-badge ${tc}">${leave.leave_type}</span>
-                    <span class="leave-entry-team">${leave.team}</span>
-                    <span class="leave-entry-rank">${leave.rank}</span>
-                    <span class="leave-entry-name">${leave.employee_name}</span>
-                    ${leave.note ? `<span class="leave-entry-note">· ${leave.note}</span>` : ''}
-                </div>
-                <button class="leave-entry-del" title="삭제">✕</button>`;
-            row.querySelector('.leave-entry-del').addEventListener('click', () => deleteLeave(leave.id, dateStr));
+
+            const info = document.createElement('div');
+            info.className = 'leave-entry-info';
+            info.innerHTML =
+                `<span class="leave-entry-badge ${tc}">${leave.leave_type}</span>` +
+                `<span class="leave-entry-team">${leave.team}</span>` +
+                `<span class="leave-entry-rank">${leave.rank}</span>` +
+                `<span class="leave-entry-name">${leave.employee_name}</span>` +
+                (leave.note ? `<span class="leave-entry-note">· ${leave.note}</span>` : '');
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'leave-entry-del';
+            delBtn.innerHTML = '🗑️ 삭제';
+            delBtn.title = '이 항목 삭제';
+            delBtn.addEventListener('click', async () => {
+                if (!confirm(`[${leave.team}] ${leave.rank} ${leave.employee_name} (${leave.leave_type}) 을 삭제할까요?`)) return;
+                delBtn.disabled = true;
+                delBtn.textContent = '삭제 중...';
+                await deleteLeave(leave.id, dateStr, row);
+            });
+
+            row.appendChild(info);
+            row.appendChild(delBtn);
             container.appendChild(row);
         });
     }
 
     // ---- 연차 삭제 ----
-    async function deleteLeave(id, dateStr) {
+    async function deleteLeave(id, dateStr, rowEl) {
+        if (!id) { console.error('삭제 오류: id 없음'); return; }
         if (sb) {
             const { error } = await sb.from('leave_plans').delete().eq('id', id);
             if (error) {
                 console.error('연차 삭제 오류:', error);
                 alert('삭제 오류: ' + error.message);
+                if (rowEl) { // 실패 시 버튼 원복
+                    const btn = rowEl.querySelector('.leave-entry-del');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '🗑️ 삭제'; }
+                }
                 return;
             }
         }
+        // 로컬 데이터 및 UI 갱신
         allLeaves = allLeaves.filter(l => l.id !== id);
-        renderLeaveModalEntries(dateStr);
+        if (rowEl) rowEl.remove(); // 행 즉시 제거 (깜빡임 없이)
+        // 빈 상태 처리
+        const container = document.getElementById('leaveModalEntries');
+        if (container && !container.querySelector('.leave-entry-row')) {
+            container.innerHTML = '<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0 4px;">등록된 연차가 없습니다</p>';
+        }
         renderLeaveCalendar();
     }
 
-    // ---- 연차 추가 ----
-    document.getElementById('leaveAddBtn').addEventListener('click', async () => {
+    // ---- 연차 추가 (공통 실행 함수) ----
+    async function submitLeaveAdd() {
         const team  = document.getElementById('leaveTeamInput').value.trim();
         const rank  = document.getElementById('leaveRankInput').value;
         const name  = document.getElementById('leaveNameInput').value.trim();
         const type  = document.getElementById('leaveTypeInput').value;
         const note  = document.getElementById('leaveNoteInput').value.trim();
 
-        if (!team || !name) { alert('팀과 이름을 입력해주세요.'); return; }
-        if (!leaveModalDate) { alert('날짜를 선택해주세요.'); return; }
+        if (!team) { alert('팀을 입력해주세요.'); document.getElementById('leaveTeamInput').focus(); return; }
+        if (!name) { alert('이름을 입력해주세요.'); document.getElementById('leaveNameInput').focus(); return; }
+        if (!leaveModalDate) { alert('캘린더에서 날짜를 클릭해 선택해주세요.'); return; }
 
         const payload = {
             date: leaveModalDate,
@@ -1155,13 +1181,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const btn = document.getElementById('leaveAddBtn');
-        const origLabel = btn.textContent;
         btn.textContent = '저장 중...';
         btn.disabled = true;
 
         try {
             if (sb) {
-                // insert 후 select로 저장된 레코드 반환
                 const { data, error } = await sb
                     .from('leave_plans')
                     .insert(payload)
@@ -1170,21 +1194,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (error) throw error;
                 allLeaves.push(data);
             } else {
-                allLeaves.push({ ...payload, id: Date.now().toString(), created_at: new Date().toISOString() });
+                allLeaves.push({ ...payload, id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), created_at: new Date().toISOString() });
             }
-            // 입력 초기화
+            // 입력 초기화 후 팀 입력란으로 포커스 복귀
             document.getElementById('leaveTeamInput').value = '';
             document.getElementById('leaveNameInput').value = '';
             document.getElementById('leaveNoteInput').value = '';
+            document.getElementById('leaveTeamInput').focus();
 
             renderLeaveModalEntries(leaveModalDate);
             renderLeaveCalendar();
         } catch(err) {
             console.error('연차 저장 오류:', err);
-            alert('저장 오류: ' + (err.message || '알 수 없는 오류'));
+            alert('저장 오류: ' + (err.message || '알 수 없는 오류가 발생했습니다.'));
         } finally {
-            btn.textContent = origLabel;
+            btn.textContent = '➕ 추가';
             btn.disabled = false;
         }
+    }
+
+    document.getElementById('leaveAddBtn').addEventListener('click', submitLeaveAdd);
+
+    // Enter 키로 추가 지원 (이름·비고 입력란)
+    ['leaveNameInput', 'leaveNoteInput'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); submitLeaveAdd(); }
+        });
     });
 });
