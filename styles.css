@@ -645,6 +645,13 @@ body {
 .calendar-header .sun { color: #e11d48; }
 .calendar-header .sat { color: #2563eb; }
 
+#requestCalendarWrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -1261,7 +1268,7 @@ body {
     #requestImageView     { display: none !important; }
 
     /* 캘린더 그리드 — 인쇄용 */
-    #requestCalendarWrap { display: block !important; }
+    #requestCalendarWrap { display: block !important; flex: none !important; }
     .calendar-header {
         font-size: 9pt !important;
         padding-bottom: 6px !important;

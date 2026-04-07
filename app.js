@@ -395,6 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         tabMenu.classList.remove('active');
         tabLeave.classList.remove('active');
         panelRequest.style.display = 'flex';
+        panelRequest.style.flexDirection = 'column';
         panelCalendar.style.display = 'none';
         panelMenuView.style.display = 'none';
         panelLeave.style.display = 'none';
