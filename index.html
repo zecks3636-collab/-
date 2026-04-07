@@ -339,9 +339,16 @@
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <button id="requestViewToggleBtn" class="menu-upload-btn" style="display:none;">🖼️ PDF 보기</button>
+                        <button id="requestPrintBtn" class="menu-upload-btn request-print-btn">🖨️ PDF 인쇄</button>
                         <button id="requestUploadBtn" class="menu-upload-btn">📂 PDF 업로드</button>
                         <input type="file" id="requestPdfInput" accept=".pdf" style="display:none">
                     </div>
+                </div>
+                <!-- 인쇄 전용 헤더 (화면에는 숨김) -->
+                <div id="requestPrintHeader" class="request-print-header-only">
+                    <div class="request-print-logo">COSMAX BTI · 건기식사업부문</div>
+                    <h1 class="request-print-title">정기요청자료 일정</h1>
+                    <p id="requestPrintMonth" class="request-print-month"></p>
                 </div>
                 <!-- PDF 이미지 뷰 (토글) -->
                 <div id="requestImageView" style="display:none; text-align:center; padding:8px 0 16px;">

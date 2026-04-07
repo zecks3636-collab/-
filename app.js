@@ -1677,6 +1677,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // PDF 인쇄
+    document.getElementById('requestPrintBtn').addEventListener('click', () => {
+        const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+        const monthEl = document.getElementById('requestPrintMonth');
+        if (monthEl) monthEl.textContent = `${currentYear}년 ${months[currentMonth]}`;
+        window.print();
+    });
+
     // PDF 이미지 삭제
     document.getElementById('requestDeleteImgBtn').addEventListener('click', async () => {
         const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
