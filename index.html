@@ -27,6 +27,8 @@
             <button class="sidebar-menu-tab" id="tabMenu">🍽️ 주간식단표</button>
             <!-- 연차계획 탭 버튼 -->
             <button class="sidebar-menu-tab" id="tabLeave">📋 연차계획</button>
+            <!-- 요청자료일정 탭 버튼 -->
+            <button class="sidebar-menu-tab" id="tabRequest">📊 요청자료일정</button>
 
             <div class="filters">
                 <h3>회사별 일정 보기</h3>
@@ -322,6 +324,39 @@
                 </div>
                 <div class="calendar-grid leave-grid" id="leaveGrid"></div>
             </div>
+
+            <!-- Request / 요청자료일정 Panel -->
+            <div id="panelRequest" class="calendar-wrapper glass-panel" style="display:none; flex-direction:column; overflow-y:auto;">
+                <!-- 헤더: 업로드 버튼 -->
+                <div class="request-panel-header">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:20px;">📊</span>
+                        <div>
+                            <h3 style="font-size:15px; font-weight:800; color:#0f172a; margin:0;">정기요청자료 일정</h3>
+                            <span id="requestMonthLabel" style="font-size:12px; color:#64748b; font-weight:600;"></span>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button id="requestViewToggleBtn" class="menu-upload-btn" style="display:none;">🖼️ PDF 보기</button>
+                        <button id="requestUploadBtn" class="menu-upload-btn">📂 PDF 업로드</button>
+                        <input type="file" id="requestPdfInput" accept=".pdf" style="display:none">
+                    </div>
+                </div>
+                <!-- PDF 이미지 뷰 (토글) -->
+                <div id="requestImageView" style="display:none; text-align:center; padding:8px 0 16px;">
+                    <img id="requestUploadedImg" style="width:100%; max-width:960px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08);" alt="요청자료일정">
+                    <div style="margin-top:10px;">
+                        <button id="requestDeleteImgBtn" class="menu-delete-btn">🗑️ PDF 이미지 삭제</button>
+                    </div>
+                </div>
+                <!-- 캘린더 그리드 -->
+                <div id="requestCalendarWrap">
+                    <div class="calendar-header">
+                        <div class="sun">SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
+                    </div>
+                    <div class="calendar-grid request-grid" id="requestGrid"></div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -384,6 +419,44 @@
                 </div>
                 <div style="margin-top:14px;text-align:right;">
                     <button id="leaveAddBtn" class="save-btn" style="font-size:13px;padding:9px 22px;">➕ 추가</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Input Modal -->
+    <div class="modal-overlay" id="requestModal">
+        <div class="modal-content glass-panel" style="width:500px; max-height:82vh; overflow-y:auto; display:flex; flex-direction:column; gap:0;">
+            <button class="close-btn" id="closeRequestModal">&times;</button>
+            <div class="modal-header">
+                <h3 style="font-size:16px;font-weight:800;color:#0f172a;">📊 요청자료 입력</h3>
+                <p class="subtitle" id="requestModalDateLabel" style="margin-top:6px;font-size:13px;font-weight:600;"></p>
+            </div>
+            <!-- 기존 항목 목록 -->
+            <div id="requestModalEntries" style="margin:14px 0 0;"></div>
+            <!-- 새 항목 추가 폼 -->
+            <div style="border-top:1px solid #f1f5f9;padding-top:16px;margin-top:14px;">
+                <p style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:12px;">새 항목 추가</p>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <div>
+                        <label class="leave-form-label">구분</label>
+                        <select id="requestCategoryInput" class="form-input">
+                            <option value="통합회의및확대회의관련">통합회의및확대회의관련</option>
+                            <option value="관계사경영회의관련">관계사경영회의관련</option>
+                            <option value="정기요청자료">정기요청자료</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="leave-form-label">내용</label>
+                        <input type="text" id="requestTitleInput" class="form-input" placeholder="예) 09:00 건기식 통합회의">
+                    </div>
+                    <div>
+                        <label class="leave-form-label">비고 (선택)</label>
+                        <input type="text" id="requestNoteInput" class="form-input" placeholder="메모">
+                    </div>
+                </div>
+                <div style="margin-top:14px;text-align:right;">
+                    <button id="requestAddBtn" class="save-btn" style="font-size:13px;padding:9px 22px;">➕ 추가</button>
                 </div>
             </div>
         </div>

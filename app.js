@@ -248,14 +248,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderCalendar();
         renderUpcoming();
         if (panelLeave && panelLeave.style.display === 'flex') renderLeaveCalendar();
+        if (panelRequest && panelRequest.style.display === 'flex') renderRequestCalendar();
     }
 
     // ========== EVENT LISTENERS ==========
     filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // 식단표/연차 보는 중이면 캘린더로 자동 전환
+            // 식단표/연차/요청자료 보는 중이면 캘린더로 자동 전환
             if (panelMenuView.style.display === 'flex' ||
-                document.getElementById('panelLeave').style.display !== 'none') {
+                panelLeave.style.display === 'flex' ||
+                panelRequest.style.display === 'flex') {
                 switchToCalendar();
             }
             filterBtns.forEach(b => b.classList.remove('active'));
@@ -270,39 +272,58 @@ document.addEventListener('DOMContentLoaded', async () => {
         update();
     });
 
-    // ========== MAIN TABS (Calendar / Menu / Leave) ==========
-    const tabMenu   = document.getElementById('tabMenu');
-    const tabLeave  = document.getElementById('tabLeave');
+    // ========== MAIN TABS (Calendar / Menu / Leave / Request) ==========
+    const tabMenu    = document.getElementById('tabMenu');
+    const tabLeave   = document.getElementById('tabLeave');
+    const tabRequest = document.getElementById('tabRequest');
     const panelCalendar = document.getElementById('panelCalendar');
     const panelMenuView = document.getElementById('panelMenuView');
     const panelLeave    = document.getElementById('panelLeave');
+    const panelRequest  = document.getElementById('panelRequest');
 
     function switchToCalendar() {
         tabMenu.classList.remove('active');
         tabLeave.classList.remove('active');
+        tabRequest.classList.remove('active');
         panelCalendar.style.display = '';
         panelMenuView.style.display = 'none';
         panelLeave.style.display = 'none';
+        panelRequest.style.display = 'none';
     }
 
     function switchToMenu() {
         tabMenu.classList.add('active');
         tabLeave.classList.remove('active');
+        tabRequest.classList.remove('active');
         panelMenuView.style.display = 'flex';
         panelMenuView.style.flexDirection = 'column';
         panelCalendar.style.display = 'none';
         panelLeave.style.display = 'none';
+        panelRequest.style.display = 'none';
         renderMenuWeek();
     }
 
     function switchToLeave() {
         tabLeave.classList.add('active');
         tabMenu.classList.remove('active');
+        tabRequest.classList.remove('active');
         panelLeave.style.display = 'flex';
         panelLeave.style.flexDirection = 'column';
         panelCalendar.style.display = 'none';
         panelMenuView.style.display = 'none';
+        panelRequest.style.display = 'none';
         renderLeaveCalendar();
+    }
+
+    function switchToRequest() {
+        tabRequest.classList.add('active');
+        tabMenu.classList.remove('active');
+        tabLeave.classList.remove('active');
+        panelRequest.style.display = 'flex';
+        panelCalendar.style.display = 'none';
+        panelMenuView.style.display = 'none';
+        panelLeave.style.display = 'none';
+        renderRequestCalendar();
     }
 
     tabMenu.addEventListener('click', () => {
@@ -313,6 +334,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     tabLeave.addEventListener('click', () => {
         if (panelLeave.style.display === 'flex') switchToCalendar();
         else switchToLeave();
+    });
+
+    tabRequest.addEventListener('click', () => {
+        if (panelRequest.style.display === 'flex') switchToCalendar();
+        else switchToRequest();
     });
 
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
@@ -1220,5 +1246,380 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById(id).addEventListener('keydown', e => {
             if (e.key === 'Enter') { e.preventDefault(); submitLeaveAdd(); }
         });
+    });
+
+    // ========== 요청자료일정 관리 ==========
+    const REQUEST_CAT_CLASS = {
+        '통합회의및확대회의관련': 'rcat-meeting',
+        '관계사경영회의관련':     'rcat-related',
+        '정기요청자료':           'rcat-regular'
+    };
+
+    let allRequests = [];
+    let requestModalDate = '';
+
+    // request_schedules 로드
+    async function loadRequests() {
+        if (!sb) { allRequests = []; return; }
+        try {
+            const { data, error } = await sb.from('request_schedules').select('*').order('date');
+            if (error) throw error;
+            allRequests = data || [];
+            console.log(`✅ request_schedules ${allRequests.length}건 로드`);
+        } catch(e) {
+            console.warn('request_schedules 로드 실패:', e.message);
+            allRequests = [];
+        }
+    }
+    await loadRequests();
+
+    // request_months (PDF 이미지) 로드
+    let requestImageStore = {}; // { 'YYYY-MM': { imageUrl, storagePath, fileName } }
+    async function loadRequestImageStore() {
+        if (!sb) return;
+        try {
+            const { data, error } = await sb.from('request_months').select('*');
+            if (error) throw error;
+            requestImageStore = {};
+            (data || []).forEach(row => {
+                const key = typeof row.month_key === 'string' ? row.month_key.slice(0, 7) : '';
+                if (!key) return;
+                const { data: urlData } = sb.storage.from('request-images').getPublicUrl(row.storage_path);
+                requestImageStore[key] = {
+                    imageUrl: urlData.publicUrl,
+                    storagePath: row.storage_path,
+                    fileName: row.file_name
+                };
+            });
+        } catch(e) {
+            console.warn('request_months 로드 실패:', e.message);
+        }
+    }
+    await loadRequestImageStore();
+
+    // ---- 요청자료 캘린더 렌더링 ----
+    function renderRequestCalendar() {
+        const requestGrid = document.getElementById('requestGrid');
+        if (!requestGrid) return;
+        requestGrid.innerHTML = '';
+
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
+        document.getElementById('monthTitle').textContent =
+            `${currentYear}. ${String(currentMonth + 1).padStart(2, '0')}`;
+
+        // 월 레이블
+        const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        const monthLabelEl = document.getElementById('requestMonthLabel');
+        if (monthLabelEl) monthLabelEl.textContent = `${currentYear}년 ${currentMonth + 1}월`;
+
+        // PDF 이미지 업로드 토글 버튼 상태
+        const toggleBtn = document.getElementById('requestViewToggleBtn');
+        if (toggleBtn) {
+            if (requestImageStore[monthKey]) {
+                toggleBtn.style.display = '';
+            } else {
+                toggleBtn.style.display = 'none';
+                document.getElementById('requestImageView').style.display = 'none';
+                document.getElementById('requestCalendarWrap').style.display = '';
+                toggleBtn.textContent = '🖼️ PDF 보기';
+            }
+        }
+
+        for (let i = 0; i < firstDayIndex; i++) {
+            const d = document.createElement('div');
+            d.className = 'cal-day empty';
+            requestGrid.appendChild(d);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'cal-day leave-cal-day';
+
+            const isSunday   = (firstDayIndex + day - 1) % 7 === 0;
+            const isSaturday = (firstDayIndex + day - 1) % 7 === 6;
+            const holidayName = getHolidayName(currentYear, currentMonth + 1, day);
+
+            if (isSaturday) dayDiv.classList.add('saturday-day');
+            if (isSunday || holidayName) dayDiv.classList.add('holiday-day');
+
+            const dateSpan = document.createElement('span');
+            dateSpan.className = 'date-num';
+            if (isSunday || holidayName) dateSpan.classList.add('sun');
+            if (isSaturday) dateSpan.classList.add('sat');
+            dateSpan.textContent = day;
+            if (holidayName) {
+                const hl = document.createElement('span');
+                hl.textContent = holidayName;
+                hl.style.cssText = 'font-size:10px;margin-left:4px;font-weight:600;opacity:0.85;';
+                dateSpan.appendChild(hl);
+            }
+            dayDiv.appendChild(dateSpan);
+
+            const dayRequests = allRequests
+                .filter(r => (r.date || '').slice(0, 10) === dateStr)
+                .sort((a, b) => {
+                    // 카테고리 순서: 통합>관계사>정기
+                    const catOrder = { '통합회의및확대회의관련': 1, '관계사경영회의관련': 2, '정기요청자료': 3 };
+                    const cd = (catOrder[a.category] || 9) - (catOrder[b.category] || 9);
+                    if (cd !== 0) return cd;
+                    return a.title.localeCompare(b.title, 'ko');
+                });
+
+            dayRequests.forEach(req => {
+                const chip = document.createElement('div');
+                chip.className = `request-chip ${REQUEST_CAT_CLASS[req.category] || 'rcat-regular'}`;
+                chip.textContent = req.title;
+                chip.title = `[${req.category}] ${req.title}${req.note ? ' / ' + req.note : ''}`;
+                chip.addEventListener('click', e => { e.stopPropagation(); openRequestModal(dateStr); });
+                dayDiv.appendChild(chip);
+            });
+
+            dayDiv.addEventListener('click', () => openRequestModal(dateStr));
+            requestGrid.appendChild(dayDiv);
+        }
+    }
+
+    // ---- 요청자료 모달 열기/닫기 ----
+    function openRequestModal(dateStr) {
+        requestModalDate = dateStr;
+        const d = new Date(dateStr + 'T00:00:00');
+        const days = ['일','월','화','수','목','금','토'];
+        document.getElementById('requestModalDateLabel').textContent =
+            `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+        renderRequestModalEntries(dateStr);
+        document.getElementById('requestModal').classList.add('active');
+    }
+
+    document.getElementById('closeRequestModal').addEventListener('click', () => {
+        document.getElementById('requestModal').classList.remove('active');
+    });
+    document.getElementById('requestModal').addEventListener('click', e => {
+        if (e.target === document.getElementById('requestModal'))
+            document.getElementById('requestModal').classList.remove('active');
+    });
+
+    // ---- 모달 내 기존 항목 렌더링 ----
+    function renderRequestModalEntries(dateStr) {
+        const container = document.getElementById('requestModalEntries');
+        const entries = allRequests
+            .filter(r => (r.date || '').slice(0, 10) === dateStr)
+            .sort((a, b) => {
+                const catOrder = { '통합회의및확대회의관련': 1, '관계사경영회의관련': 2, '정기요청자료': 3 };
+                return (catOrder[a.category] || 9) - (catOrder[b.category] || 9);
+            });
+
+        if (entries.length === 0) {
+            container.innerHTML = '<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0 4px;">등록된 요청자료 일정이 없습니다</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+        entries.forEach(req => {
+            const row = document.createElement('div');
+            row.className = 'leave-entry-row';
+            row.dataset.id = req.id;
+            const catCls = REQUEST_CAT_CLASS[req.category] || 'rcat-regular';
+
+            const info = document.createElement('div');
+            info.className = 'leave-entry-info';
+            info.innerHTML =
+                `<span class="leave-entry-badge ${catCls}" style="font-size:10px;">${req.category}</span>` +
+                `<span class="leave-entry-name" style="font-weight:700;">${req.title}</span>` +
+                (req.note ? `<span class="leave-entry-note">· ${req.note}</span>` : '');
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'leave-entry-del';
+            delBtn.innerHTML = '🗑️ 삭제';
+            delBtn.title = '이 항목 삭제';
+            delBtn.addEventListener('click', async () => {
+                if (!confirm(`[${req.category}] ${req.title} 을 삭제할까요?`)) return;
+                delBtn.disabled = true;
+                delBtn.textContent = '삭제 중...';
+                await deleteRequest(req.id, dateStr, row);
+            });
+
+            row.appendChild(info);
+            row.appendChild(delBtn);
+            container.appendChild(row);
+        });
+    }
+
+    // ---- 요청자료 삭제 ----
+    async function deleteRequest(id, dateStr, rowEl) {
+        if (!id) return;
+        if (sb) {
+            const { error } = await sb.from('request_schedules').delete().eq('id', id);
+            if (error) {
+                alert('삭제 오류: ' + error.message);
+                if (rowEl) {
+                    const btn = rowEl.querySelector('.leave-entry-del');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '🗑️ 삭제'; }
+                }
+                return;
+            }
+        }
+        allRequests = allRequests.filter(r => r.id !== id);
+        if (rowEl) rowEl.remove();
+        const container = document.getElementById('requestModalEntries');
+        if (container && !container.querySelector('.leave-entry-row')) {
+            container.innerHTML = '<p style="font-size:13px;color:#94a3b8;text-align:center;padding:8px 0 4px;">등록된 요청자료 일정이 없습니다</p>';
+        }
+        renderRequestCalendar();
+    }
+
+    // ---- 요청자료 추가 ----
+    async function submitRequestAdd() {
+        const category = document.getElementById('requestCategoryInput').value;
+        const title    = document.getElementById('requestTitleInput').value.trim();
+        const note     = document.getElementById('requestNoteInput').value.trim();
+
+        if (!title) { alert('내용을 입력해주세요.'); document.getElementById('requestTitleInput').focus(); return; }
+        if (!requestModalDate) { alert('캘린더에서 날짜를 클릭해 선택해주세요.'); return; }
+
+        const payload = { date: requestModalDate, title, category, note: note || null };
+
+        const btn = document.getElementById('requestAddBtn');
+        btn.textContent = '저장 중...';
+        btn.disabled = true;
+
+        try {
+            if (sb) {
+                const { data, error } = await sb
+                    .from('request_schedules')
+                    .insert(payload)
+                    .select('*')
+                    .single();
+                if (error) throw error;
+                allRequests.push(data);
+            } else {
+                allRequests.push({ ...payload, id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), created_at: new Date().toISOString() });
+            }
+            document.getElementById('requestTitleInput').value = '';
+            document.getElementById('requestNoteInput').value = '';
+            document.getElementById('requestTitleInput').focus();
+            renderRequestModalEntries(requestModalDate);
+            renderRequestCalendar();
+        } catch(err) {
+            console.error('요청자료 저장 오류:', err);
+            alert('저장 오류: ' + (err.message || '알 수 없는 오류가 발생했습니다.'));
+        } finally {
+            btn.textContent = '➕ 추가';
+            btn.disabled = false;
+        }
+    }
+
+    document.getElementById('requestAddBtn').addEventListener('click', submitRequestAdd);
+    document.getElementById('requestTitleInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); submitRequestAdd(); }
+    });
+    document.getElementById('requestNoteInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); submitRequestAdd(); }
+    });
+
+    // ---- 요청자료 PDF 업로드 ----
+    const requestPdfInput = document.getElementById('requestPdfInput');
+    document.getElementById('requestUploadBtn').addEventListener('click', () => requestPdfInput.click());
+
+    requestPdfInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        requestPdfInput.value = '';
+
+        const btn = document.getElementById('requestUploadBtn');
+        const origLabel = btn.textContent;
+        btn.textContent = '⏳ 처리 중...';
+        btn.disabled = true;
+
+        try {
+            const ab = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+            const page = await pdf.getPage(1);
+            const vp = page.getViewport({ scale: 2.0 });
+            const canvas = document.createElement('canvas');
+            canvas.width = vp.width;
+            canvas.height = vp.height;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+            const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            const storagePath = `${monthKey}.jpg`;
+
+            if (sb) {
+                const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
+                const { error: upErr } = await sb.storage
+                    .from('request-images')
+                    .upload(storagePath, blob, { upsert: true, contentType: 'image/jpeg' });
+                if (upErr) throw upErr;
+
+                const { data: urlData } = sb.storage.from('request-images').getPublicUrl(storagePath);
+
+                const { error: dbErr } = await sb.from('request_months').upsert({
+                    month_key: monthKey + '-01',
+                    file_name: file.name,
+                    storage_path: storagePath,
+                    uploaded_at: new Date().toISOString()
+                });
+                if (dbErr) throw dbErr;
+
+                requestImageStore[monthKey] = {
+                    imageUrl: urlData.publicUrl,
+                    storagePath,
+                    fileName: file.name
+                };
+            } else {
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+                requestImageStore[monthKey] = { imageUrl: dataUrl, storagePath, fileName: file.name };
+            }
+
+            // PDF 이미지 표시 및 토글
+            document.getElementById('requestUploadedImg').src = requestImageStore[monthKey].imageUrl;
+            document.getElementById('requestImageView').style.display = 'block';
+            document.getElementById('requestCalendarWrap').style.display = 'none';
+            const toggleBtn = document.getElementById('requestViewToggleBtn');
+            toggleBtn.style.display = '';
+            toggleBtn.textContent = '📅 캘린더 보기';
+            renderRequestCalendar();
+        } catch(err) {
+            alert('PDF 처리 중 오류가 발생했습니다: ' + err.message);
+        } finally {
+            btn.textContent = origLabel;
+            btn.disabled = false;
+        }
+    });
+
+    // PDF/캘린더 토글
+    document.getElementById('requestViewToggleBtn').addEventListener('click', () => {
+        const imageView = document.getElementById('requestImageView');
+        const calWrap   = document.getElementById('requestCalendarWrap');
+        const toggleBtn = document.getElementById('requestViewToggleBtn');
+        if (imageView.style.display === 'none') {
+            imageView.style.display = 'block';
+            calWrap.style.display = 'none';
+            toggleBtn.textContent = '📅 캘린더 보기';
+        } else {
+            imageView.style.display = 'none';
+            calWrap.style.display = '';
+            toggleBtn.textContent = '🖼️ PDF 보기';
+        }
+    });
+
+    // PDF 이미지 삭제
+    document.getElementById('requestDeleteImgBtn').addEventListener('click', async () => {
+        const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+        if (!requestImageStore[monthKey]) return;
+        if (!confirm('이 달의 업로드된 PDF 이미지를 삭제할까요?')) return;
+        const storagePath = requestImageStore[monthKey].storagePath;
+        if (sb) {
+            try {
+                await sb.storage.from('request-images').remove([storagePath]);
+                await sb.from('request_months').delete().eq('storage_path', storagePath);
+            } catch(e) { console.warn('삭제 오류:', e.message); }
+        }
+        delete requestImageStore[monthKey];
+        document.getElementById('requestImageView').style.display = 'none';
+        document.getElementById('requestCalendarWrap').style.display = '';
+        document.getElementById('requestViewToggleBtn').style.display = 'none';
+        renderRequestCalendar();
     });
 });
