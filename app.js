@@ -160,9 +160,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return m ? parseInt(m[1]) * 60 + parseInt(m[2]) : 9999;
             };
 
-            const dayEvents = allEvents
-                .filter(e => e.date === dayString)
-                .sort((a, b) => getTimeVal(a.title) - getTimeVal(b.title));
+            const COMPANY_PRIORITY = { Group: 0, NBT: 1, BIO: 2 };
+
+            // 전체보기 시 동일 시간·동일 회의명 중복 제거 (Group 우선)
+            function deduplicateByTitle(events) {
+                if (currentFilter !== 'all') return events;
+                const map = new Map();
+                events.forEach(evt => {
+                    const key = evt.title.replace(/\s+/g, '').toLowerCase();
+                    const prev = map.get(key);
+                    if (!prev || (COMPANY_PRIORITY[evt.company] ?? 9) < (COMPANY_PRIORITY[prev.company] ?? 9)) {
+                        map.set(key, evt);
+                    }
+                });
+                return [...map.values()].sort((a, b) => getTimeVal(a.title) - getTimeVal(b.title));
+            }
+
+            const dayEvents = deduplicateByTitle(
+                allEvents
+                    .filter(e => e.date === dayString)
+                    .sort((a, b) => getTimeVal(a.title) - getTimeVal(b.title))
+            );
 
             dayEvents.forEach(evt => {
                 if (currentFilter !== 'all' && evt.company !== currentFilter) return;
