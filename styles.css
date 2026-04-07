@@ -100,7 +100,7 @@ body {
     padding-bottom: 4px;
 }
 .logo-brand {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 900;
     letter-spacing: 2px;
     background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
@@ -111,10 +111,10 @@ body {
     margin-bottom: 2px;
 }
 .logo-division {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.5px;
-    background: linear-gradient(135deg, #0f172a 0%, #334155 60%, #64748b 100%);
+    background: linear-gradient(135deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%);
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
