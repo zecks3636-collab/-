@@ -764,19 +764,6 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.10);
 }
 
-/* 왼쪽 단색 원형 도트 — 회사 구분 */
-.event::before {
-    content: '';
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-.event.Group::before { background: #0284c7; }
-.event.NBT::before   { background: #16a34a; }
-.event.BIO::before   { background: #ea580c; }
-
 /* 회사 이니셜 배지 (전체보기 시) */
 .e-badge {
     display: inline-flex;
