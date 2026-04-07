@@ -657,10 +657,24 @@ body {
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     min-height: 0;
 }
+.cal-day:not(.empty) {
+    cursor: grab;           /* 드래그 가능 커서 */
+}
+.cal-day.is-dragging,
+.cal-day:not(.empty):active {
+    cursor: grabbing;       /* 드래그 중 커서 */
+    box-shadow: 0 6px 20px rgba(0,0,0,0.13);
+    border-color: #94b4d8;
+    z-index: 20;
+}
 .cal-day:hover {
     box-shadow: 0 4px 16px rgba(0,0,0,0.10);
     border-color: #b8cfe8;
     z-index: 10;
+}
+/* 이벤트 칩은 클릭 커서 유지 */
+.cal-day .event {
+    cursor: pointer;
 }
 
 .cal-day.empty {

@@ -226,6 +226,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         _fitTimer = setTimeout(fitEventText, 120);
     });
 
+    // ========== 셀 드래그 스크롤 ==========
+    (function initCellDragScroll() {
+        const grid = document.getElementById('calendarGrid');
+        let activeCell = null;
+        let startY = 0, baseScrollTop = 0;
+        let didDrag = false;
+
+        // 마우스 누름 → 드래그 준비
+        grid.addEventListener('mousedown', e => {
+            const cell = e.target.closest('.cal-day:not(.empty)');
+            if (!cell) return;
+            activeCell    = cell;
+            startY        = e.clientY;
+            baseScrollTop = cell.scrollTop;
+            didDrag       = false;
+            document.body.style.userSelect = 'none';
+        });
+
+        // 마우스 이동 → 스크롤 적용
+        window.addEventListener('mousemove', e => {
+            if (!activeCell) return;
+            const dy = e.clientY - startY;
+            if (Math.abs(dy) > 4) {
+                didDrag = true;
+                activeCell.classList.add('is-dragging');
+                activeCell.scrollTop = baseScrollTop - dy;
+            }
+        });
+
+        // 마우스 뗌 → 드래그 종료
+        window.addEventListener('mouseup', () => {
+            if (!activeCell) return;
+            activeCell.classList.remove('is-dragging');
+            activeCell = null;
+            document.body.style.userSelect = '';
+            // 다음 틱까지 didDrag 유지 → 클릭 차단 후 리셋
+            setTimeout(() => { didDrag = false; }, 0);
+        });
+
+        // 드래그 직후 클릭 이벤트 차단 (캡처 페이즈)
+        grid.addEventListener('click', e => {
+            if (didDrag) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, true);
+    })();
+
     function renderUpcoming() {
         upcomingList.innerHTML = '';
 
