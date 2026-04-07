@@ -616,7 +616,8 @@ body {
     padding: 24px;
     display: flex;
     flex-direction: column;
-    min-height: 0; /* Prevent vertical overflow */
+    min-height: 0;
+    overflow-y: auto; /* 패널 전체가 스크롤 */
 }
 
 .calendar-header {
@@ -635,10 +636,9 @@ body {
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(5, minmax(0, 1fr));
-    gap: 12px;
-    flex: 1;
-    min-height: 0; /* Important for flex child to not expand over bounds */
+    /* 행 높이: 콘텐츠에 맞게 자동 확장, 최소 120px */
+    grid-auto-rows: minmax(120px, auto);
+    gap: 8px;
 }
 
 .cal-day {
@@ -648,7 +648,7 @@ body {
     border: 1px solid #e9eef5;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    /* overflow 제거: 셀이 콘텐츠 높이만큼 자동 확장 */
     transition: box-shadow 0.18s ease, border-color 0.18s ease;
     box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
@@ -807,8 +807,10 @@ body {
 }
 .event.hidden { display: none !important; }
 
-.cal-day::-webkit-scrollbar { width: 4px; }
-.cal-day::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
+/* 캘린더 패널 스크롤바 */
+.calendar-wrapper::-webkit-scrollbar { width: 6px; }
+.calendar-wrapper::-webkit-scrollbar-track { background: transparent; }
+.calendar-wrapper::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 6px; }
 
 /* Modal Detail (Polished) */
 .modal-overlay {
@@ -1023,11 +1025,10 @@ body {
 
 /* ===== 연차계획 캘린더 ===== */
 .leave-grid {
-    /* 기존 calendar-grid 상속, 동일 레이아웃 */
+    grid-auto-rows: minmax(90px, auto);
 }
 .leave-cal-day {
     cursor: pointer;
-    min-height: 80px;
 }
 .leave-cal-day:hover {
     background: rgba(255,255,255,0.92);
