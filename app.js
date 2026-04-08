@@ -1374,6 +1374,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     await loadLeaves();
+    // null/불완전 항목 방어 정리
+    allLeaves = allLeaves.filter(l => l && l.date && l.employee_name);
 
     // ---- 연차 패널 월 이동 버튼 ----
     document.getElementById('leavePrevMonth').addEventListener('click', () => {
@@ -1482,17 +1484,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('leaveModal').classList.remove('active');
     });
 
+    // HTML 특수문자 이스케이프 (innerHTML 삽입용)
+    function escHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
     // ---- 모달 내 기존 항목 렌더링 ----
     function renderLeaveModalEntries(dateStr) {
         const container = document.getElementById('leaveModalEntries');
         const entries = allLeaves
-            .filter(l => (l.date || '').slice(0, 10) === dateStr)
+            .filter(l => l && (l.date || '').slice(0, 10) === dateStr)  // null 항목 방어
             .sort((a, b) => {
-                const tc = a.team.localeCompare(b.team, 'ko');
+                const tc = (a.team || '').localeCompare(b.team || '', 'ko');
                 if (tc !== 0) return tc;
                 const rd = (RANK_ORDER[a.rank] || 9) - (RANK_ORDER[b.rank] || 9);
                 if (rd !== 0) return rd;
-                return a.employee_name.localeCompare(b.employee_name, 'ko');
+                return (a.employee_name || '').localeCompare(b.employee_name || '', 'ko');
             });
 
         if (entries.length === 0) {
@@ -1515,11 +1522,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             info.className = 'leave-entry-info';
             info.innerHTML =
                 `<span class="leave-entry-date-badge">${leave.date ? leave.date.slice(5).replace('-','/') : ''}</span>` +
-                `<span class="leave-entry-badge ${tc}">${leave.leave_type}</span>` +
-                `<span class="leave-entry-team">${leave.team}</span>` +
-                `<span class="leave-entry-rank">${leave.rank}</span>` +
-                `<span class="leave-entry-name">${leave.employee_name}</span>` +
-                (leave.note ? `<span class="leave-entry-note">· ${leave.note}</span>` : '');
+                `<span class="leave-entry-badge ${tc}">${escHtml(leave.leave_type)}</span>` +
+                `<span class="leave-entry-team">${escHtml(leave.team)}</span>` +
+                `<span class="leave-entry-rank">${escHtml(leave.rank)}</span>` +
+                `<span class="leave-entry-name">${escHtml(leave.employee_name)}</span>` +
+                (leave.note ? `<span class="leave-entry-note">· ${escHtml(leave.note)}</span>` : '');
 
             // 수정 버튼
             const editBtn = document.createElement('button');
@@ -1562,30 +1569,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   </div>
   <div>
     <label class="leave-form-label">팀</label>
-    <input type="text" class="form-input ef-team" value="${leave.team || ''}">
+    <input type="text" class="form-input ef-team" value="${escHtml(leave.team)}">
   </div>
   <div>
     <label class="leave-form-label">직급</label>
-    <select class="form-input ef-rank">${RANKS.map(r=>`<option${r===leave.rank?' selected':''}>${r}</option>`).join('')}</select>
+    <select class="form-input ef-rank">${RANKS.map(r=>`<option${r===leave.rank?' selected':''}>${escHtml(r)}</option>`).join('')}</select>
   </div>
   <div>
     <label class="leave-form-label">이름</label>
-    <input type="text" class="form-input ef-name" value="${leave.employee_name || ''}">
+    <input type="text" class="form-input ef-name" value="${escHtml(leave.employee_name)}">
   </div>
   <div>
     <label class="leave-form-label">구분</label>
-    <select class="form-input ef-type">${TYPES.map(t=>`<option${t===leave.leave_type?' selected':''}>${t}</option>`).join('')}</select>
+    <select class="form-input ef-type">${TYPES.map(t=>`<option${t===leave.leave_type?' selected':''}>${escHtml(t)}</option>`).join('')}</select>
   </div>
   <div>
     <label class="leave-form-label">비고</label>
-    <input type="text" class="form-input ef-note" value="${leave.note || ''}">
+    <input type="text" class="form-input ef-note" value="${escHtml(leave.note)}">
   </div>
 </div>
-<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;align-items:center;">
+<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
   <label style="font-size:11.5px;color:#64748b;display:flex;align-items:center;gap:4px;cursor:pointer;">
     <input type="checkbox" class="ef-period-toggle"> 기간 수정
   </label>
-  <div class="ef-period-section" style="display:none;display:flex;gap:6px;align-items:center;">
+  <div class="ef-period-section" style="display:none;gap:6px;align-items:center;">
     <input type="date" class="form-input ef-period-start" style="width:130px;">
     <span style="font-size:12px;color:#94a3b8;">~</span>
     <input type="date" class="form-input ef-period-end" style="width:130px;">
