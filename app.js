@@ -1385,22 +1385,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     allLeaves = allLeaves.filter(l => l && l.date && l.employee_name);
 
     // ---- 연차 패널 월 이동 버튼 ----
-    document.getElementById('leavePrevMonth').addEventListener('click', () => {
-        leaveMonth--;
-        if (leaveMonth < 0) { leaveMonth = 11; leaveYear--; }
-        // 상단 타이틀도 동기화
-        currentMonth = leaveMonth; currentYear = leaveYear;
+    // 연차 패널 월 이동 공통 함수
+    function moveLeaveMonth(year, month) {
+        leaveYear = year; leaveMonth = month;
+        currentYear = year; currentMonth = month;
         document.getElementById('monthTitle').textContent =
-            `${leaveYear}. ${String(leaveMonth + 1).padStart(2, '0')}`;
+            `${year}. ${String(month + 1).padStart(2, '0')}`;
+        // picker 값도 동기화
+        const picker = document.getElementById('leaveMonthPicker');
+        if (picker) picker.value = `${year}-${String(month + 1).padStart(2, '0')}`;
         renderLeaveCalendar();
+    }
+
+    document.getElementById('leavePrevMonth').addEventListener('click', () => {
+        let m = leaveMonth - 1, y = leaveYear;
+        if (m < 0) { m = 11; y--; }
+        moveLeaveMonth(y, m);
     });
     document.getElementById('leaveNextMonth').addEventListener('click', () => {
-        leaveMonth++;
-        if (leaveMonth > 11) { leaveMonth = 0; leaveYear++; }
-        currentMonth = leaveMonth; currentYear = leaveYear;
-        document.getElementById('monthTitle').textContent =
-            `${leaveYear}. ${String(leaveMonth + 1).padStart(2, '0')}`;
-        renderLeaveCalendar();
+        let m = leaveMonth + 1, y = leaveYear;
+        if (m > 11) { m = 0; y++; }
+        moveLeaveMonth(y, m);
+    });
+
+    // 월 라벨 클릭 → input[type=month] picker
+    document.getElementById('leaveMonthPicker').addEventListener('change', (e) => {
+        const [y, m] = e.target.value.split('-').map(Number);
+        if (y && m) moveLeaveMonth(y, m - 1);
     });
 
     // ---- 연차 캘린더 렌더링 ----
@@ -1415,6 +1426,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 연차 패널 자체 월 라벨 갱신
         const leaveLabel = document.getElementById('leaveMonthLabel');
         if (leaveLabel) leaveLabel.textContent = `${leaveYear}. ${String(leaveMonth + 1).padStart(2, '0')}`;
+        const picker = document.getElementById('leaveMonthPicker');
+        if (picker) picker.value = `${leaveYear}-${String(leaveMonth + 1).padStart(2, '0')}`;
 
         for (let i = 0; i < firstDayIndex; i++) {
             const d = document.createElement('div');

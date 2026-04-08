@@ -322,7 +322,10 @@
                     <h2 class="panel-title">📋 건기식관리부문 연차계획</h2>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <button id="leavePrevMonth" class="month-nav-btn">&#8249;</button>
-                        <span id="leaveMonthLabel" style="font-size:14px;font-weight:700;color:#0f172a;min-width:72px;text-align:center;"></span>
+                        <span style="position:relative;display:inline-flex;align-items:center;">
+                            <span id="leaveMonthLabel" title="클릭하여 월 선택" style="font-size:14px;font-weight:700;color:#0f172a;min-width:72px;text-align:center;cursor:pointer;"></span>
+                            <input type="month" id="leaveMonthPicker" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:none;background:none;">
+                        </span>
                         <button id="leaveNextMonth" class="month-nav-btn">&#8250;</button>
                     </div>
                 </div>
