@@ -1352,6 +1352,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let allLeaves = [];
     let leaveModalDate = '';
+    // 연차 패널 전용 월/연도 (공통 currentYear/currentMonth와 독립)
+    let leaveYear  = new Date().getFullYear();
+    let leaveMonth = new Date().getMonth();
 
     async function loadLeaves() {
         if (!sb) { allLeaves = []; return; }
@@ -1372,16 +1375,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadLeaves();
 
+    // ---- 연차 패널 월 이동 버튼 ----
+    document.getElementById('leavePrevMonth').addEventListener('click', () => {
+        leaveMonth--;
+        if (leaveMonth < 0) { leaveMonth = 11; leaveYear--; }
+        renderLeaveCalendar();
+    });
+    document.getElementById('leaveNextMonth').addEventListener('click', () => {
+        leaveMonth++;
+        if (leaveMonth > 11) { leaveMonth = 0; leaveYear++; }
+        renderLeaveCalendar();
+    });
+
     // ---- 연차 캘린더 렌더링 ----
     function renderLeaveCalendar() {
         const leaveGrid = document.getElementById('leaveGrid');
         if (!leaveGrid) return;
         leaveGrid.innerHTML = '';
 
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
-        document.getElementById('monthTitle').textContent =
-            `${currentYear}. ${String(currentMonth + 1).padStart(2, '0')}`;
+        const daysInMonth = new Date(leaveYear, leaveMonth + 1, 0).getDate();
+        const firstDayIndex = new Date(leaveYear, leaveMonth, 1).getDay();
+
+        // 연차 패널 자체 월 라벨 갱신
+        const leaveLabel = document.getElementById('leaveMonthLabel');
+        if (leaveLabel) leaveLabel.textContent = `${leaveYear}. ${String(leaveMonth + 1).padStart(2, '0')}`;
 
         for (let i = 0; i < firstDayIndex; i++) {
             const d = document.createElement('div');
@@ -1390,13 +1407,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         for (let day = 1; day <= daysInMonth; day++) {
-            const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            const dateStr = `${leaveYear}-${String(leaveMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
             const dayDiv = document.createElement('div');
             dayDiv.className = 'cal-day leave-cal-day';
 
             const isSunday  = (firstDayIndex + day - 1) % 7 === 0;
             const isSaturday = (firstDayIndex + day - 1) % 7 === 6;
-            const holidayName = getHolidayName(currentYear, currentMonth + 1, day);
+            const holidayName = getHolidayName(leaveYear, leaveMonth + 1, day);
 
             if (isSaturday) dayDiv.classList.add('saturday-day');
             if (isSunday || holidayName) dayDiv.classList.add('holiday-day');

@@ -318,8 +318,13 @@
             </div>
             <!-- Leave / 연차계획 Panel -->
             <div id="panelLeave" class="calendar-wrapper glass-panel" style="display:none;">
-                <div class="panel-title-row">
+                <div class="panel-title-row" style="display:flex;align-items:center;justify-content:space-between;">
                     <h2 class="panel-title">📋 건기식관리부문 연차계획</h2>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button id="leavePrevMonth" class="month-nav-btn">&#8249;</button>
+                        <span id="leaveMonthLabel" style="font-size:14px;font-weight:700;color:#0f172a;min-width:72px;text-align:center;"></span>
+                        <button id="leaveNextMonth" class="month-nav-btn">&#8250;</button>
+                    </div>
                 </div>
                 <div class="calendar-header">
                     <div class="sun">SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
