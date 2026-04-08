@@ -972,11 +972,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('prevMonth').addEventListener('click', () => {
         currentMonth--;
         if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+        // 연차 패널이 열려 있으면 leaveYear/leaveMonth도 함께 이동
+        if (panelLeave && panelLeave.style.display === 'flex') {
+            leaveMonth = currentMonth; leaveYear = currentYear;
+        }
         update();
     });
     document.getElementById('nextMonth').addEventListener('click', () => {
         currentMonth++;
         if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+        if (panelLeave && panelLeave.style.display === 'flex') {
+            leaveMonth = currentMonth; leaveYear = currentYear;
+        }
         update();
     });
 
@@ -1381,11 +1388,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('leavePrevMonth').addEventListener('click', () => {
         leaveMonth--;
         if (leaveMonth < 0) { leaveMonth = 11; leaveYear--; }
+        // 상단 타이틀도 동기화
+        currentMonth = leaveMonth; currentYear = leaveYear;
+        document.getElementById('monthTitle').textContent =
+            `${leaveYear}. ${String(leaveMonth + 1).padStart(2, '0')}`;
         renderLeaveCalendar();
     });
     document.getElementById('leaveNextMonth').addEventListener('click', () => {
         leaveMonth++;
         if (leaveMonth > 11) { leaveMonth = 0; leaveYear++; }
+        currentMonth = leaveMonth; currentYear = leaveYear;
+        document.getElementById('monthTitle').textContent =
+            `${leaveYear}. ${String(leaveMonth + 1).padStart(2, '0')}`;
         renderLeaveCalendar();
     });
 
