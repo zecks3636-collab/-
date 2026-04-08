@@ -1442,12 +1442,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ---- 연차 모달 열기/닫기 ----
     function openLeaveModal(dateStr) {
         leaveModalDate = dateStr;
+        setLeaveModalDateLabel(dateStr);
+        const singleDateInput = document.getElementById('leaveSingleDate');
+        if (singleDateInput) singleDateInput.value = dateStr;
+        renderLeaveModalEntries(dateStr);
+        document.getElementById('leaveModal').classList.add('active');
+    }
+
+    function setLeaveModalDateLabel(dateStr) {
+        leaveModalDate = dateStr;
         const d = new Date(dateStr + 'T00:00:00');
         const days = ['일','월','화','수','목','금','토'];
         document.getElementById('leaveModalDateLabel').textContent =
             `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
-        renderLeaveModalEntries(dateStr);
-        document.getElementById('leaveModal').classList.add('active');
     }
 
     document.getElementById('closeLeaveModal').addEventListener('click', () => {
@@ -1536,6 +1543,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ---- 연차 추가 (공통 실행 함수) ----
+    // djb2 해시 (leave 결정적 ID용)
+    function leaveHashStr(s) {
+        let h = 5381;
+        for (let i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
+        return (h >>> 0).toString(36);
+    }
+
     async function submitLeaveAdd() {
         const team  = document.getElementById('leaveTeamInput').value.trim();
         const rank  = document.getElementById('leaveRankInput').value;
@@ -1559,25 +1573,36 @@ document.addEventListener('DOMContentLoaded', async () => {
             const btn = document.getElementById('leaveAddBtn');
             btn.textContent = '저장 중...'; btn.disabled = true;
             try {
+                // 결정적 ID: 같은 기간·인원 재등록 시 중복 방지
                 const payloads = dates.map(date => ({
-                    id: crypto.randomUUID ? crypto.randomUUID() : `leave-${Date.now()}-${Math.random().toString(36).substr(2,4)}`,
+                    id: `leave-${date}-${leaveHashStr(team + name + type)}`,
                     date, team, rank, employee_name: name, leave_type: type, note: note || null
                 }));
                 if (sb) {
-                    const { error } = await sb.from('leave_plans').insert(payloads);
+                    const { error } = await sb.from('leave_plans').upsert(payloads, { onConflict: 'id' });
                     if (error) throw error;
                 }
-                payloads.forEach(p => allLeaves.push(p));
-                allLeaves.sort((a, b) => a.date.localeCompare(b.date));
+                // 로컬 상태 병합
+                const byId = new Map(allLeaves.map(l => [l.id, l]));
+                payloads.forEach(p => byId.set(p.id, p));
+                allLeaves = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+
                 renderLeaveCalendar();
-                renderLeaveModalEntries(leaveModalDate);
-                // 폼 초기화
+                // 단일 날짜 필드를 시작일로 업데이트하고 모달 라벨도 변경
+                const targetDate = s;
+                setLeaveModalDateLabel(targetDate);
+                const singleDateInput = document.getElementById('leaveSingleDate');
+                if (singleDateInput) singleDateInput.value = targetDate;
+                renderLeaveModalEntries(targetDate);
+
+                // 폼 초기화 (기간 필드는 유지)
                 document.getElementById('leaveTeamInput').value = '';
                 document.getElementById('leaveNameInput').value = '';
                 document.getElementById('leaveNoteInput').value = '';
                 document.getElementById('leavePeriodToggle').checked = false;
                 document.getElementById('leavePeriodSection').style.display = 'none';
-                alert(`✅ ${dates.length}일 등록 완료`);
+                document.getElementById('leaveSingleDateRow').style.display = '';
+                alert(`✅ ${dates.length}일 등록 완료 (${s} ~ ${e})\n이제 날짜를 선택해 개별 항목을 추가할 수 있습니다.`);
             } catch(err) {
                 console.error(err); alert('저장 오류: ' + err.message);
             } finally {
@@ -1586,10 +1611,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // 단일 날짜 모드
-        if (!leaveModalDate) { alert('캘린더에서 날짜를 클릭해 선택해주세요.'); return; }
+        // 단일 날짜 모드 — leaveSingleDate 필드 우선 사용
+        const singleDateVal = (document.getElementById('leaveSingleDate') || {}).value || leaveModalDate;
+        if (!singleDateVal) { alert('입력 날짜를 선택해주세요.'); return; }
         const payload = {
-            date: leaveModalDate,
+            id: `leave-${singleDateVal}-${leaveHashStr(team + name + type)}`,
+            date: singleDateVal,
             team, rank,
             employee_name: name,
             leave_type: type,
@@ -1602,23 +1629,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             if (sb) {
-                const { data, error } = await sb
+                const { error } = await sb
                     .from('leave_plans')
-                    .insert(payload)
-                    .select('*')
-                    .single();
+                    .upsert(payload, { onConflict: 'id' });
                 if (error) throw error;
-                allLeaves.push(data);
-            } else {
-                allLeaves.push({ ...payload, id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), created_at: new Date().toISOString() });
             }
+            // 로컬 상태 병합
+            const byId = new Map(allLeaves.map(l => [l.id, l]));
+            byId.set(payload.id, payload);
+            allLeaves = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+
             // 입력 초기화 후 팀 입력란으로 포커스 복귀
             document.getElementById('leaveTeamInput').value = '';
             document.getElementById('leaveNameInput').value = '';
             document.getElementById('leaveNoteInput').value = '';
             document.getElementById('leaveTeamInput').focus();
 
-            renderLeaveModalEntries(leaveModalDate);
+            // 라벨·엔트리를 현재 선택된 날짜 기준으로 갱신
+            setLeaveModalDateLabel(singleDateVal);
+            renderLeaveModalEntries(singleDateVal);
             renderLeaveCalendar();
         } catch(err) {
             console.error('연차 저장 오류:', err);
@@ -1639,10 +1668,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const leavePeriodPreview = document.getElementById('leavePeriodPreview');
 
     leavePeriodToggle.addEventListener('change', () => {
-        leavePeriodSection.style.display = leavePeriodToggle.checked ? '' : 'none';
-        if (leavePeriodToggle.checked && leaveModalDate) {
-            leaveStartDate.value = leaveModalDate;
-            leaveEndDate.value   = leaveModalDate;
+        const on = leavePeriodToggle.checked;
+        leavePeriodSection.style.display = on ? '' : 'none';
+        const singleRow = document.getElementById('leaveSingleDateRow');
+        if (singleRow) singleRow.style.display = on ? 'none' : '';
+        if (on) {
+            const curDate = (document.getElementById('leaveSingleDate') || {}).value || leaveModalDate;
+            if (curDate) {
+                leaveStartDate.value = curDate;
+                leaveEndDate.value   = curDate;
+            }
             updatePeriodPreview();
         }
     });
@@ -1659,6 +1694,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     leaveStartDate.addEventListener('change', updatePeriodPreview);
     leaveEndDate.addEventListener('change', updatePeriodPreview);
+
+    // 단일 날짜 변경 시 모달 라벨·엔트리 즉시 갱신
+    const leaveSingleDateInput = document.getElementById('leaveSingleDate');
+    if (leaveSingleDateInput) {
+        leaveSingleDateInput.addEventListener('change', () => {
+            const v = leaveSingleDateInput.value;
+            if (v) { setLeaveModalDateLabel(v); renderLeaveModalEntries(v); }
+        });
+    }
 
     // 시작~종료일 사이 평일 날짜 배열 반환
     function getDateRange(startStr, endStr) {
