@@ -1372,6 +1372,68 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
 }
+.leave-entry-edit {
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #2563eb;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.leave-entry-edit:hover {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+}
+.leave-entry-date-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: #64748b;
+    border-radius: 6px;
+    padding: 1px 7px;
+    letter-spacing: 0.02em;
+}
+.leave-edit-form {
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 12px 14px 10px;
+    border: 1px solid #e2e8f0;
+}
+.leave-edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px 10px;
+}
+.ef-save-btn {
+    padding: 5px 16px;
+    border-radius: 8px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.ef-save-btn:hover { background: #1d4ed8; }
+.ef-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ef-cancel-btn {
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.ef-cancel-btn:hover { background: #f1f5f9; }
 
 /* ===== 요청자료일정 패널 헤더 ===== */
 .request-panel-header {

@@ -1485,34 +1485,210 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         container.innerHTML = '';
         entries.forEach(leave => {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'margin-bottom:6px;';
+            wrap.dataset.id = leave.id;
+
+            // ── 표시 행 ──
             const row = document.createElement('div');
             row.className = 'leave-entry-row';
-            row.dataset.id = leave.id;
             const tc = LEAVE_TYPE_CLASS[leave.leave_type] || 'ltype-연차';
 
             const info = document.createElement('div');
             info.className = 'leave-entry-info';
             info.innerHTML =
+                `<span class="leave-entry-date-badge">${leave.date ? leave.date.slice(5).replace('-','/') : ''}</span>` +
                 `<span class="leave-entry-badge ${tc}">${leave.leave_type}</span>` +
                 `<span class="leave-entry-team">${leave.team}</span>` +
                 `<span class="leave-entry-rank">${leave.rank}</span>` +
                 `<span class="leave-entry-name">${leave.employee_name}</span>` +
                 (leave.note ? `<span class="leave-entry-note">· ${leave.note}</span>` : '');
 
+            // 수정 버튼
+            const editBtn = document.createElement('button');
+            editBtn.className = 'leave-entry-edit';
+            editBtn.innerHTML = '✏️ 수정';
+            editBtn.title = '이 항목 수정';
+
+            // 삭제 버튼
             const delBtn = document.createElement('button');
             delBtn.className = 'leave-entry-del';
             delBtn.innerHTML = '🗑️ 삭제';
             delBtn.title = '이 항목 삭제';
             delBtn.addEventListener('click', async () => {
                 if (!confirm(`[${leave.team}] ${leave.rank} ${leave.employee_name} (${leave.leave_type}) 을 삭제할까요?`)) return;
-                delBtn.disabled = true;
-                delBtn.textContent = '삭제 중...';
-                await deleteLeave(leave.id, dateStr, row);
+                delBtn.disabled = true; delBtn.textContent = '삭제 중...';
+                await deleteLeave(leave.id, dateStr, wrap);
             });
 
+            const btnGroup = document.createElement('div');
+            btnGroup.style.cssText = 'display:flex;gap:5px;flex-shrink:0;';
+            btnGroup.appendChild(editBtn);
+            btnGroup.appendChild(delBtn);
+
             row.appendChild(info);
-            row.appendChild(delBtn);
-            container.appendChild(row);
+            row.appendChild(btnGroup);
+
+            // ── 인라인 수정 폼 (기본 숨김) ──
+            const editForm = document.createElement('div');
+            editForm.className = 'leave-edit-form';
+            editForm.style.display = 'none';
+
+            const RANKS = ['임원','부장','과장','대리','사원'];
+            const TYPES = ['연차','반차(오전)','반차(오후)','반반차(오전)','반반차(오후)','하기휴가','교육','특별휴가','병가'];
+
+            editForm.innerHTML = `
+<div class="leave-edit-grid">
+  <div>
+    <label class="leave-form-label">날짜</label>
+    <input type="date" class="form-input ef-date" value="${leave.date ? leave.date.slice(0,10) : ''}">
+  </div>
+  <div>
+    <label class="leave-form-label">팀</label>
+    <input type="text" class="form-input ef-team" value="${leave.team || ''}">
+  </div>
+  <div>
+    <label class="leave-form-label">직급</label>
+    <select class="form-input ef-rank">${RANKS.map(r=>`<option${r===leave.rank?' selected':''}>${r}</option>`).join('')}</select>
+  </div>
+  <div>
+    <label class="leave-form-label">이름</label>
+    <input type="text" class="form-input ef-name" value="${leave.employee_name || ''}">
+  </div>
+  <div>
+    <label class="leave-form-label">구분</label>
+    <select class="form-input ef-type">${TYPES.map(t=>`<option${t===leave.leave_type?' selected':''}>${t}</option>`).join('')}</select>
+  </div>
+  <div>
+    <label class="leave-form-label">비고</label>
+    <input type="text" class="form-input ef-note" value="${leave.note || ''}">
+  </div>
+</div>
+<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;align-items:center;">
+  <label style="font-size:11.5px;color:#64748b;display:flex;align-items:center;gap:4px;cursor:pointer;">
+    <input type="checkbox" class="ef-period-toggle"> 기간 수정
+  </label>
+  <div class="ef-period-section" style="display:none;display:flex;gap:6px;align-items:center;">
+    <input type="date" class="form-input ef-period-start" style="width:130px;">
+    <span style="font-size:12px;color:#94a3b8;">~</span>
+    <input type="date" class="form-input ef-period-end" style="width:130px;">
+    <span class="ef-period-preview" style="font-size:11px;color:#64748b;"></span>
+  </div>
+  <button class="ef-cancel-btn">취소</button>
+  <button class="ef-save-btn">저장</button>
+</div>`;
+
+            // 기간 수정 토글
+            const periodToggle = editForm.querySelector('.ef-period-toggle');
+            const periodSection = editForm.querySelector('.ef-period-section');
+            const dateInput = editForm.querySelector('.ef-date');
+            periodToggle.addEventListener('change', () => {
+                const on = periodToggle.checked;
+                periodSection.style.display = on ? 'flex' : 'none';
+                dateInput.closest('div').style.display = on ? 'none' : '';
+                if (on) {
+                    editForm.querySelector('.ef-period-start').value = dateInput.value || leave.date.slice(0,10);
+                    editForm.querySelector('.ef-period-end').value   = dateInput.value || leave.date.slice(0,10);
+                }
+            });
+            const updateEfPreview = () => {
+                const s = editForm.querySelector('.ef-period-start').value;
+                const e = editForm.querySelector('.ef-period-end').value;
+                const days = getDateRange(s, e);
+                editForm.querySelector('.ef-period-preview').textContent =
+                    days.length ? `평일 ${days.length}일` : '⚠️ 날짜 오류';
+            };
+            editForm.querySelector('.ef-period-start').addEventListener('change', updateEfPreview);
+            editForm.querySelector('.ef-period-end').addEventListener('change', updateEfPreview);
+
+            // 취소
+            editForm.querySelector('.ef-cancel-btn').addEventListener('click', () => {
+                editForm.style.display = 'none';
+                row.style.display = '';
+            });
+
+            // 저장
+            editForm.querySelector('.ef-save-btn').addEventListener('click', async () => {
+                const saveBtn = editForm.querySelector('.ef-save-btn');
+                const team2  = editForm.querySelector('.ef-team').value.trim();
+                const rank2  = editForm.querySelector('.ef-rank').value;
+                const name2  = editForm.querySelector('.ef-name').value.trim();
+                const type2  = editForm.querySelector('.ef-type').value;
+                const note2  = editForm.querySelector('.ef-note').value.trim();
+                if (!team2 || !name2) { alert('팀과 이름은 필수입니다.'); return; }
+
+                const isPeriod = periodToggle.checked;
+                saveBtn.textContent = '저장 중...'; saveBtn.disabled = true;
+
+                try {
+                    if (isPeriod) {
+                        // 기간 수정: 기존 항목 삭제 후 새 기간으로 일괄 upsert
+                        const ps = editForm.querySelector('.ef-period-start').value;
+                        const pe = editForm.querySelector('.ef-period-end').value;
+                        const newDates = getDateRange(ps, pe);
+                        if (!newDates.length) { alert('유효한 기간이 없습니다.'); return; }
+                        if (!confirm(`기존 항목을 삭제하고 ${ps}~${pe} 평일 ${newDates.length}일로 재등록하시겠습니까?`)) return;
+
+                        // 기존 항목 삭제
+                        if (sb) {
+                            const { error } = await sb.from('leave_plans').delete().eq('id', leave.id);
+                            if (error) throw error;
+                        }
+                        allLeaves = allLeaves.filter(l => l.id !== leave.id);
+
+                        // 새 기간 upsert
+                        const payloads = newDates.map(date => ({
+                            id: `leave-${date}-${leaveHashStr(team2 + name2 + type2)}`,
+                            date, team: team2, rank: rank2, employee_name: name2,
+                            leave_type: type2, note: note2 || null
+                        }));
+                        if (sb) {
+                            const { error } = await sb.from('leave_plans').upsert(payloads, { onConflict: 'id' });
+                            if (error) throw error;
+                        }
+                        const byId = new Map(allLeaves.map(l => [l.id, l]));
+                        payloads.forEach(p => byId.set(p.id, p));
+                        allLeaves = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+                    } else {
+                        // 단일 날짜 수정
+                        const newDate = editForm.querySelector('.ef-date').value;
+                        if (!newDate) { alert('날짜를 선택해주세요.'); return; }
+                        const newId = `leave-${newDate}-${leaveHashStr(team2 + name2 + type2)}`;
+                        const updated = { id: newId, date: newDate, team: team2, rank: rank2,
+                            employee_name: name2, leave_type: type2, note: note2 || null };
+
+                        if (sb) {
+                            if (newId !== leave.id) {
+                                // ID가 바뀌면 기존 삭제 후 새 행 insert
+                                await sb.from('leave_plans').delete().eq('id', leave.id);
+                            }
+                            const { error } = await sb.from('leave_plans').upsert(updated, { onConflict: 'id' });
+                            if (error) throw error;
+                        }
+                        allLeaves = allLeaves.filter(l => l.id !== leave.id);
+                        const byId = new Map(allLeaves.map(l => [l.id, l]));
+                        byId.set(updated.id, updated);
+                        allLeaves = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+                    }
+
+                    renderLeaveCalendar();
+                    renderLeaveModalEntries(leaveModalDate);
+                } catch(err) {
+                    console.error(err); alert('수정 오류: ' + err.message);
+                    saveBtn.textContent = '저장'; saveBtn.disabled = false;
+                }
+            });
+
+            // 수정 버튼 클릭 → 폼 토글
+            editBtn.addEventListener('click', () => {
+                const isOpen = editForm.style.display !== 'none';
+                editForm.style.display = isOpen ? 'none' : '';
+                row.style.display = isOpen ? '' : 'none';
+            });
+
+            wrap.appendChild(row);
+            wrap.appendChild(editForm);
+            container.appendChild(wrap);
         });
     }
 
