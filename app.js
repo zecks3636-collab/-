@@ -1119,12 +1119,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         });
 
-                        // 스캔: 행(dc.row+1 ~ maxRow-1) × 열(dc.col, dc.col+1)
+                        // 인접 열(col+1)에 다른 날짜가 있으면 수평 헤더 레이아웃(Group)
+                        // → col+1 스캔 시 다음 날짜의 이벤트가 현재 날짜로 중복 수집되는 것을 방지
+                        const hasAdjDate = dateCells.some(o =>
+                            o !== dc && o.col === dc.col + 1 && Math.abs(o.row - dc.row) <= 1
+                        );
+                        const scanCols = hasAdjDate ? [dc.col] : [dc.col, dc.col + 1];
+
+                        // 스캔: 행(dc.row+1 ~ maxRow-1) × 선택 열
                         let pendingTime = null;
                         for (let r = dc.row + 1; r < maxRow; r++) {
                             const row = rows[r] || [];
-                            for (let dcol = 0; dcol <= 1; dcol++) {
-                                const c = dc.col + dcol;
+                            for (const c of scanCols) {
                                 const v = row[c];
                                 if (v == null || v === '') continue;
 
