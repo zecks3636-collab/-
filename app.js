@@ -1653,18 +1653,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                         allLeaves = allLeaves.filter(l => l.id !== leave.id);
 
-                        // 새 기간 insert (uuid 타입 컬럼이므로 id 미지정)
+                        // 새 기간 insert — UUID 클라이언트 생성
                         const payloads = newDates.map(date => ({
+                            id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
                             date, team: team2, rank: rank2, employee_name: name2,
                             leave_type: type2, note: note2 || null
                         }));
-                        let insertedPeriod = payloads;
                         if (sb) {
-                            const { data, error } = await sb.from('leave_plans').insert(payloads).select('*');
+                            const { error } = await sb.from('leave_plans').insert(payloads);
                             if (error) throw error;
-                            insertedPeriod = data || payloads;
                         }
-                        insertedPeriod.forEach(p => allLeaves.push(p));
+                        payloads.forEach(p => allLeaves.push(p));
                         allLeaves.sort((a, b) => a.date.localeCompare(b.date));
                     } else {
                         // 단일 날짜 수정
@@ -1763,17 +1762,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             const btn = document.getElementById('leaveAddBtn');
             btn.textContent = '저장 중...'; btn.disabled = true;
             try {
-                // UUID로 각 날짜별 행 생성 (DB 컬럼이 uuid 타입)
+                // 날짜별로 UUID 생성 → DB uuid 컬럼 호환, 로컬 상태도 즉시 반영
                 const payloads = dates.map(date => ({
+                    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
                     date, team, rank, employee_name: name, leave_type: type, note: note || null
                 }));
-                let inserted = payloads;
                 if (sb) {
-                    const { data, error } = await sb.from('leave_plans').insert(payloads).select('*');
+                    const { error } = await sb.from('leave_plans').insert(payloads);
                     if (error) throw error;
-                    inserted = data || payloads;
                 }
-                inserted.forEach(p => allLeaves.push(p));
+                payloads.forEach(p => allLeaves.push(p));
                 allLeaves.sort((a, b) => a.date.localeCompare(b.date));
 
                 renderLeaveCalendar();
@@ -1803,7 +1801,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 단일 날짜 모드 — leaveSingleDate 필드 우선 사용
         const singleDateVal = (document.getElementById('leaveSingleDate') || {}).value || leaveModalDate;
         if (!singleDateVal) { alert('입력 날짜를 선택해주세요.'); return; }
+        // crypto.randomUUID()로 클라이언트에서 UUID 생성 → DB uuid 컬럼과 호환
+        const newId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const payload = {
+            id: newId,
             date: singleDateVal,
             team, rank,
             employee_name: name,
@@ -1816,17 +1817,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = true;
 
         try {
-            let saved = payload;
             if (sb) {
-                const { data, error } = await sb
-                    .from('leave_plans')
-                    .insert(payload)
-                    .select('*')
-                    .single();
+                const { error } = await sb.from('leave_plans').insert(payload);
                 if (error) throw error;
-                saved = data;
             }
-            allLeaves.push(saved);
+            // DB 반환값에 의존하지 않고 로컬 payload를 직접 사용
+            allLeaves.push(payload);
             allLeaves.sort((a, b) => a.date.localeCompare(b.date));
 
             // 입력 초기화 후 팀 입력란으로 포커스 복귀
