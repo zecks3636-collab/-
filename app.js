@@ -889,20 +889,30 @@ document.addEventListener('DOMContentLoaded', async () => {
                 confirmReviewBtn.textContent = '최종 캘린더 반영하기'; confirmReviewBtn.disabled = false;
             }
         } else {
-            // ── 회사 일정 저장 (Group / NBT / BIO) ──
+            // ── 회사 일정 저장 (Group / NBT / BIO) — 결정적 ID로 병합 ──
+            // djb2 해시: 동일 (company, date, title)은 동일 ID 생성 → 재업로드 시 중복 방지
+            const hashStr = (s) => {
+                let h = 5381;
+                for (let i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
+                return (h >>> 0).toString(36);
+            };
+            const normalizeTitle = t => (t || '').replace(/\s+/g, ' ').trim();
+
             const finalEvents = [];
+            const seenIds = new Set();
             rows.forEach(row => {
                 const dateInput = row.querySelector('.edit-date');
                 const titleInput = row.querySelector('.edit-title');
                 const compInput  = row.querySelector('.edit-company');
-                if (dateInput && titleInput) {
-                    finalEvents.push({
-                        id: (compInput ? compInput.value : uploadDestination) + '-' + Date.now() + '-' + Math.random().toString(36).substr(2,4),
-                        company: compInput ? compInput.value : (uploadDestination || 'Group'),
-                        date: dateInput.value,
-                        title: titleInput.value
-                    });
-                }
+                if (!dateInput || !titleInput) return;
+                const company = compInput ? compInput.value : (uploadDestination || 'Group');
+                const date    = dateInput.value;
+                const title   = normalizeTitle(titleInput.value);
+                if (!title) return;
+                const id = `${company}-${date}-${hashStr(title)}`;
+                if (seenIds.has(id)) return; // 리뷰 테이블 내 중복도 제거
+                seenIds.add(id);
+                finalEvents.push({ id, company, date, title });
             });
             if (finalEvents.length === 0) { alert('반영할 일정이 없습니다.'); return; }
 
@@ -912,16 +922,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const { error } = await sb.from('schedules').upsert(finalEvents, { onConflict: 'id' });
                     if (error) throw error;
                 }
-                const seen = new Set(allEvents.map(e => `${e.company}|${e.date}|${e.title}`));
-                let addedCount = 0;
+                // 로컬 상태 병합: 동일 ID는 교체, 신규는 추가
+                const byId = new Map(allEvents.map(e => [e.id, e]));
+                let addedCount = 0, updatedCount = 0;
                 finalEvents.forEach(ne => {
-                    const key = `${ne.company}|${ne.date}|${ne.title}`;
-                    if (!seen.has(key)) { seen.add(key); allEvents.push(ne); addedCount++; }
+                    if (byId.has(ne.id)) updatedCount++;
+                    else addedCount++;
+                    byId.set(ne.id, ne);
                 });
-                allEvents.sort((a, b) => a.date.localeCompare(b.date));
+                allEvents = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+
                 reviewModal.classList.remove('active');
                 update();
-                alert(`✅ ${addedCount}개의 새로운 일정이 저장되었습니다.`);
+                alert(`✅ 신규 ${addedCount}건 / 기존 ${updatedCount}건 병합 완료 (총 ${finalEvents.length}건 반영)`);
             } catch (err) {
                 console.error(err); alert('Supabase 저장 오류: ' + err.message);
             } finally {
@@ -1028,8 +1041,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                             if (typeof cellVal === 'number' && cellVal >= 1 && cellVal <= 31) {
                                 dateVal = Math.floor(cellVal);
-                            } else if (typeof cellVal === 'string' && cellVal.trim().match(/^\d+$/) && parseInt(cellVal) >= 1 && parseInt(cellVal) <= 31) {
-                                dateVal = parseInt(cellVal.trim());
+                            } else if (typeof cellVal === 'string') {
+                                const s = cellVal.trim();
+                                // 1, 01, 1일, 4/1, 04-01, 2026-04-01 등 지원
+                                let m;
+                                if (m = s.match(/^(\d{1,2})\s*일?$/)) {
+                                    const d = parseInt(m[1]); if (d >= 1 && d <= 31) dateVal = d;
+                                } else if (m = s.match(/^\d{1,2}[\/\-.](\d{1,2})$/)) {
+                                    const d = parseInt(m[1]); if (d >= 1 && d <= 31) dateVal = d;
+                                } else if (m = s.match(/^\d{4}[\/\-.]\d{1,2}[\/\-.](\d{1,2})$/)) {
+                                    const d = parseInt(m[1]); if (d >= 1 && d <= 31) dateVal = d;
+                                }
                             }
 
                             if (dateVal !== null) {
