@@ -64,6 +64,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     allEvents.sort((a, b) => a.date.localeCompare(b.date));
 
+    // ── 기존 중복 일정 1회 정리 (company,date,정규화 title 기준) ──
+    try {
+        const normT = t => (t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        const groups = new Map();
+        allEvents.forEach(e => {
+            const k = `${e.company}||${e.date}||${normT(e.title)}`;
+            if (!groups.has(k)) groups.set(k, []);
+            groups.get(k).push(e);
+        });
+        const dupIds = [];
+        groups.forEach(arr => { if (arr.length > 1) arr.slice(1).forEach(x => dupIds.push(x.id)); });
+        if (dupIds.length > 0) {
+            console.log(`🧹 중복 일정 ${dupIds.length}건 정리 중...`);
+            if (sb) {
+                const { error } = await sb.from('schedules').delete().in('id', dupIds);
+                if (error) console.warn('중복 삭제 실패:', error.message);
+            }
+            const rm = new Set(dupIds);
+            allEvents = allEvents.filter(e => !rm.has(e.id));
+            console.log(`✅ 중복 ${dupIds.length}건 제거 완료`);
+        }
+    } catch (e) {
+        console.warn('중복 정리 중 오류:', e.message);
+    }
+
     // ========== CALENDAR STATE ==========
     let today = new Date();
     let currentYear = today.getFullYear();
