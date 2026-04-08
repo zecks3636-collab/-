@@ -1021,59 +1021,108 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ========== EXCEL PARSING (SheetJS, client-side) ==========
+    // 두 가지 레이아웃 지원:
+    //  A) Group/BIO: 숫자 날짜(1~31) + 같은 열 아래 이벤트(시간 내장)
+    //  B) NBT: Date 객체 날짜 + 인접 열(col+1) 이벤트 + 같은 열 time 객체
     function parseExcelFile(file, company) {
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                 const newEvents = [];
+
+                // 헬퍼: 셀에서 날짜(YYYY-MM-DD) 추출
+                function extractDate(v) {
+                    if (v instanceof Date) {
+                        const y = v.getFullYear();
+                        if (y < 1970) return null; // 시간 전용 셀
+                        return `${y}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
+                    }
+                    if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 31) {
+                        return `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(v).padStart(2,'0')}`;
+                    }
+                    if (typeof v === 'string') {
+                        const s = v.trim();
+                        let m;
+                        if (m = s.match(/^(\d{1,2})\s*일?$/)) {
+                            const d = parseInt(m[1]);
+                            if (d >= 1 && d <= 31) return `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                        }
+                        if (m = s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/)) {
+                            return `${m[1]}-${String(parseInt(m[2])).padStart(2,'0')}-${String(parseInt(m[3])).padStart(2,'0')}`;
+                        }
+                    }
+                    return null;
+                }
+
+                // 헬퍼: 셀에서 시간(HH:MM) 추출
+                function extractTime(v) {
+                    if (v instanceof Date && v.getFullYear() < 1970) {
+                        return `${String(v.getHours()).padStart(2,'0')}:${String(v.getMinutes()).padStart(2,'0')}`;
+                    }
+                    if (typeof v === 'string') {
+                        const m = v.trim().match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+                        if (m) return `${m[1].padStart(2,'0')}:${m[2]}`;
+                    }
+                    return null;
+                }
 
                 workbook.SheetNames.forEach(sheetName => {
                     const sheet = workbook.Sheets[sheetName];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: true });
+                    if (!rows.length) return;
 
+                    // 1단계: 모든 날짜 셀 위치 수집
+                    const dateCells = [];
                     for (let r = 0; r < rows.length; r++) {
-                        const row = rows[r];
+                        const row = rows[r] || [];
                         for (let c = 0; c < row.length; c++) {
-                            let cellVal = row[c];
-                            let dateVal = null;
-
-                            if (typeof cellVal === 'number' && cellVal >= 1 && cellVal <= 31) {
-                                dateVal = Math.floor(cellVal);
-                            } else if (typeof cellVal === 'string') {
-                                const s = cellVal.trim();
-                                // 1, 01, 1일, 4/1, 04-01, 2026-04-01 등 지원
-                                let m;
-                                if (m = s.match(/^(\d{1,2})\s*일?$/)) {
-                                    const d = parseInt(m[1]); if (d >= 1 && d <= 31) dateVal = d;
-                                } else if (m = s.match(/^\d{1,2}[\/\-.](\d{1,2})$/)) {
-                                    const d = parseInt(m[1]); if (d >= 1 && d <= 31) dateVal = d;
-                                } else if (m = s.match(/^\d{4}[\/\-.]\d{1,2}[\/\-.](\d{1,2})$/)) {
-                                    const d = parseInt(m[1]); if (d >= 1 && d <= 31) dateVal = d;
-                                }
-                            }
-
-                            if (dateVal !== null) {
-                                for (let offset = 1; offset <= 6; offset++) {
-                                    if (r + offset >= rows.length) break;
-                                    const eventCell = rows[r + offset][c];
-                                    if (eventCell === '' || eventCell === undefined || eventCell === null) continue;
-                                    const eventText = String(eventCell).trim();
-                                    if (eventText === '' || eventText.match(/^[\d.]+$/) || ['일','월','화','수','목','금','토'].includes(eventText)) break;
-
-                                    const ym = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
-                                    newEvents.push({
-                                        id: `${company}-${dateVal}-${offset}-xls`,
-                                        company: company,
-                                        date: `${ym}-${String(dateVal).padStart(2,'0')}`,
-                                        title: eventText,
-                                        category: '정기요청자료'
-                                    });
-                                }
-                            }
+                            const ds = extractDate(row[c]);
+                            if (ds) dateCells.push({ row: r, col: c, dateStr: ds });
                         }
                     }
+
+                    // 2단계: 각 날짜 셀에 대해 이벤트 영역 스캔
+                    dateCells.forEach(dc => {
+                        // 같은 열/인접 열에 있는 다음 날짜 행을 찾아 스캔 종료점 결정
+                        let maxRow = Math.min(dc.row + 10, rows.length);
+                        dateCells.forEach(other => {
+                            if (other === dc) return;
+                            if (Math.abs(other.col - dc.col) <= 1 && other.row > dc.row && other.row < maxRow) {
+                                maxRow = other.row;
+                            }
+                        });
+
+                        // 스캔: 행(dc.row+1 ~ maxRow-1) × 열(dc.col, dc.col+1)
+                        let pendingTime = null;
+                        for (let r = dc.row + 1; r < maxRow; r++) {
+                            const row = rows[r] || [];
+                            for (let dcol = 0; dcol <= 1; dcol++) {
+                                const c = dc.col + dcol;
+                                const v = row[c];
+                                if (v == null || v === '') continue;
+
+                                // 시간 셀?
+                                const t = extractTime(v);
+                                if (t) { pendingTime = t; continue; }
+
+                                // 텍스트 이벤트?
+                                const txt = String(v).trim();
+                                if (!txt) continue;
+                                if (/^[\d.]+$/.test(txt)) continue;
+                                if (/^(일|월|화|수|목|금|토|SUN|MON|TUE|WED|THU|FRI|SAT)$/i.test(txt)) continue;
+
+                                const title = pendingTime ? `${pendingTime} ${txt}` : txt;
+                                pendingTime = null;
+                                newEvents.push({
+                                    company: company,
+                                    date: dc.dateStr,
+                                    title: title
+                                });
+                            }
+                        }
+                    });
                 });
 
                 if (newEvents.length === 0) {
