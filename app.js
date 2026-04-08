@@ -1213,6 +1213,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const REQUEST_CATEGORIES = ['통합회의및확대회의관련', '관계사경영회의관련', '정기요청자료'];
 
     function showReviewModal(events, dest) {
+        // 파싱 단계 중복 제거: (date, 정규화 title) 기준
+        const _seen = new Set();
+        const _norm = t => (t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+        events = (events || []).filter(e => {
+            const t = _norm(e.title);
+            if (!t) return false;
+            const k = `${e.date}||${t}`;
+            if (_seen.has(k)) return false;
+            _seen.add(k);
+            return true;
+        });
+
         pendingUploadEvents = events;
         reviewTableBody.innerHTML = '';
 
