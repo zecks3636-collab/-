@@ -1653,39 +1653,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                         allLeaves = allLeaves.filter(l => l.id !== leave.id);
 
-                        // 새 기간 upsert
+                        // 새 기간 insert (uuid 타입 컬럼이므로 id 미지정)
                         const payloads = newDates.map(date => ({
-                            id: `leave-${date}-${leaveHashStr(team2 + name2 + type2)}`,
                             date, team: team2, rank: rank2, employee_name: name2,
                             leave_type: type2, note: note2 || null
                         }));
+                        let insertedPeriod = payloads;
                         if (sb) {
-                            const { error } = await sb.from('leave_plans').upsert(payloads, { onConflict: 'id' });
+                            const { data, error } = await sb.from('leave_plans').insert(payloads).select('*');
                             if (error) throw error;
+                            insertedPeriod = data || payloads;
                         }
-                        const byId = new Map(allLeaves.map(l => [l.id, l]));
-                        payloads.forEach(p => byId.set(p.id, p));
-                        allLeaves = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+                        insertedPeriod.forEach(p => allLeaves.push(p));
+                        allLeaves.sort((a, b) => a.date.localeCompare(b.date));
                     } else {
                         // 단일 날짜 수정
                         const newDate = editForm.querySelector('.ef-date').value;
                         if (!newDate) { alert('날짜를 선택해주세요.'); return; }
-                        const newId = `leave-${newDate}-${leaveHashStr(team2 + name2 + type2)}`;
-                        const updated = { id: newId, date: newDate, team: team2, rank: rank2,
+                        const updated = { date: newDate, team: team2, rank: rank2,
                             employee_name: name2, leave_type: type2, note: note2 || null };
 
                         if (sb) {
-                            if (newId !== leave.id) {
-                                // ID가 바뀌면 기존 삭제 후 새 행 insert
-                                await sb.from('leave_plans').delete().eq('id', leave.id);
-                            }
-                            const { error } = await sb.from('leave_plans').upsert(updated, { onConflict: 'id' });
+                            // 기존 UUID id 유지한 채로 update
+                            const { error } = await sb.from('leave_plans')
+                                .update(updated).eq('id', leave.id);
                             if (error) throw error;
                         }
-                        allLeaves = allLeaves.filter(l => l.id !== leave.id);
-                        const byId = new Map(allLeaves.map(l => [l.id, l]));
-                        byId.set(updated.id, updated);
-                        allLeaves = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+                        // 로컬 상태 갱신
+                        const merged = { ...leave, ...updated };
+                        allLeaves = allLeaves.map(l => l.id === leave.id ? merged : l)
+                            .sort((a, b) => a.date.localeCompare(b.date));
                     }
 
                     renderLeaveCalendar();
@@ -1766,19 +1763,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             const btn = document.getElementById('leaveAddBtn');
             btn.textContent = '저장 중...'; btn.disabled = true;
             try {
-                // 결정적 ID: 같은 기간·인원 재등록 시 중복 방지
+                // UUID로 각 날짜별 행 생성 (DB 컬럼이 uuid 타입)
                 const payloads = dates.map(date => ({
-                    id: `leave-${date}-${leaveHashStr(team + name + type)}`,
                     date, team, rank, employee_name: name, leave_type: type, note: note || null
                 }));
+                let inserted = payloads;
                 if (sb) {
-                    const { error } = await sb.from('leave_plans').upsert(payloads, { onConflict: 'id' });
+                    const { data, error } = await sb.from('leave_plans').insert(payloads).select('*');
                     if (error) throw error;
+                    inserted = data || payloads;
                 }
-                // 로컬 상태 병합
-                const byId = new Map(allLeaves.map(l => [l.id, l]));
-                payloads.forEach(p => byId.set(p.id, p));
-                allLeaves = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+                inserted.forEach(p => allLeaves.push(p));
+                allLeaves.sort((a, b) => a.date.localeCompare(b.date));
 
                 renderLeaveCalendar();
                 // 단일 날짜 필드를 시작일로 업데이트하고 모달 라벨도 변경
@@ -1808,7 +1804,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const singleDateVal = (document.getElementById('leaveSingleDate') || {}).value || leaveModalDate;
         if (!singleDateVal) { alert('입력 날짜를 선택해주세요.'); return; }
         const payload = {
-            id: `leave-${singleDateVal}-${leaveHashStr(team + name + type)}`,
             date: singleDateVal,
             team, rank,
             employee_name: name,
@@ -1821,16 +1816,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = true;
 
         try {
+            let saved = payload;
             if (sb) {
-                const { error } = await sb
+                const { data, error } = await sb
                     .from('leave_plans')
-                    .upsert(payload, { onConflict: 'id' });
+                    .insert(payload)
+                    .select('*')
+                    .single();
                 if (error) throw error;
+                saved = data;
             }
-            // 로컬 상태 병합
-            const byId = new Map(allLeaves.map(l => [l.id, l]));
-            byId.set(payload.id, payload);
-            allLeaves = [...byId.values()].sort((a, b) => a.date.localeCompare(b.date));
+            allLeaves.push(saved);
+            allLeaves.sort((a, b) => a.date.localeCompare(b.date));
 
             // 입력 초기화 후 팀 입력란으로 포커스 복귀
             document.getElementById('leaveTeamInput').value = '';
