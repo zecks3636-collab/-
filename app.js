@@ -449,7 +449,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
-    const HARDCODED_WEEK = '2026-04-06'; // 하드코딩 테이블이 있는 주 (월요일 기준)
+    const HARDCODED_WEEKS = {
+        '2026-04-06': 'menuContentTable',   // 둘째주
+        '2026-04-13': 'menuContentTable2'    // 셋째주
+    };
 
     // Supabase에서 menu_weeks 로드 (fallback: localStorage)
     let menuStore = {};
@@ -493,7 +496,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMenuStore();
 
     // 현재 표시 중인 주 (월요일 기준 Date)
-    let currentMenuMonday = new Date('2026-04-06T00:00:00');
+    let currentMenuMonday = new Date('2026-04-13T00:00:00');
 
     function menuWeekKey(d) {
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -520,12 +523,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('menuWeekLabel').textContent = '창조경제혁신센터 주간 메뉴';
         document.getElementById('menuWeekSub').textContent = `${info.title} (${info.range}) · (주)멜리에프에스`;
 
-        const tableEl  = document.getElementById('menuContentTable');
         const imageEl  = document.getElementById('menuContentImage');
         const emptyEl  = document.getElementById('menuContentEmpty');
         const noticeEl = document.getElementById('menuNotice');
 
-        tableEl.style.display = 'none';
+        // 모든 하드코딩 테이블 숨기기
+        Object.values(HARDCODED_WEEKS).forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
         imageEl.style.display = 'none';
         emptyEl.style.display = 'none';
 
@@ -534,9 +539,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('menuUploadedImg').src = menuStore[key].imageUrl || menuStore[key].dataUrl || '';
             imageEl.style.display = 'block';
             noticeEl.style.display = '';
-        } else if (key === HARDCODED_WEEK) {
+        } else if (HARDCODED_WEEKS[key]) {
             // 하드코딩 테이블 표시
-            tableEl.style.display = '';
+            document.getElementById(HARDCODED_WEEKS[key]).style.display = '';
             noticeEl.style.display = '';
         } else {
             // 빈 상태
