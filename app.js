@@ -495,8 +495,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     await loadMenuStore();
 
-    // 현재 표시 중인 주 (월요일 기준 Date)
-    let currentMenuMonday = new Date('2026-04-13T00:00:00');
+    // 현재 표시 중인 주 (오늘 날짜 기준 → 해당 주 월요일 자동 계산)
+    function getTodayMonday() {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const day = today.getDay(); // 0=Sun
+        const diff = day === 0 ? 6 : day - 1; // 월요일까지 거리
+        today.setDate(today.getDate() - diff);
+        return today;
+    }
+    let currentMenuMonday = getTodayMonday();
 
     function menuWeekKey(d) {
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
