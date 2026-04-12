@@ -118,7 +118,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         "2026-05-25": "대체공휴일",   // 부처님오신날(일) → 월
         "2026-08-17": "대체공휴일",   // 광복절(토) → 월
         "2026-09-28": "대체공휴일",   // 추석연휴(토) → 월
-        "2026-10-05": "대체공휴일"    // 개천절(토) → 월
+        "2026-10-05": "대체공휴일",   // 개천절(토) → 월
+        "05-01": "근로자의 날"
     };
 
     function getHolidayName(y, m, d) {
@@ -1163,6 +1164,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 if (!txt) continue;
                                 if (/^[\d.]+$/.test(txt)) continue;
                                 if (/^(일|월|화|수|목|금|토|SUN|MON|TUE|WED|THU|FRI|SAT)$/i.test(txt)) continue;
+                                // 일정이 아닌 행정/참고 항목 제외
+                                if (/생산일수|상여지급|급여지급|근무일수|휴무일수|공휴일수/.test(txt)) continue;
 
                                 const title = pendingTime ? `${pendingTime} ${txt}` : txt;
                                 pendingTime = null;
