@@ -43,6 +43,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('Supabase 클라이언트 초기화 실패:', initErr);
     }
 
+    // ── 이벤트 배경색 저장소 (Supabase 로드 전 초기화) ──
+    let eventColorMap = {};
+    try { eventColorMap = JSON.parse(localStorage.getItem('eventCustomColors')) || {}; } catch { eventColorMap = {}; }
+
     // ========== DATA LAYER (Supabase + fallback) ==========
     let allEvents = [];
     if (sb) {
@@ -52,8 +56,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .select('id, company, date, title')
                 .order('date', { ascending: true });
             if (error) throw error;
-            allEvents = data || [];
-            console.log(`✅ Supabase에서 ${allEvents.length}건 로드 완료`);
+            const raw = data || [];
+            // _COLOR 레코드는 색상 맵으로 분리, 일반 일정만 allEvents에
+            raw.forEach(r => {
+                if (r.company === '_COLOR') {
+                    try { eventColorMap[r.date] = JSON.parse(r.title); } catch(_) {}
+                }
+            });
+            allEvents = raw.filter(r => r.company !== '_COLOR');
+            console.log(`✅ Supabase에서 ${allEvents.length}건 로드 완료 (색상 ${Object.keys(eventColorMap).length}건)`);
         } catch (e) {
             console.warn('Supabase 쿼리 실패, data.js 폴백 사용:', e.message);
             allEvents = window.fallbackEvents || [];
@@ -68,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const normT = t => (t || '').replace(/\s+/g, ' ').trim().toLowerCase();
         const groups = new Map();
-        allEvents.forEach(e => {
+        allEvents.filter(e => e.company !== '_COLOR').forEach(e => {
             const k = `${e.company}||${e.date}||${normT(e.title)}`;
             if (!groups.has(k)) groups.set(k, []);
             groups.get(k).push(e);
@@ -671,13 +682,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== DETAIL / EDIT / DELETE MODAL ==========
     let currentEventId = null; // tracks the event being viewed/edited
 
-    // ── 이벤트 배경색 저장소 ──
-    const EVENT_COLOR_KEY = 'eventCustomColors';
-    let eventColorMap = {};
-    try { eventColorMap = JSON.parse(localStorage.getItem(EVENT_COLOR_KEY)) || {}; } catch { eventColorMap = {}; }
+    // ── 이벤트 배경색 저장 (Supabase schedules 테이블, company='_COLOR') ──
+    async function saveEventColor(eventId, colorInfo) {
+        // localStorage 동기 저장 (즉시 반영)
+        try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
+        // Supabase 비동기 저장 (다른 사용자와 공유)
+        if (!sb || !eventId) return;
+        try {
+            await sb.from('schedules').upsert({
+                id:      `_COLOR-${eventId}`,
+                company: '_COLOR',
+                date:    eventId,          // event_id를 date 필드에 보관
+                title:   JSON.stringify(colorInfo)
+            }, { onConflict: 'id' });
+        } catch(e) { console.warn('색상 저장 실패:', e.message); }
+    }
 
-    function saveEventColors() {
-        localStorage.setItem(EVENT_COLOR_KEY, JSON.stringify(eventColorMap));
+    async function deleteEventColor(eventId) {
+        try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
+        if (!sb || !eventId) return;
+        try {
+            await sb.from('schedules').delete().eq('id', `_COLOR-${eventId}`);
+        } catch(e) { console.warn('색상 삭제 실패:', e.message); }
     }
 
     // 배경 밝기에 따라 텍스트색 자동 결정 (WCAG 대비)
@@ -746,9 +772,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     function applyColorSelection(bg) {
         if (!currentEventId) return;
         const text = contrastColor(bg);
-        eventColorMap[currentEventId] = { bg, text };
-        saveEventColors();
-        syncColorPickerUI({ bg, text }, bg);
+        const colorInfo = { bg, text };
+        eventColorMap[currentEventId] = colorInfo;
+        saveEventColor(currentEventId, colorInfo); // Supabase + localStorage
+        syncColorPickerUI(colorInfo, bg);
         const evt = allEvents.find(e => e.id === currentEventId);
         updateColorPreview(bg, evt ? evt.title : '미리보기');
         renderCalendar(); // 캘린더 즉시 반영
@@ -767,7 +794,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('eventColorResetBtn').addEventListener('click', () => {
         if (!currentEventId) return;
         delete eventColorMap[currentEventId];
-        saveEventColors();
+        deleteEventColor(currentEventId); // Supabase + localStorage
         const evt = allEvents.find(e => e.id === currentEventId);
         const defaultBg = evt ? (DEFAULT_EVENT_BG[evt.company] || '#f1f5f9') : '#f1f5f9';
         syncColorPickerUI(null, defaultBg);
