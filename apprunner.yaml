@@ -3,9 +3,9 @@ runtime: nodejs22
 build:
   commands:
     build:
-      - npm install
+      - echo "No build step needed"
 run:
-  command: "npx http-server . -p 8080 -c-1"
+  command: "node serve.js"
   network:
     port: 8080
     env: PORT
