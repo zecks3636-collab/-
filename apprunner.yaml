@@ -5,7 +5,7 @@ build:
     build:
       - npm install
 run:
-  command: "npx serve -s . -p 8080"
+  command: "npx http-server . -p 8080 -c-1"
   network:
     port: 8080
     env: PORT
