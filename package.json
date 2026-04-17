@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "echo 'No build step needed'",
-    "start": "npx serve -s . -l $PORT"
+    "start": "npx serve -s . -p 8080"
   },
   "dependencies": {
     "serve": "^14.2.0"
