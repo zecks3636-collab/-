@@ -2,8 +2,10 @@ version: 1.0
 runtime: nodejs22
 build:
   commands:
+    pre-build:
+      - rm -rf node_modules package-lock.json
     build:
-      - echo "No build step needed"
+      - echo "Static site - no build needed"
 run:
   command: "node serve.js"
   network:
