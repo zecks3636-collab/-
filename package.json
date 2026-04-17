@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "build": "echo 'No build step needed'",
-    "start": "npx serve -s . -p 8080"
+    "start": "http-server . -p 8080 -c-1"
   },
   "dependencies": {
-    "serve": "^14.2.0"
+    "http-server": "^14.1.1"
   }
 }
