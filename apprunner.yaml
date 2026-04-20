@@ -1,13 +1,15 @@
 version: 1.0
-runtime: nodejs22
+runtime: python311
 build:
   commands:
-    pre-build:
-      - rm -rf node_modules package-lock.json
     build:
-      - echo "Static site - no build needed"
+      - pip install -r requirements.txt
 run:
-  command: "node serve.js"
+  command: "uvicorn server:app --host 0.0.0.0 --port 8080"
   network:
     port: 8080
-    env: PORT
+  env:
+    - name: DB_SECRET_ARN
+      value: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_bti_schedule_prd-lJAp1t"
+    - name: DB_NAME
+      value: "postgres"
