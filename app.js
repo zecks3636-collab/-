@@ -26,22 +26,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentFilter = 'all';
     let currentSearch = '';
 
-    // ========== SUPABASE CONFIG ==========
-    const SUPABASE_URL = 'https://heguvoklrdzcjbifzqsc.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlZ3V2b2tscmR6Y2piaWZ6cXNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMzA1NjAsImV4cCI6MjA5MDkwNjU2MH0.nlaMAjSqlz7ZcP-4hrO6kWKSv6AQ3YyT8rIu95ggFVs';
-
-    // Safely detect Supabase client (UMD export varies by version)
-    let sb = null;
-    try {
-        const _sb = window.supabase;
-        if (_sb && typeof _sb.createClient === 'function') {
-            sb = _sb.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        } else if (_sb && _sb.supabase && typeof _sb.supabase.createClient === 'function') {
-            sb = _sb.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        }
-    } catch (initErr) {
-        console.warn('Supabase 클라이언트 초기화 실패:', initErr);
-    }
+    // ========== DB API CLIENT (사내 PostgreSQL via FastAPI) ==========
+    const sb = window.__dbClient || null;
 
     // ── 이벤트 배경색 저장소 (Supabase 로드 전 초기화) ──
     let eventColorMap = {};
@@ -688,22 +674,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         // localStorage 동기 저장 (즉시 반영)
         try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
         // Supabase 비동기 저장 (다른 사용자와 공유)
-        if (!sb || !eventId) return;
+        if (!eventId) return;
         try {
-            await sb.from('schedules').upsert({
-                id:      `_COLOR-${eventId}`,
-                company: '_COLOR',
-                date:    eventId,          // event_id를 date 필드에 보관
-                title:   JSON.stringify(colorInfo)
-            }, { onConflict: 'id' });
+            await fetch('/api/event_colors', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ event_id: eventId, bg: colorInfo.bg, text_color: colorInfo.text })
+            });
         } catch(e) { console.warn('색상 저장 실패:', e.message); }
     }
 
     async function deleteEventColor(eventId) {
         try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
-        if (!sb || !eventId) return;
+        if (!eventId) return;
         try {
-            await sb.from('schedules').delete().eq('id', `_COLOR-${eventId}`);
+            await fetch(`/api/event_colors/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
         } catch(e) { console.warn('색상 삭제 실패:', e.message); }
     }
 
