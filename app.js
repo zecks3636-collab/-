@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let eventColorMap = {};
     try { eventColorMap = JSON.parse(localStorage.getItem('eventCustomColors')) || {}; } catch { eventColorMap = {}; }
 
-    // ========== DATA LAYER (Supabase + fallback) ==========
+    // ========== DATA LAYER (사내 DB + fallback) ==========
     let allEvents = [];
     if (sb) {
         try {
@@ -42,21 +42,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .select('id, company, date, title')
                 .order('date', { ascending: true });
             if (error) throw error;
-            const raw = data || [];
-            // _COLOR 레코드는 색상 맵으로 분리, 일반 일정만 allEvents에
-            raw.forEach(r => {
-                if (r.company === '_COLOR') {
-                    try { eventColorMap[r.date] = JSON.parse(r.title); } catch(_) {}
+            allEvents = data || [];
+
+            // 이벤트 색상: 서버(event_colors 테이블)가 정답 → localStorage 덮어씀
+            try {
+                const colorRes = await fetch('/api/event_colors');
+                if (colorRes.ok) {
+                    const serverColors = await colorRes.json();
+                    eventColorMap = serverColors || {};
+                    try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
                 }
-            });
-            allEvents = raw.filter(r => r.company !== '_COLOR');
-            console.log(`✅ Supabase에서 ${allEvents.length}건 로드 완료 (색상 ${Object.keys(eventColorMap).length}건)`);
+            } catch(e) { console.warn('색상 로드 실패(localStorage 유지):', e.message); }
+
+            console.log(`✅ DB에서 ${allEvents.length}건 로드 완료 (색상 ${Object.keys(eventColorMap).length}건)`);
         } catch (e) {
-            console.warn('Supabase 쿼리 실패, data.js 폴백 사용:', e.message);
+            console.warn('DB 쿼리 실패, data.js 폴백 사용:', e.message);
             allEvents = window.fallbackEvents || [];
         }
     } else {
-        console.warn('Supabase 미연결 → data.js 폴백 사용');
+        console.warn('DB 미연결 → data.js 폴백 사용');
         allEvents = window.fallbackEvents || [];
     }
     allEvents.sort((a, b) => a.date.localeCompare(b.date));
@@ -669,11 +673,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== DETAIL / EDIT / DELETE MODAL ==========
     let currentEventId = null; // tracks the event being viewed/edited
 
-    // ── 이벤트 배경색 저장 (Supabase schedules 테이블, company='_COLOR') ──
+    // ── 이벤트 배경색 저장 (사내 DB event_colors 테이블) ──
     async function saveEventColor(eventId, colorInfo) {
         // localStorage 동기 저장 (즉시 반영)
         try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
-        // Supabase 비동기 저장 (다른 사용자와 공유)
+        // 서버 비동기 저장 (다른 사용자와 공유)
         if (!eventId) return;
         try {
             await fetch('/api/event_colors', {
