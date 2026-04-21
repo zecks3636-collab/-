@@ -51,8 +51,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const serverColors = await colorRes.json();
                     eventColorMap = serverColors || {};
                     try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
+                } else if (window.fallbackEventColors) {
+                    eventColorMap = { ...window.fallbackEventColors, ...eventColorMap };
                 }
-            } catch(e) { console.warn('색상 로드 실패(localStorage 유지):', e.message); }
+            } catch(e) {
+                console.warn('색상 로드 실패(폴백/localStorage 사용):', e.message);
+                if (window.fallbackEventColors) eventColorMap = { ...window.fallbackEventColors, ...eventColorMap };
+            }
 
             console.log(`✅ DB에서 ${allEvents.length}건 로드 완료 (색상 ${Object.keys(eventColorMap).length}건)`);
         } catch (e) {
@@ -1412,19 +1417,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     let leaveMonth = new Date().getMonth();
 
     async function loadLeaves() {
-        if (!sb) { allLeaves = []; return; }
+        if (!sb) { allLeaves = window.fallbackLeavePlans || []; return; }
         try {
             const { data, error } = await sb.from('leave_plans').select('*').order('date');
             if (error) throw error;
-            allLeaves = data || [];
+            allLeaves = (data && data.length) ? data : (window.fallbackLeavePlans || []);
             console.log(`✅ leave_plans ${allLeaves.length}건 로드`);
         } catch(e) {
-            console.warn('leave_plans 로드 실패:', e.message);
-            allLeaves = [];
-            // 연차 패널에 오류 안내 표시
-            const grid = document.getElementById('leaveGrid');
-            if (grid) grid.innerHTML =
-                '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#f43f5e;font-weight:600;">Supabase leave_plans 테이블 연결 오류<br><span style="font-size:12px;color:#94a3b8;">' + e.message + '</span></div>';
+            console.warn('leave_plans 로드 실패, 폴백 사용:', e.message);
+            allLeaves = window.fallbackLeavePlans || [];
         }
     }
 
@@ -2007,15 +2008,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // request_schedules 로드
     async function loadRequests() {
-        if (!sb) { allRequests = []; return; }
+        if (!sb) { allRequests = window.fallbackRequestSchedules || []; return; }
         try {
             const { data, error } = await sb.from('request_schedules').select('*').order('date');
             if (error) throw error;
-            allRequests = data || [];
+            allRequests = (data && data.length) ? data : (window.fallbackRequestSchedules || []);
             console.log(`✅ request_schedules ${allRequests.length}건 로드`);
         } catch(e) {
-            console.warn('request_schedules 로드 실패:', e.message);
-            allRequests = [];
+            console.warn('request_schedules 로드 실패, 폴백 사용:', e.message);
+            allRequests = window.fallbackRequestSchedules || [];
         }
     }
     await loadRequests();
