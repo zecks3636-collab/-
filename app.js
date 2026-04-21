@@ -200,7 +200,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                         map.set(key, evt);
                     }
                 });
-                return [...map.values()].sort((a, b) => getTimeVal(a.title) - getTimeVal(b.title));
+                let list = [...map.values()];
+
+                // Group의 "NBT 확대" / "바이오 확대"가 있으면, 같은 시간대 NBT/BIO 확대회의 숨김
+                const groupNbtExp = list.filter(e => e.company === 'Group' && /nbt\s*확대/i.test(e.title));
+                const groupBioExp = list.filter(e => e.company === 'Group' && /바이오\s*확대/.test(e.title));
+                if (groupNbtExp.length || groupBioExp.length) {
+                    list = list.filter(e => {
+                        if (e.company === 'NBT' && /확대/.test(e.title) &&
+                            groupNbtExp.some(g => getTimeVal(g.title) === getTimeVal(e.title))) return false;
+                        if (e.company === 'BIO' && /확대/.test(e.title) &&
+                            groupBioExp.some(g => getTimeVal(g.title) === getTimeVal(e.title))) return false;
+                        return true;
+                    });
+                }
+
+                return list.sort((a, b) => getTimeVal(a.title) - getTimeVal(b.title));
             }
 
             const dayEvents = deduplicateByTitle(
