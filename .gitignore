@@ -1,0 +1,9 @@
+# Claude Code session/personal workspace
+.claude/
+
+# Local SQL scratch files (migrations live in migration.sql)
+create_event_colors_table.sql
+
+# OS
+.DS_Store
+Thumbs.db
