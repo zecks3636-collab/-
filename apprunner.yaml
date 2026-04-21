@@ -4,7 +4,7 @@ build:
   commands:
     build:
       - python3 -m pip install --upgrade pip
-      - python3 -m pip install -r requirements.txt
+      - python3 -m pip install --target /app/packages -r requirements.txt
 run:
   command: "python3 -m uvicorn server:app --host 0.0.0.0 --port 8080"
   network:
@@ -14,3 +14,5 @@ run:
       value: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_bti_schedule_prd-lJAp1t"
     - name: DB_NAME
       value: "postgres"
+    - name: PYTHONPATH
+      value: "/app/packages"
