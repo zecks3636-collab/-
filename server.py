@@ -33,7 +33,12 @@ def get_db_config():
 
 def get_conn():
     cfg = get_db_config()
-    conn = psycopg2.connect(**cfg, options="-c search_path=app_bti_schedule_prd")
+    conn = psycopg2.connect(
+        **cfg,
+        sslmode="require",
+        channel_binding="disable",
+        options="-c search_path=app_bti_schedule_prd",
+    )
     return conn
 
 # ── 모델 ──
