@@ -108,17 +108,20 @@ def get_leave_plans():
             return JSONResponse(cur.fetchall())
 
 @app.post("/api/leave_plans")
-def insert_leave_plan(item: LeavePlan):
+def insert_leave_plans(items: List[LeavePlan]):
+    inserted = []
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("""
-                INSERT INTO leave_plans (id, date, team, rank, employee_name, leave_type, note)
-                VALUES (COALESCE(%s::uuid, gen_random_uuid()), %s, %s, %s, %s, %s, %s)
-                RETURNING id::text, date, team, rank, employee_name, leave_type, note
-            """, (item.id, item.date, item.team, item.rank,
-                  item.employee_name, item.leave_type, item.note))
-            conn.commit()
-            return JSONResponse(cur.fetchone())
+            for item in items:
+                cur.execute("""
+                    INSERT INTO leave_plans (id, date, team, rank, employee_name, leave_type, note)
+                    VALUES (COALESCE(%s::uuid, gen_random_uuid()), %s, %s, %s, %s, %s, %s)
+                    RETURNING id::text, date, team, rank, employee_name, leave_type, note
+                """, (item.id, item.date, item.team, item.rank,
+                      item.employee_name, item.leave_type, item.note))
+                inserted.append(cur.fetchone())
+        conn.commit()
+    return JSONResponse(inserted)
 
 @app.put("/api/leave_plans/{leave_id}")
 def update_leave_plan(leave_id: str, item: LeavePlan):
