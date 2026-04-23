@@ -7,3 +7,9 @@ create_event_colors_table.sql
 # OS
 .DS_Store
 Thumbs.db
+
+# 임시 스크립트
+_create_files_table.py
+
+# 로컬 원본 파일 (DB에 저장, git에는 제외)
+schedules/
