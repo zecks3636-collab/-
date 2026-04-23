@@ -51,6 +51,7 @@
                 <button class="sidebar-menu-tab" id="tabMenu">🍽️ 주간식단표</button>
                 <button class="sidebar-menu-tab" id="tabLeave">📋 연차계획</button>
                 <button class="sidebar-menu-tab" id="tabRequest">📊 요청자료일정</button>
+                <button class="sidebar-menu-tab" id="tabFiles">📁 파일 관리</button>
             </div>
 
             <!-- Settings / Upload Icon at Bottom Left -->
@@ -737,6 +738,56 @@
                         <div class="sun">SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
                     </div>
                     <div class="calendar-grid request-grid" id="requestGrid"></div>
+                </div>
+            </div>
+
+            <!-- Files Panel -->
+            <div id="panelFiles" class="calendar-wrapper glass-panel" style="display:none; flex-direction:column; overflow-y:auto;">
+                <div class="request-panel-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:14px; margin-bottom:4px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:20px;">📁</span>
+                        <div>
+                            <h3 style="font-size:15px; font-weight:800; color:#0f172a; margin:0;">파일 관리</h3>
+                            <p style="font-size:12px; color:#64748b; margin:2px 0 0;">일정표·식단표 원본 파일을 폴더별로 보관합니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 폴더 탭 -->
+                <div style="display:flex; gap:8px; padding:14px 0 10px; flex-wrap:wrap;">
+                    <button class="files-folder-tab active" data-folder="Group" style="background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;">
+                        <span style="font-size:15px;">📁</span> 그룹 일정표
+                    </button>
+                    <button class="files-folder-tab" data-folder="NBT" style="background:#f0fdf4;color:#15803d;border:1.5px solid #bbf7d0;">
+                        <span style="font-size:15px;">📁</span> NBT 일정표
+                    </button>
+                    <button class="files-folder-tab" data-folder="BIO" style="background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa;">
+                        <span style="font-size:15px;">📁</span> BIO 일정표
+                    </button>
+                    <button class="files-folder-tab" data-folder="menu" style="background:#fdf4ff;color:#7e22ce;border:1.5px solid #e9d5ff;">
+                        <span style="font-size:15px;">🍽️</span> 주간식단표
+                    </button>
+                </div>
+
+                <!-- 폴더 콘텐츠 -->
+                <div id="filesFolderContent" style="flex:1;">
+                    <!-- 업로드 영역 -->
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                        <span id="filesFolderTitle" style="font-size:13px; font-weight:700; color:#334155;">📁 그룹 일정표</span>
+                        <label id="filesUploadLabel" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:7px 14px; background:#0f172a; color:#fff; border-radius:8px; font-size:12px; font-weight:600;">
+                            ⬆ 파일 업로드
+                            <input type="file" id="filesUploadInput" accept=".pdf,.xls,.xlsx,.png,.jpg" style="display:none;" multiple>
+                        </label>
+                    </div>
+                    <!-- 파일 목록 -->
+                    <div id="filesListWrap" style="display:flex; flex-direction:column; gap:8px; min-height:120px;">
+                        <div id="filesEmptyMsg" style="text-align:center; color:#94a3b8; padding:40px 0; font-size:13px; display:none;">
+                            업로드된 파일이 없습니다.
+                        </div>
+                    </div>
+                    <div id="filesLoadingMsg" style="text-align:center; color:#94a3b8; padding:30px 0; font-size:13px;">
+                        불러오는 중...
+                    </div>
                 </div>
             </div>
         </main>

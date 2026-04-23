@@ -1580,3 +1580,40 @@ body {
         print-color-adjust: exact;
     }
 }
+
+/* ── 파일 관리 패널 ── */
+.files-folder-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    opacity: 0.7;
+}
+.files-folder-tab:hover { opacity: 1; transform: translateY(-1px); }
+.files-folder-tab.active { opacity: 1; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+
+.file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: background 0.15s;
+}
+.file-row:hover { background: #f1f5f9; }
+.file-row-icon { font-size: 20px; flex-shrink: 0; }
+.file-row-info { flex: 1; min-width: 0; }
+.file-row-name { font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-row-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+.file-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.file-row-dl { padding: 5px 10px; border-radius: 7px; font-size: 11px; font-weight: 700; background: #0f172a; color: #fff; border: none; cursor: pointer; }
+.file-row-dl:hover { background: #1e293b; }
+.file-row-del { padding: 5px 10px; border-radius: 7px; font-size: 11px; font-weight: 700; background: #fee2e2; color: #b91c1c; border: none; cursor: pointer; }
+.file-row-del:hover { background: #fecaca; }

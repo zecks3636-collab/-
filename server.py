@@ -1,6 +1,6 @@
 import os, json, boto3, psycopg2, psycopg2.extras
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -191,6 +191,78 @@ def delete_event_color(event_id: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM event_colors WHERE event_id=%s", (event_id,))
+        conn.commit()
+    return {"status": "ok"}
+
+# ── schedule_files (폴더별 원본 파일 보관) ──
+_VALID_FOLDERS = {'Group', 'NBT', 'BIO', 'menu'}
+
+@app.get("/api/files/{folder}")
+def list_files(folder: str):
+    if folder not in _VALID_FOLDERS:
+        raise HTTPException(status_code=400, detail="invalid folder")
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id::text, filename, content_type, file_size, uploaded_at::text"
+                " FROM schedule_files WHERE folder=%s ORDER BY uploaded_at DESC",
+                (folder,)
+            )
+            return JSONResponse(cur.fetchall())
+
+@app.post("/api/files/{folder}")
+async def upload_file(folder: str, file: UploadFile = File(...)):
+    if folder not in _VALID_FOLDERS:
+        raise HTTPException(status_code=400, detail="invalid folder")
+    data = await file.read()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "INSERT INTO schedule_files (folder, filename, content_type, file_data, file_size)"
+                " VALUES (%s, %s, %s, %s, %s)"
+                " RETURNING id::text, filename, file_size, uploaded_at::text",
+                (folder, file.filename, file.content_type, psycopg2.Binary(data), len(data))
+            )
+        conn.commit()
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id::text, filename, file_size, uploaded_at::text"
+                " FROM schedule_files WHERE folder=%s AND filename=%s ORDER BY uploaded_at DESC LIMIT 1",
+                (folder, file.filename)
+            )
+            return JSONResponse(cur.fetchone())
+
+@app.get("/api/files/{folder}/{file_id}")
+def download_file(folder: str, file_id: str):
+    if folder not in _VALID_FOLDERS:
+        raise HTTPException(status_code=400, detail="invalid folder")
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT filename, content_type, file_data FROM schedule_files"
+                " WHERE id=%s::uuid AND folder=%s",
+                (file_id, folder)
+            )
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="file not found")
+    filename, content_type, file_data = row
+    return Response(
+        content=bytes(file_data),
+        media_type=content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+@app.delete("/api/files/{folder}/{file_id}")
+def delete_file(folder: str, file_id: str):
+    if folder not in _VALID_FOLDERS:
+        raise HTTPException(status_code=400, detail="invalid folder")
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM schedule_files WHERE id=%s::uuid AND folder=%s",
+                (file_id, folder)
+            )
         conn.commit()
     return {"status": "ok"}
 

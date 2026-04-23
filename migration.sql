@@ -170,3 +170,14 @@ INSERT INTO request_schedules (id, date, title, category, note) VALUES ('ffaa565
 INSERT INTO request_schedules (id, date, title, category, note) VALUES ('8ce3dff4-6ab7-48f2-aa4b-965b5fb09ec7', '2026-04-24', '가마감예상실적(매출) 자료회신', '정기요청자료', '') ON CONFLICT (id) DO NOTHING;
 
 -- 완료
+
+-- ── 파일 관리 (폴더별 원본 파일 보관) ──
+CREATE TABLE IF NOT EXISTS schedule_files (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    folder       TEXT NOT NULL CHECK (folder IN ('Group','NBT','BIO','menu')),
+    filename     TEXT NOT NULL,
+    content_type TEXT,
+    file_data    BYTEA NOT NULL,
+    file_size    INTEGER,
+    uploaded_at  TIMESTAMPTZ DEFAULT now()
+);
