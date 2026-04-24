@@ -385,8 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 식단표/연차/요청자료 보는 중이면 캘린더로 자동 전환
             if (panelMenuView.style.display === 'flex' ||
                 panelLeave.style.display === 'flex' ||
-                panelRequest.style.display === 'flex' ||
-                panelFiles.style.display === 'flex') {
+                panelRequest.style.display === 'flex') {
                 switchToCalendar();
             }
             filterBtns.forEach(b => b.classList.remove('active'));
@@ -405,20 +404,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tabMenu    = document.getElementById('tabMenu');
     const tabLeave   = document.getElementById('tabLeave');
     const tabRequest = document.getElementById('tabRequest');
-    const tabFiles   = document.getElementById('tabFiles');
+
     const panelCalendar = document.getElementById('panelCalendar');
     const panelMenuView = document.getElementById('panelMenuView');
     const panelLeave    = document.getElementById('panelLeave');
     const panelRequest  = document.getElementById('panelRequest');
-    const panelFiles    = document.getElementById('panelFiles');
-
     function _hidePanels() {
         panelCalendar.style.display = 'none';
         panelMenuView.style.display = 'none';
         panelLeave.style.display    = 'none';
         panelRequest.style.display  = 'none';
-        panelFiles.style.display    = 'none';
-        [tabMenu, tabLeave, tabRequest, tabFiles].forEach(t => t.classList.remove('active'));
+        [tabMenu, tabLeave, tabRequest].forEach(t => t.classList.remove('active'));
     }
 
     function switchToCalendar() {
@@ -450,14 +446,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderRequestCalendar();
     }
 
-    function switchToFiles() {
-        _hidePanels();
-        tabFiles.classList.add('active');
-        panelFiles.style.display = 'flex';
-        panelFiles.style.flexDirection = 'column';
-        filesLoadFolder(filesCurrentFolder);
-    }
-
     tabMenu.addEventListener('click', () => {
         if (panelMenuView.style.display === 'flex') switchToCalendar();
         else switchToMenu();
@@ -473,10 +461,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         else switchToRequest();
     });
 
-    tabFiles.addEventListener('click', () => {
-        if (panelFiles.style.display === 'flex') switchToCalendar();
-        else switchToFiles();
-    });
 
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
     const HARDCODED_WEEKS = {
@@ -2386,119 +2370,4 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderRequestCalendar();
     });
 
-    // ========== 파일 관리 ==========
-    const FOLDER_META = {
-        Group: { label: '📁 그룹 일정표',  icon: '📋', color: '#1d4ed8' },
-        NBT:   { label: '📁 NBT 일정표',   icon: '📋', color: '#15803d' },
-        BIO:   { label: '📁 BIO 일정표',   icon: '📋', color: '#c2410c' },
-        menu:  { label: '🍽️ 주간식단표',   icon: '🍽️', color: '#7e22ce' },
-    };
-    let filesCurrentFolder = 'Group';
-
-    // 폴더 탭 클릭
-    document.querySelectorAll('.files-folder-tab').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.files-folder-tab').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            filesCurrentFolder = btn.dataset.folder;
-            filesLoadFolder(filesCurrentFolder);
-        });
-    });
-
-    async function filesLoadFolder(folder) {
-        const listWrap   = document.getElementById('filesListWrap');
-        const emptyMsg   = document.getElementById('filesEmptyMsg');
-        const loadingMsg = document.getElementById('filesLoadingMsg');
-        const titleEl    = document.getElementById('filesFolderTitle');
-
-        titleEl.textContent = FOLDER_META[folder]?.label || folder;
-        loadingMsg.style.display = '';
-        emptyMsg.style.display   = 'none';
-        // 기존 행 제거
-        listWrap.querySelectorAll('.file-row').forEach(r => r.remove());
-
-        try {
-            const res = await fetch(`/api/files/${folder}`);
-            if (!res.ok) throw new Error(await res.text());
-            const files = await res.json();
-            loadingMsg.style.display = 'none';
-
-            if (!files.length) {
-                emptyMsg.style.display = '';
-                return;
-            }
-            files.forEach(f => listWrap.appendChild(filesRenderRow(folder, f)));
-        } catch(e) {
-            loadingMsg.textContent = '파일 목록 로드 실패 — 백엔드 연결을 확인하세요.';
-            console.warn('files load error:', e.message);
-        }
-    }
-
-    function filesRenderRow(folder, f) {
-        const ext = (f.filename || '').split('.').pop().toLowerCase();
-        const icon = ext === 'pdf' ? '📄' : (ext === 'xlsx' || ext === 'xls') ? '📊' : '🖼️';
-        const size = f.file_size ? (f.file_size > 1024*1024
-            ? `${(f.file_size/1024/1024).toFixed(1)} MB`
-            : `${Math.round(f.file_size/1024)} KB`) : '';
-        const dt = f.uploaded_at ? new Date(f.uploaded_at).toLocaleString('ko-KR', {
-            year:'numeric', month:'2-digit', day:'2-digit',
-            hour:'2-digit', minute:'2-digit'
-        }) : '';
-
-        const row = document.createElement('div');
-        row.className = 'file-row';
-        row.dataset.fileId = f.id;
-        row.innerHTML = `
-            <span class="file-row-icon">${icon}</span>
-            <div class="file-row-info">
-                <div class="file-row-name" title="${f.filename}">${f.filename}</div>
-                <div class="file-row-meta">${size}${size && dt ? ' · ' : ''}${dt}</div>
-            </div>
-            <div class="file-row-actions">
-                <button class="file-row-dl">⬇ 다운로드</button>
-                <button class="file-row-del">🗑️ 삭제</button>
-            </div>`;
-
-        row.querySelector('.file-row-dl').addEventListener('click', () => {
-            window.open(`/api/files/${folder}/${f.id}`, '_blank');
-        });
-        row.querySelector('.file-row-del').addEventListener('click', async () => {
-            if (!confirm(`"${f.filename}" 파일을 삭제할까요?`)) return;
-            try {
-                const res = await fetch(`/api/files/${folder}/${f.id}`, { method: 'DELETE' });
-                if (!res.ok) throw new Error(await res.text());
-                row.remove();
-                const listWrap = document.getElementById('filesListWrap');
-                if (!listWrap.querySelector('.file-row')) {
-                    document.getElementById('filesEmptyMsg').style.display = '';
-                }
-            } catch(e) {
-                alert('삭제 오류: ' + e.message);
-            }
-        });
-        return row;
-    }
-
-    // 파일 업로드
-    document.getElementById('filesUploadInput').addEventListener('change', async (e) => {
-        const files = Array.from(e.target.files);
-        if (!files.length) return;
-        const folder = filesCurrentFolder;
-        for (const file of files) {
-            const form = new FormData();
-            form.append('file', file, file.name);
-            try {
-                const res = await fetch(`/api/files/${folder}`, { method: 'POST', body: form });
-                if (!res.ok) throw new Error(await res.text());
-                const f = await res.json();
-                const listWrap = document.getElementById('filesListWrap');
-                document.getElementById('filesEmptyMsg').style.display = 'none';
-                document.getElementById('filesLoadingMsg').style.display = 'none';
-                listWrap.prepend(filesRenderRow(folder, f));
-            } catch(e) {
-                alert(`업로드 오류 (${file.name}): ${e.message}`);
-            }
-        }
-        e.target.value = '';
-    });
 });
