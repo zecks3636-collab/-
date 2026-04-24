@@ -194,6 +194,17 @@ def delete_event_color(event_id: str):
         conn.commit()
     return {"status": "ok"}
 
+# ── menu_weeks 목록 조회 ──
+@app.get("/api/menu_weeks")
+def list_menu_weeks():
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT week_key, file_name, storage_path, uploaded_at::text"
+                " FROM menu_weeks ORDER BY week_key"
+            )
+            return JSONResponse(cur.fetchall())
+
 # ── menu_weeks upsert (앱이 스토리지 업로드 후 메타데이터 별도 upsert) ──
 @app.post("/api/menu_weeks/upsert")
 def upsert_menu_weeks(items: List[dict]):
