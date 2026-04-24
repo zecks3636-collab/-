@@ -1,5 +1,5 @@
-// data.js — 사내 DB 백엔드 미가용 시 폴백용 (GitHub Pages 등 정적 호스팅)
-// ⚠️ 이 파일은 DB 스냅샷입니다. 갱신 스크립트: regenerate_fallback.py
+// data.js -- DB fallback for GitHub Pages (static hosting)
+// regenerated: 2026-04-24 11:29
 
 window.fallbackEvents = [
   {
@@ -270,7 +270,7 @@ window.fallbackEvents = [
     "id": "Group-direct-1775514202071",
     "company": "Group",
     "date": "2026-04-27",
-    "title": "08:30 건기식 관리부문 월간미팅"
+    "title": "13:30 건기식 관리부문 월간미팅"
   },
   {
     "id": "NBT-27-1",
@@ -630,15 +630,6 @@ window.fallbackLeavePlans = [
     "note": ""
   },
   {
-    "id": "f0688a38-99b1-445b-aff6-39ea31752284",
-    "date": "2026-04-24",
-    "team": "사업관리팀",
-    "rank": "대리",
-    "employee_name": "김홍순",
-    "leave_type": "반차(오후)",
-    "note": ""
-  },
-  {
     "id": "86a0e58c-2d64-4715-a580-85d557a6dcdf",
     "date": "2026-04-24",
     "team": "사업관리팀",
@@ -648,11 +639,11 @@ window.fallbackLeavePlans = [
     "note": ""
   },
   {
-    "id": "824019dc-2f14-4c16-b88f-acc562a68fb0",
-    "date": "2026-04-29",
-    "team": "관리부문",
-    "rank": "임원",
-    "employee_name": "이진우",
+    "id": "f0688a38-99b1-445b-aff6-39ea31752284",
+    "date": "2026-04-24",
+    "team": "사업관리팀",
+    "rank": "대리",
+    "employee_name": "김홍순",
     "leave_type": "반차(오후)",
     "note": ""
   },
@@ -666,13 +657,31 @@ window.fallbackLeavePlans = [
     "note": ""
   },
   {
-    "id": "ac376368-2ef7-4f6a-91d0-7748474f60b8",
+    "id": "824019dc-2f14-4c16-b88f-acc562a68fb0",
+    "date": "2026-04-29",
+    "team": "관리부문",
+    "rank": "임원",
+    "employee_name": "이진우",
+    "leave_type": "반차(오후)",
+    "note": ""
+  },
+  {
+    "id": "3dab203b-f3c2-4073-815c-1d4b2924a6b1",
     "date": "2026-04-30",
     "team": "사업관리팀",
-    "rank": "대리",
-    "employee_name": "김홍순",
+    "rank": "과장",
+    "employee_name": "조경훈",
     "leave_type": "연차",
-    "note": ""
+    "note": null
+  },
+  {
+    "id": "97e340da-0fa0-4295-8869-76e66311ab34",
+    "date": "2026-04-30",
+    "team": "경영관리팀",
+    "rank": "과장",
+    "employee_name": "최건",
+    "leave_type": "연차",
+    "note": null
   },
   {
     "id": "b0a8b2b0-8005-47ef-b597-0bd805cc6c59",
@@ -682,6 +691,15 @@ window.fallbackLeavePlans = [
     "employee_name": "이종현",
     "leave_type": "연차",
     "note": ""
+  },
+  {
+    "id": "3ae486d3-469f-48fe-b2a3-1f41fa24ac77",
+    "date": "2026-05-04",
+    "team": "사업관리팀",
+    "rank": "과장",
+    "employee_name": "이병우",
+    "leave_type": "연차",
+    "note": null
   },
   {
     "id": "3693b888-605f-4d37-8eb9-03cccea14eea",
@@ -781,4 +799,61 @@ window.fallbackRequestSchedules = [
   }
 ];
 
-window.fallbackEventColors = {};
+window.fallbackEventColors = {
+  "Group-2026-05-15-10l99y3": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-2026-05-15-1jdukpr": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-2026-05-15-anhdoh": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-direct-1775514128215": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-direct-1776152586813": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-direct-1775514202071": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-direct-1775605891556": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-direct-1775600442484": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-1775616288112-gp6e": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-1775616288112-ilvv": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-direct-1776152631093": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-2026-05-19-csp2zb": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-2026-05-12-rov1sm": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  },
+  "Group-23-0-pdf": {
+    "bg": "#111827",
+    "text": "#ffffff"
+  }
+};
