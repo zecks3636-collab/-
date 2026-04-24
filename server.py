@@ -194,6 +194,82 @@ def delete_event_color(event_id: str):
         conn.commit()
     return {"status": "ok"}
 
+# ── menu_weeks upsert (앱이 스토리지 업로드 후 메타데이터 별도 upsert) ──
+@app.post("/api/menu_weeks/upsert")
+def upsert_menu_weeks(items: List[dict]):
+    if not items:
+        return JSONResponse({"data": [], "error": None})
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for item in items:
+                cur.execute(
+                    """INSERT INTO menu_weeks (week_key, file_name, storage_path, uploaded_at)
+                       VALUES (%(week_key)s, %(file_name)s, %(storage_path)s, %(uploaded_at)s)
+                       ON CONFLICT (week_key) DO UPDATE
+                       SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                           uploaded_at=EXCLUDED.uploaded_at""",
+                    item,
+                )
+        conn.commit()
+    return JSONResponse({"data": None, "error": None})
+
+# ── request_months (요청자료 PDF 이미지) ──
+@app.get("/api/request_months")
+def list_request_months():
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT month_key, file_name, storage_path, uploaded_at::text FROM request_months ORDER BY month_key"
+            )
+            return JSONResponse(cur.fetchall())
+
+@app.post("/api/request_months/upsert")
+def upsert_request_months(items: List[dict]):
+    if not items:
+        return JSONResponse({"data": [], "error": None})
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for item in items:
+                cur.execute(
+                    """INSERT INTO request_months (month_key, file_name, storage_path, uploaded_at)
+                       VALUES (%(month_key)s, %(file_name)s, %(storage_path)s, %(uploaded_at)s)
+                       ON CONFLICT (month_key) DO UPDATE
+                       SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                           uploaded_at=EXCLUDED.uploaded_at""",
+                    item,
+                )
+        conn.commit()
+    return JSONResponse({"data": None, "error": None})
+
+@app.get("/api/storage/request-images/{month_key}")
+def get_request_image(month_key: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT image_data FROM request_months WHERE month_key=%s AND image_data IS NOT NULL",
+                (month_key,),
+            )
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="image not found")
+    return Response(content=bytes(row[0]), media_type="image/jpeg")
+
+@app.post("/api/storage/request-images/{month_key}")
+async def upload_request_image(month_key: str, file: UploadFile = File(...)):
+    data = await file.read()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO request_months (month_key, file_name, storage_path, uploaded_at, image_data)
+                   VALUES (%s, %s, %s, now(), %s)
+                   ON CONFLICT (month_key) DO UPDATE
+                   SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                       uploaded_at=now(), image_data=EXCLUDED.image_data""",
+                (month_key, file.filename, month_key, psycopg2.Binary(data)),
+            )
+        conn.commit()
+    return JSONResponse({"status": "ok", "month_key": month_key})
+
 # ── 메뉴 이미지 스토리지 (/api/storage/menu-images/{week_key}) ──
 @app.get("/api/storage/menu-images/{week_key}")
 def get_menu_image(week_key: str):

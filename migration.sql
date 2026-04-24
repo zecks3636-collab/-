@@ -171,6 +171,15 @@ INSERT INTO request_schedules (id, date, title, category, note) VALUES ('8ce3dff
 
 -- 완료
 
+-- ── 요청자료 PDF 이미지 ──
+CREATE TABLE IF NOT EXISTS request_months (
+    month_key    TEXT PRIMARY KEY,
+    file_name    TEXT,
+    storage_path TEXT,
+    uploaded_at  TIMESTAMPTZ DEFAULT now(),
+    image_data   BYTEA
+);
+
 -- ── 파일 관리 (폴더별 원본 파일 보관) ──
 CREATE TABLE IF NOT EXISTS schedule_files (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
