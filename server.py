@@ -1,4 +1,4 @@
-import os, json, boto3, psycopg2, psycopg2.extras
+import os, json, io, datetime, boto3, psycopg2, psycopg2.extras
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -316,25 +316,61 @@ def list_files(folder: str):
             )
             return JSONResponse(cur.fetchall())
 
+def _monday_of_week(d: datetime.date) -> str:
+    """주어진 날짜가 속한 주의 월요일 (YYYY-MM-DD)"""
+    return (d - datetime.timedelta(days=d.weekday())).strftime("%Y-%m-%d")
+
+def _pdf_to_jpeg(data: bytes) -> bytes:
+    """PDF 첫 페이지를 JPEG bytes로 변환 (pymupdf + Pillow)"""
+    import fitz
+    from PIL import Image
+    doc = fitz.open(stream=data, filetype="pdf")
+    pix = doc[0].get_pixmap(matrix=fitz.Matrix(2.0, 2.0), alpha=False)
+    img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=88)
+    return buf.getvalue()
+
 @app.post("/api/files/{folder}")
 async def upload_file(folder: str, file: UploadFile = File(...)):
     if folder not in _VALID_FOLDERS:
         raise HTTPException(status_code=400, detail="invalid folder")
     data = await file.read()
     with get_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO schedule_files (folder, filename, content_type, file_data, file_size)"
-                " VALUES (%s, %s, %s, %s, %s)"
-                " RETURNING id::text, filename, file_size, uploaded_at::text",
+                " VALUES (%s, %s, %s, %s, %s)",
                 (folder, file.filename, file.content_type, psycopg2.Binary(data), len(data))
             )
         conn.commit()
+
+    # menu 폴더 PDF → 주간식단표 자동 반영
+    if folder == "menu" and (file.content_type == "application/pdf" or
+                              file.filename.lower().endswith(".pdf")):
+        try:
+            jpeg = _pdf_to_jpeg(data)
+            week_key = _monday_of_week(datetime.date.today())
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO menu_weeks (week_key, file_name, storage_path, uploaded_at, image_data)
+                           VALUES (%s, %s, %s, now(), %s)
+                           ON CONFLICT (week_key) DO UPDATE
+                           SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                               uploaded_at=now(), image_data=EXCLUDED.image_data""",
+                        (week_key, file.filename, week_key, psycopg2.Binary(jpeg)),
+                    )
+                conn.commit()
+        except Exception as e:
+            print(f"[warn] menu PDF auto-convert failed: {e}")
+
+    with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
                 "SELECT id::text, filename, file_size, uploaded_at::text"
                 " FROM schedule_files WHERE folder=%s AND filename=%s ORDER BY uploaded_at DESC LIMIT 1",
-                (folder, file.filename)
+                (folder, file.filename),
             )
             return JSONResponse(cur.fetchone())
 
