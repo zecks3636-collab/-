@@ -194,6 +194,36 @@ def delete_event_color(event_id: str):
         conn.commit()
     return {"status": "ok"}
 
+# ── 메뉴 이미지 스토리지 (/api/storage/menu-images/{week_key}) ──
+@app.get("/api/storage/menu-images/{week_key}")
+def get_menu_image(week_key: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT image_data FROM menu_weeks WHERE week_key=%s AND image_data IS NOT NULL",
+                (week_key,)
+            )
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="image not found")
+    return Response(content=bytes(row[0]), media_type="image/jpeg")
+
+@app.post("/api/storage/menu-images/{week_key}")
+async def upload_menu_image(week_key: str, file: UploadFile = File(...)):
+    data = await file.read()
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO menu_weeks (week_key, file_name, storage_path, uploaded_at, image_data)
+                   VALUES (%s, %s, %s, now(), %s)
+                   ON CONFLICT (week_key) DO UPDATE
+                   SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                       uploaded_at=now(), image_data=EXCLUDED.image_data""",
+                (week_key, file.filename, week_key, psycopg2.Binary(data))
+            )
+        conn.commit()
+    return {"status": "ok", "week_key": week_key}
+
 # ── schedule_files (폴더별 원본 파일 보관) ──
 _VALID_FOLDERS = {'Group', 'NBT', 'BIO', 'menu'}
 
