@@ -1227,6 +1227,21 @@ body {
 .leave-grid {
     grid-auto-rows: 1fr;
 }
+
+/* 요청자료 캘린더: 셀 높이 고정 → 스크롤 활성화 */
+.calendar-grid.request-grid {
+    grid-auto-rows: minmax(110px, 1fr);
+}
+.calendar-grid.request-grid .cal-day {
+    max-height: 140px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+.calendar-grid.request-grid .cal-day::-webkit-scrollbar { width: 3px; }
+.calendar-grid.request-grid .cal-day::-webkit-scrollbar-track { background: transparent; }
+.calendar-grid.request-grid .cal-day::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+.calendar-grid.request-grid .cal-day::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
 .leave-cal-day {
     cursor: pointer;
     overflow-y: auto;
