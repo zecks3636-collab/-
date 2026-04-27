@@ -1228,20 +1228,10 @@ body {
     grid-auto-rows: 1fr;
 }
 
-/* 요청자료 캘린더: 행 높이 고정 → 칩 영역만 스크롤 */
-.calendar-grid.request-grid {
-    grid-auto-rows: 120px;
-}
-.calendar-grid.request-grid .cal-day {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;   /* 셀 전체는 스크롤 없음 */
-}
-
-/* 날짜 번호 아래 칩 영역만 스크롤 */
+/* 요청자료 캘린더: 날짜 번호 아래 칩 영역만 독립 스크롤 */
 .req-chips-scroll {
-    flex: 1;
-    min-height: 0;
+    display: block;
+    max-height: 86px;          /* 칩 ~4개 높이 — 이 이상은 스크롤 */
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 1px;
@@ -1250,8 +1240,11 @@ body {
 }
 .req-chips-scroll::-webkit-scrollbar { width: 3px; }
 .req-chips-scroll::-webkit-scrollbar-track { background: transparent; }
-.req-chips-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 3px; }
-.req-chips-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.32); }
+.req-chips-scroll::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 3px;
+}
+.req-chips-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.36); }
 .leave-cal-day {
     cursor: pointer;
     overflow-y: auto;
