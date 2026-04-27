@@ -1,5 +1,5 @@
 // data.js -- DB fallback for GitHub Pages (static hosting)
-// regenerated: 2026-04-27 10:25
+// regenerated: 2026-04-27 10:44
 
 window.fallbackEvents = [
   {
@@ -438,13 +438,13 @@ window.fallbackEvents = [
     "id": "Group-2026-05-15-anhdoh",
     "company": "Group",
     "date": "2026-05-15",
-    "title": "1500 코스맥스펫 확대회의(판교)"
+    "title": "1600 코스맥스펫 확대회의(판교)"
   },
   {
     "id": "Group-2026-05-15-d95zbf",
     "company": "Group",
     "date": "2026-05-15",
-    "title": "1600 코스맥스파마 확대회의(판교)"
+    "title": "1630 코스맥스파마 확대회의(판교)"
   },
   {
     "id": "NBT-2026-05-15-cg3sut",
