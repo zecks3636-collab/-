@@ -311,6 +311,73 @@ async def upload_menu_image(week_key: str, file: UploadFile = File(...)):
         conn.commit()
     return {"status": "ok", "week_key": week_key}
 
+# ── schedules 개별/배치 삭제 ──
+@app.delete("/api/schedules/{schedule_id}")
+def delete_schedule(schedule_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM schedules WHERE id=%s", (schedule_id,))
+        conn.commit()
+    return {"status": "ok"}
+
+@app.post("/api/schedules/delete")
+def delete_schedules_batch(ids: List[str]):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM schedules WHERE id = ANY(%s)", (ids,))
+        conn.commit()
+    return {"status": "ok"}
+
+# ── request_schedules 삭제 ──
+@app.delete("/api/request_schedules/{item_id}")
+def delete_request_schedule(item_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM request_schedules WHERE id=%s", (item_id,))
+        conn.commit()
+    return {"status": "ok"}
+
+# ── menu_weeks 삭제 ──
+@app.delete("/api/menu_weeks/{week_key}")
+def delete_menu_week(week_key: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM menu_weeks WHERE week_key=%s", (week_key,))
+        conn.commit()
+    return {"status": "ok"}
+
+# ── request_months 삭제 ──
+@app.delete("/api/request_months/{month_key}")
+def delete_request_month(month_key: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM request_months WHERE month_key=%s", (month_key,))
+        conn.commit()
+    return {"status": "ok"}
+
+# ── 스토리지 이미지 삭제 ──
+@app.delete("/api/storage/menu-images/{week_key}")
+def delete_menu_image(week_key: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE menu_weeks SET image_data=NULL WHERE week_key=%s OR storage_path=%s",
+                (week_key, week_key)
+            )
+        conn.commit()
+    return {"status": "ok"}
+
+@app.delete("/api/storage/request-images/{month_key}")
+def delete_request_image(month_key: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE request_months SET image_data=NULL WHERE month_key=%s OR storage_path=%s",
+                (month_key, month_key)
+            )
+        conn.commit()
+    return {"status": "ok"}
+
 # ── schedule_files (폴더별 원본 파일 보관) ──
 _VALID_FOLDERS = {'Group', 'NBT', 'BIO', 'menu'}
 
