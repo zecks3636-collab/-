@@ -2096,6 +2096,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             dayDiv.appendChild(dateSpan);
 
+            // 칩을 담는 스크롤 컨테이너 — 날짜 번호 아래 공간을 차지하며 독립 스크롤
+            const chipsWrap = document.createElement('div');
+            chipsWrap.className = 'req-chips-scroll';
+
             const dayRequests = allRequests
                 .filter(r => (r.date || '').slice(0, 10) === dateStr)
                 .sort((a, b) => {
@@ -2112,9 +2116,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 chip.textContent = req.title;
                 chip.title = `[${req.category}] ${req.title}${req.note ? ' / ' + req.note : ''}`;
                 chip.addEventListener('click', e => { e.stopPropagation(); openRequestModal(dateStr); });
-                dayDiv.appendChild(chip);
+                chipsWrap.appendChild(chip);
             });
 
+            dayDiv.appendChild(chipsWrap);
             dayDiv.addEventListener('click', () => openRequestModal(dateStr));
             requestGrid.appendChild(dayDiv);
         }
