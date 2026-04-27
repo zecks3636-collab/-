@@ -1,5 +1,5 @@
 // data.js -- DB fallback for GitHub Pages (static hosting)
-// regenerated: 2026-04-24 11:29
+// regenerated: 2026-04-27 10:21
 
 window.fallbackEvents = [
   {
@@ -793,6 +793,83 @@ window.fallbackRequestSchedules = [
   {
     "id": "8ce3dff4-6ab7-48f2-aa4b-965b5fb09ec7",
     "date": "2026-04-24",
+    "title": "가마감예상실적(매출) 자료회신",
+    "category": "정기요청자료",
+    "note": ""
+  },
+  {
+    "id": "b4f2a99d-9834-48fd-89d9-c0b4798af7c6",
+    "date": "2026-05-11",
+    "title": "공통전략지표 5월 업데이트",
+    "category": "정기요청자료",
+    "note": ""
+  },
+  {
+    "id": "122b4c13-fbee-411e-8303-b1287f43bbc5",
+    "date": "2026-05-11",
+    "title": "경영실적(예상) 엑셀자료회신",
+    "category": "정기요청자료",
+    "note": ""
+  },
+  {
+    "id": "513be9f9-6f85-489a-831d-df722e4f974f",
+    "date": "2026-05-11",
+    "title": "운전자본(채권/재고/재무제표) 자료회신",
+    "category": "정기요청자료",
+    "note": ""
+  },
+  {
+    "id": "924571ef-1ee4-4081-82cf-04d41ca71e59",
+    "date": "2026-05-11",
+    "title": "팀즈[공통지표관리채널] Upload",
+    "category": "정기요청자료",
+    "note": ""
+  },
+  {
+    "id": "7b71ae45-2c8d-453a-bf6d-d2d5ca092f02",
+    "date": "2026-05-13",
+    "title": "확대회의 자료회신 (NBT/BIO/펫/파마)",
+    "category": "통합회의및확대회의관련",
+    "note": ""
+  },
+  {
+    "id": "221a499a-fb6c-4beb-b081-2be68312abb3",
+    "date": "2026-05-15",
+    "title": "09:00 엔비티 확대회의",
+    "category": "통합회의및확대회의관련",
+    "note": ""
+  },
+  {
+    "id": "935b85c3-f08c-48f7-826c-afedca0f0c84",
+    "date": "2026-05-15",
+    "title": "10:30 바이오확대회의",
+    "category": "통합회의및확대회의관련",
+    "note": ""
+  },
+  {
+    "id": "8e0528d1-eb01-40c0-ac0f-1e618b275fc7",
+    "date": "2026-05-15",
+    "title": "15:00 펫 확대회의",
+    "category": "통합회의및확대회의관련",
+    "note": ""
+  },
+  {
+    "id": "358b7b38-1b12-4288-a6d5-9f2ffa5a7cea",
+    "date": "2026-05-15",
+    "title": "16:00 파마확대회의",
+    "category": "통합회의및확대회의관련",
+    "note": ""
+  },
+  {
+    "id": "6ad8988e-63c5-464d-a74c-afecab80057f",
+    "date": "2026-05-18",
+    "title": "확대회의 회의록회신",
+    "category": "통합회의및확대회의관련",
+    "note": ""
+  },
+  {
+    "id": "14c35a73-a792-479c-9458-6e06b00f8e01",
+    "date": "2026-05-22",
     "title": "가마감예상실적(매출) 자료회신",
     "category": "정기요청자료",
     "note": ""
