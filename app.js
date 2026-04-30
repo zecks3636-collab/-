@@ -464,10 +464,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
     const HARDCODED_WEEKS = {
-        '2026-04-06': 'menuContentTable',   // 둘째주
-        '2026-04-13': 'menuContentTable2',  // 셋째주
-        '2026-04-20': 'menuContentTable3',  // 넷째주
-        '2026-04-27': 'menuContentTable4',  // 다섯째주
+        '2026-04-06': 'menuContentTable',   // 4월 둘째주
+        '2026-04-13': 'menuContentTable2',  // 4월 셋째주
+        '2026-04-20': 'menuContentTable3',  // 4월 넷째주
+        '2026-04-27': 'menuContentTable4',  // 4월 다섯째주
+        '2026-05-04': 'menuContentTable5',  // 5월 둘째주
     };
 
     // Supabase에서 menu_weeks 로드 (fallback: localStorage)
