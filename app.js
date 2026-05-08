@@ -469,6 +469,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         '2026-04-20': 'menuContentTable3',  // 4월 넷째주
         '2026-04-27': 'menuContentTable4',  // 4월 다섯째주
         '2026-05-04': 'menuContentTable5',  // 5월 둘째주
+        '2026-05-11': 'menuContentTable6',  // 5월 셋째주
     };
 
     // Supabase에서 menu_weeks 로드 (fallback: localStorage)
