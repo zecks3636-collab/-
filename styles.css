@@ -803,6 +803,7 @@ body {
     text-overflow: ellipsis;
     flex: 1;
 }
+.holiday-label.sat { color: #2563eb; }   /* 토요일 휴일 → 토요일 파란색 */
 
 /* Holiday & Weekend cell tints */
 .cal-day.holiday-day {

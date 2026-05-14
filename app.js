@@ -178,6 +178,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (holidayName) {
                 const hl = document.createElement('span');
                 hl.className = 'holiday-label';
+                if (isSaturday) hl.classList.add('sat');   // 토요일 휴일 → 토요일 파란색
                 hl.textContent = holidayName;
                 dateRow.appendChild(hl);
             }
@@ -262,10 +263,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 eventDiv.title = `[${evt.company}] ${timeStr ? timeStr + ' ' : ''}${contentStr}`;
 
-                eventDiv.addEventListener('click', () => openEventModal(evt));
+                eventDiv.addEventListener('click', (e) => { e.stopPropagation(); openEventModal(evt); });
 
                 dayDiv.appendChild(eventDiv);
             });
+
+            // 빈 영역 클릭 시 → 직접 입력 모달 (해당 날짜 자동 채움)
+            dayDiv.addEventListener('click', (e) => {
+                if (e.target.closest('.event')) return;
+                openDirectInputForDate(dayString);
+            });
+            dayDiv.style.cursor = 'pointer';
 
             calendarGrid.appendChild(dayDiv);
         }
@@ -884,6 +892,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dd = document.getElementById('directDate');
         if (!dd.value) dd.value = today.toISOString().slice(0,10);
     });
+
+    // 캘린더 날짜 셀 클릭 → 직접 입력 모달 (해당 날짜 자동 채움)
+    function openDirectInputForDate(dateStr) {
+        tabDirect.classList.add('active'); tabUpload.classList.remove('active');
+        panelDirect.style.display = ''; panelUpload.style.display = 'none';
+        document.getElementById('directDate').value = dateStr;
+        // 현재 필터가 회사별이면 그 회사로 기본 설정
+        const sel = document.getElementById('directCompany');
+        if (currentFilter && currentFilter !== 'all') sel.value = currentFilter;
+        document.getElementById('directTitle').value = '';
+        settingsModal.classList.add('active');
+        setTimeout(() => document.getElementById('directTitle').focus(), 100);
+    }
 
     // Direct save
     document.getElementById('directSaveBtn').addEventListener('click', async () => {
