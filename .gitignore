@@ -20,6 +20,7 @@ _check_menu.py
 _verify.py
 _parse_june.py
 _insert_june_api.py
+_parse_bio_june.py
 
 # 업로드 상태 캐시
 .uploaded_state.json
