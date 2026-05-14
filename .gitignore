@@ -15,6 +15,11 @@ _check_appjs.py
 _check_appjs2.py
 _check_appjs3.py
 _regen.py
+_regen_api.py
+_check_menu.py
+_verify.py
+_parse_june.py
+_insert_june_api.py
 
 # 업로드 상태 캐시
 .uploaded_state.json
