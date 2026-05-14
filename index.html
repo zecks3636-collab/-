@@ -70,7 +70,8 @@
                 <div class="month-selector" style="display:flex; align-items:center; gap:15px;">
                     <button class="nav-btn" id="prevMonth" style="background:transparent;border:none;font-size:24px;cursor:pointer;color:#777;">&lt;</button>
                     <div>
-                        <h2 id="monthTitle">2026. 04</h2>
+                        <h2 id="monthTitle"></h2>
+                        <script>(function(){var d=new Date();document.getElementById('monthTitle').textContent=d.getFullYear()+'. '+String(d.getMonth()+1).padStart(2,'0');})();</script>
                     </div>
                     <button class="nav-btn" id="nextMonth" style="background:transparent;border:none;font-size:24px;cursor:pointer;color:#777;">&gt;</button>
                 </div>
