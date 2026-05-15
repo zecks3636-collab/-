@@ -755,6 +755,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 기본 배경색 (회사별)
     const DEFAULT_EVENT_BG = { Group: '#eff8ff', NBT: '#f0fdf4', BIO: '#fff7ed' };
 
+    // ── 그룹↔NBT/BIO 확대회의 자동 동기화 ──
+    // Group 일정의 "엔비티/NBT 확대" "바이오 확대" 항목을 NBT/BIO 회사 미러로 복제·삭제
+    const MIRROR_MAP = [
+        { regex: /(nbt|엔비티)\s*확대/i, key: 'nbt', target: 'NBT' },
+        { regex: /바이오\s*확대/i,       key: 'bio', target: 'BIO' },
+    ];
+    function getMirrorMatches(title) {
+        return MIRROR_MAP.filter(m => m.regex.test(title || ''));
+    }
+    async function syncGroupMirror(srcEvent, action /* 'upsert' | 'delete' */, prevTitle) {
+        if (!srcEvent || srcEvent.company !== 'Group') return;
+
+        // 이전 매칭과 현재 매칭 비교 → 빠진 키는 미러 삭제
+        const prevMatches = getMirrorMatches(prevTitle || srcEvent.title);
+        const nowMatches  = action === 'delete' ? [] : getMirrorMatches(srcEvent.title);
+
+        // 미러 삭제 대상
+        const toRemove = prevMatches.filter(p => !nowMatches.some(n => n.key === p.key));
+        for (const m of toRemove) {
+            const mid = `${m.target}-mirror-${(prevTitle ? srcEvent.date : srcEvent.date)}-${m.key}`;
+            if (sb) { try { await sb.from('schedules').delete().eq('id', mid); } catch(_) {} }
+            allEvents = allEvents.filter(e => e.id !== mid);
+        }
+        // 미러 upsert 대상
+        for (const m of nowMatches) {
+            const mid = `${m.target}-mirror-${srcEvent.date}-${m.key}`;
+            const mirror = { id: mid, company: m.target, date: srcEvent.date, title: srcEvent.title };
+            if (sb) { try { await sb.from('schedules').upsert(mirror, { onConflict: 'id' }); } catch(_) {} }
+            const idx = allEvents.findIndex(e => e.id === mid);
+            if (idx >= 0) allEvents[idx] = mirror;
+            else allEvents.push(mirror);
+        }
+    }
+
     function openEventModal(evt) {
         currentEventId = evt.id;
         modalCompany.className = `company-badge ${evt.company}`;
@@ -842,6 +876,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const idx = allEvents.findIndex(e => e.id === currentEventId);
         if (idx === -1) return;
 
+        const prev = { ...allEvents[idx] };
         const updated = { ...allEvents[idx], company, date, title };
 
         try {
@@ -850,6 +885,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (error) throw error;
             }
             allEvents[idx] = updated;
+            // 그룹의 확대회의 항목이면 NBT/BIO 미러 동기화
+            await syncGroupMirror(updated, 'upsert', prev.title);
             allEvents.sort((a, b) => a.date.localeCompare(b.date));
             closeEventModal();
             update();
@@ -861,12 +898,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Delete button
     document.getElementById('deleteEventBtn').addEventListener('click', async () => {
         if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+        const removed = allEvents.find(e => e.id === currentEventId);
         try {
             if (sb) {
                 const { error } = await sb.from('schedules').delete().eq('id', currentEventId);
                 if (error) throw error;
             }
             allEvents = allEvents.filter(e => e.id !== currentEventId);
+            if (removed) await syncGroupMirror(removed, 'delete');
             closeEventModal();
             update();
         } catch (err) {
@@ -923,6 +962,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (error) throw error;
             }
             allEvents.push(newEvt);
+            // 그룹의 확대회의 항목이면 NBT/BIO 미러 동기화
+            await syncGroupMirror(newEvt, 'upsert');
             allEvents.sort((a, b) => a.date.localeCompare(b.date));
             document.getElementById('directTitle').value = '';
             settingsModal.classList.remove('active');
@@ -2245,7 +2286,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!title) { alert('내용을 입력해주세요.'); document.getElementById('requestTitleInput').focus(); return; }
         if (!requestModalDate) { alert('캘린더에서 날짜를 클릭해 선택해주세요.'); return; }
 
-        const payload = { date: requestModalDate, title, category, note: note || null };
+        // FastAPI 서버는 id 필수 → 클라이언트에서 UUID 생성
+        const newId = crypto.randomUUID ? crypto.randomUUID() : `req-${Date.now()}`;
+        const payload = { id: newId, date: requestModalDate, title, category, note: note || null };
 
         const btn = document.getElementById('requestAddBtn');
         btn.textContent = '저장 중...';
@@ -2253,16 +2296,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             if (sb) {
-                const { data, error } = await sb
-                    .from('request_schedules')
-                    .insert(payload)
-                    .select('*')
-                    .single();
+                // db.js 시밍이 .select().single() 체인을 지원하지 않으므로 upsert 사용
+                const { error } = await sb.from('request_schedules').upsert(payload);
                 if (error) throw error;
-                allRequests.push(data);
-            } else {
-                allRequests.push({ ...payload, id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), created_at: new Date().toISOString() });
             }
+            allRequests.push(payload);
             document.getElementById('requestTitleInput').value = '';
             document.getElementById('requestNoteInput').value = '';
             document.getElementById('requestTitleInput').focus();
