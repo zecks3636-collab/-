@@ -1522,7 +1522,7 @@ body {
 /* ===== @media print — 정기요청자료일정 PDF 출력 ===== */
 @page {
     size: A4 landscape;
-    margin: 6mm 10mm 6mm 10mm;   /* 상하 6mm, 좌우 10mm — 최대 공간 확보 */
+    margin: 12px 10mm 12px 10mm;   /* 상하 12px, 좌우 10mm */
 }
 @media print {
     /* 배경 orb, 그라데이션 숨김 */
