@@ -2367,9 +2367,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 chip.className = `request-chip ${REQUEST_CAT_CLASS[req.category] || 'rcat-regular'}`;
                 // 칩 표시용 축약 표기 (원본 title/tooltip 은 그대로 유지)
                 //   - 우측 "(판교)" 위치 표기 제거
+                //   - "(NBT/BIO/펫/파마)" 등 회사 나열 괄호 제거
                 //   - "코스맥스펫" → "펫", "코스맥스파마" → "파마"
                 chip.textContent = (req.title || '')
                     .replace(/\s*\(판교\)\s*$/, '')
+                    .replace(/\s*\(NBT\/BIO\/펫\/파마\)\s*/g, '')
                     .replace(/코스맥스펫/g, '펫')
                     .replace(/코스맥스파마/g, '파마');
                 chip.title = `[${req.category}] ${req.title}${req.note ? ' / ' + req.note : ''}`;
