@@ -2365,7 +2365,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             dayRequests.forEach(req => {
                 const chip = document.createElement('div');
                 chip.className = `request-chip ${REQUEST_CAT_CLASS[req.category] || 'rcat-regular'}`;
-                chip.textContent = req.title;
+                // 칩 표시용: 우측 "(판교)" 등 장소 표기는 숨김 (원본 데이터는 유지)
+                chip.textContent = (req.title || '').replace(/\s*\(판교\)\s*$/, '');
                 chip.title = `[${req.category}] ${req.title}${req.note ? ' / ' + req.note : ''}`;
                 chip.addEventListener('click', e => { e.stopPropagation(); openRequestModal(dateStr); });
                 chipsWrap.appendChild(chip);
