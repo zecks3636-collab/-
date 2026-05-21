@@ -869,8 +869,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
 
-        // 운전자본 — 해당 월 9번째 영업일 (확대회의일과 무관)
-        const workingCapDay = nthBusinessDayOfMonth(year, month - 1, 9);
+        // 운전자본 — 해당 월 8번째 영업일 (확대회의일과 무관)
+        const workingCapDay = nthBusinessDayOfMonth(year, month - 1, 8);
         if (workingCapDay) {
             records.push({
                 id:       `req-auto-${ym}-working-capital`,
