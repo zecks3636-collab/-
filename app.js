@@ -2610,7 +2610,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
         const monthEl = document.getElementById('requestPrintMonth');
         if (monthEl) monthEl.textContent = `${currentYear}년 ${months[currentMonth]}`;
-        window.print();
+
+        // 첫 인쇄 시 안내 (세션당 1회) — 여백 옵션 안내
+        try {
+            if (!sessionStorage.getItem('printHintShown')) {
+                sessionStorage.setItem('printHintShown', '1');
+                alert('인쇄 미리보기에서 "여백 = 기본" 으로 선택해 주십시오.\n자동으로 상단 15mm 여백이 적용됩니다.\n\n(사용자 지정 여백 선택 시 CSS 설정이 무시됩니다)');
+            }
+        } catch(_) {}
+
+        setTimeout(() => window.print(), 100);
     });
 
     // PDF 이미지 삭제
