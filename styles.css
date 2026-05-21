@@ -1565,11 +1565,13 @@ body {
 
     /* 캘린더 래퍼: 헤더 아래 남은 공간 모두 차지 */
     #requestCalendarWrap {
-        flex: 1 1 auto !important;
+        flex: 1 1 0 !important;
         display: flex !important;
         flex-direction: column !important;
         min-height: 0 !important;
         overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
 
     /* 인쇄 전용 헤더 — 좌측: 월·부제(좌측 세로 바), 우측: 부서명 */
@@ -1623,24 +1625,20 @@ body {
     .request-panel-header { display: none !important; }
     #requestImageView     { display: none !important; }
 
-    /* 캘린더 그리드 — 인쇄용 */
+    /* 캘린더 그리드 — 인쇄용 (flex 기반, height 명시 없이 채움) */
     .calendar-header {
         font-size: 9pt !important;
         padding-bottom: 4px !important;
         flex-shrink: 0 !important;
     }
     .calendar-grid.request-grid {
-        flex: 1 1 auto !important;
-        /* viewport 기반 명시 height — 1fr 행 분배가 동작하려면 컨테이너 height 필수.
-           100vh − (인쇄헤더 ~50 + 요일라벨 ~25 + 여백 ~5) ≈ 100vh − 80px */
-        height: calc(100vh - 80px) !important;
+        flex: 1 1 0 !important;          /* basis 0 → 부모의 남은 공간 정확히 차지 */
         min-height: 0 !important;
-        max-height: calc(100vh - 80px) !important;
-        grid-auto-rows: 1fr !important;
+        height: auto !important;
+        max-height: none !important;
+        grid-auto-rows: minmax(0, 1fr) !important;  /* 행이 부모 height 안에서 균등 축소·확장 */
         gap: 3px !important;
         overflow: hidden !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
     }
     /* 요청자료 셀: 화면용 height:105px·overflow:hidden 보다 specificity 동등하게 강제 해제 */
     .calendar-grid.request-grid .cal-day {
