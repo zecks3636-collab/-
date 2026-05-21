@@ -2433,6 +2433,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `<span class="leave-entry-name" style="font-weight:700;">${req.title}</span>` +
                 (req.note ? `<span class="leave-entry-note">· ${req.note}</span>` : '');
 
+            const actions = document.createElement('div');
+            actions.style.cssText = 'display:flex; gap:4px;';
+
+            // 수정 버튼
+            const editBtn = document.createElement('button');
+            editBtn.className = 'leave-entry-del';
+            editBtn.innerHTML = '✏️ 수정';
+            editBtn.title = '이 항목 수정';
+            editBtn.style.background = '#fef3c7';
+            editBtn.style.color = '#92400e';
+            editBtn.addEventListener('click', () => openInlineRequestEdit(req, row, dateStr));
+
+            // 삭제 버튼
             const delBtn = document.createElement('button');
             delBtn.className = 'leave-entry-del';
             delBtn.innerHTML = '🗑️ 삭제';
@@ -2444,9 +2457,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await deleteRequest(req.id, dateStr, row);
             });
 
+            actions.appendChild(editBtn);
+            actions.appendChild(delBtn);
             row.appendChild(info);
-            row.appendChild(delBtn);
+            row.appendChild(actions);
             container.appendChild(row);
+        });
+    }
+
+    // ---- 요청자료 인라인 수정 ----
+    function openInlineRequestEdit(req, rowEl, dateStr) {
+        const catOptions = ['통합회의및확대회의관련','관계사경영회의관련','정기요청자료']
+            .map(c => `<option value="${c}"${c===req.category?' selected':''}>${c}</option>`).join('');
+        rowEl.innerHTML = `
+            <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
+                <input type="date" class="form-input req-edit-date" value="${(req.date||'').slice(0,10)}" style="font-size:12px; padding:5px 8px;">
+                <input type="text" class="form-input req-edit-title" value="${req.title.replace(/"/g,'&quot;')}" placeholder="일정 내용" style="font-size:12px; padding:5px 8px;">
+                <select class="form-input req-edit-cat" style="font-size:12px; padding:5px 8px;">${catOptions}</select>
+                <input type="text" class="form-input req-edit-note" value="${(req.note||'').replace(/"/g,'&quot;')}" placeholder="비고 (선택)" style="font-size:12px; padding:5px 8px;">
+            </div>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                <button class="leave-entry-del req-save-btn" style="background:#d1fae5; color:#065f46;">💾 저장</button>
+                <button class="leave-entry-del req-cancel-btn">❌ 취소</button>
+            </div>`;
+        rowEl.querySelector('.req-save-btn').addEventListener('click', async () => {
+            const newDate  = rowEl.querySelector('.req-edit-date').value;
+            const newTitle = rowEl.querySelector('.req-edit-title').value.trim();
+            const newCat   = rowEl.querySelector('.req-edit-cat').value;
+            const newNote  = rowEl.querySelector('.req-edit-note').value.trim();
+            if (!newDate || !newTitle) { alert('날짜와 내용을 입력해주세요.'); return; }
+
+            const updated = {
+                id: req.id, date: newDate, title: newTitle, category: newCat,
+                note: newNote || null,
+            };
+            try {
+                if (sb) {
+                    const { error } = await sb.from('request_schedules').upsert(updated);
+                    if (error) throw error;
+                }
+                const idx = allRequests.findIndex(r => r.id === req.id);
+                if (idx >= 0) allRequests[idx] = updated;
+                else allRequests.push(updated);
+                // 날짜가 변경됐으면 현재 모달 날짜는 변경 안 함, 그냥 사라짐
+                renderRequestModalEntries(dateStr);
+                renderRequestCalendar();
+            } catch(err) {
+                alert('수정 오류: ' + (err.message || err));
+            }
+        });
+        rowEl.querySelector('.req-cancel-btn').addEventListener('click', () => {
+            renderRequestModalEntries(dateStr);
         });
     }
 
