@@ -837,9 +837,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 확대회의 기준 영업일 오프셋 항목 (회의일 기준)
         const offsetItems = [
-            { suffix: 'revenue-est',  title: `경영실적(예상) 엑셀자료회신`,                   cat: '통합회의및확대회의관련', offset: -4 },
+            { suffix: 'revenue-est',  title: `경영실적(예상) 엑셀자료 회신`,                  cat: '통합회의및확대회의관련', offset: -4 },
             { suffix: 'conf-submit',  title: `확대회의 PPT자료 회신 (NBT/BIO/펫/파마)`,    cat: '통합회의및확대회의관련', offset: -3 },
-            { suffix: 'conf-minutes', title: `확대회의 회의록회신`,                          cat: '통합회의및확대회의관련', offset: 1 },
+            { suffix: 'conf-minutes', title: `확대회의 회의록 회신`,                         cat: '통합회의및확대회의관련', offset: 1 },
         ];
 
         const records = offsetItems.map(it => ({
@@ -875,7 +875,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             records.push({
                 id:       `req-auto-${ym}-working-capital`,
                 date:     fmtDateLocal(workingCapDay),
-                title:    `운전자본(채권/재고/재무제표) 자료회신`,
+                title:    `운전자본(채권/재고/재무제표) 자료 회신`,
                 category: '정기요청자료',
                 note:     null,
             });
@@ -886,7 +886,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         records.push({
             id:       `req-auto-${ym}-month-close`,
             date:     fmtDateLocal(addBusinessDays(lastDay, -4)),
-            title:    `가마감예상실적(매출) 자료회신`,
+            title:    `가마감예상실적(매출) 자료 회신`,
             category: '정기요청자료',
             note:     null,
         });
