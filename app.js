@@ -756,11 +756,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 기본 배경색 (회사별)
     const DEFAULT_EVENT_BG = { Group: '#eff8ff', NBT: '#f0fdf4', BIO: '#fff7ed' };
 
-    // ── 그룹↔NBT/BIO 확대회의 자동 동기화 ──
-    // Group 일정의 "엔비티/NBT 확대" "바이오 확대" 항목을 NBT/BIO 회사 미러로 복제·삭제
+    // ── 그룹↔NBT/BIO/Pet/Pharma 확대회의 자동 동기화 ──
+    //  - NBT/BIO 회사 일정 미러 (schedules 테이블)
+    //  - 요청자료일정 미러 (request_schedules 테이블, 4종 모두)
     const MIRROR_MAP = [
-        { regex: /(nbt|엔비티)\s*확대/i, key: 'nbt', target: 'NBT' },
-        { regex: /바이오\s*확대/i,       key: 'bio', target: 'BIO' },
+        { regex: /(nbt|엔비티)\s*확대/i, key: 'nbt',    target: 'NBT' },
+        { regex: /바이오\s*확대/i,       key: 'bio',    target: 'BIO' },
+        { regex: /펫\s*확대/i,           key: 'pet',    target: null },
+        { regex: /파마\s*확대/i,         key: 'pharma', target: null },
     ];
     function getMirrorMatches(title) {
         return MIRROR_MAP.filter(m => m.regex.test(title || ''));
@@ -775,18 +778,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 미러 삭제 대상
         const toRemove = prevMatches.filter(p => !nowMatches.some(n => n.key === p.key));
         for (const m of toRemove) {
-            const mid = `${m.target}-mirror-${(prevTitle ? srcEvent.date : srcEvent.date)}-${m.key}`;
-            if (sb) { try { await sb.from('schedules').delete().eq('id', mid); } catch(_) {} }
-            allEvents = allEvents.filter(e => e.id !== mid);
+            // 1) NBT/BIO 회사 미러 삭제
+            if (m.target) {
+                const mid = `${m.target}-mirror-${srcEvent.date}-${m.key}`;
+                if (sb) { try { await sb.from('schedules').delete().eq('id', mid); } catch(_) {} }
+                allEvents = allEvents.filter(e => e.id !== mid);
+            }
+            // 2) 요청자료 미러 삭제 (4종 모두)
+            const rid = `req-conf-${srcEvent.date}-${m.key}`;
+            if (sb) { try { await sb.from('request_schedules').delete().eq('id', rid); } catch(_) {} }
+            allRequests = allRequests.filter(r => r.id !== rid);
         }
+
         // 미러 upsert 대상
         for (const m of nowMatches) {
-            const mid = `${m.target}-mirror-${srcEvent.date}-${m.key}`;
-            const mirror = { id: mid, company: m.target, date: srcEvent.date, title: srcEvent.title };
-            if (sb) { try { await sb.from('schedules').upsert(mirror, { onConflict: 'id' }); } catch(_) {} }
-            const idx = allEvents.findIndex(e => e.id === mid);
-            if (idx >= 0) allEvents[idx] = mirror;
-            else allEvents.push(mirror);
+            // 1) NBT/BIO 회사 미러
+            if (m.target) {
+                const mid = `${m.target}-mirror-${srcEvent.date}-${m.key}`;
+                const mirror = { id: mid, company: m.target, date: srcEvent.date, title: srcEvent.title };
+                if (sb) { try { await sb.from('schedules').upsert(mirror, { onConflict: 'id' }); } catch(_) {} }
+                const idx = allEvents.findIndex(e => e.id === mid);
+                if (idx >= 0) allEvents[idx] = mirror;
+                else allEvents.push(mirror);
+            }
+            // 2) 요청자료 미러 (4종 모두)
+            const rid = `req-conf-${srcEvent.date}-${m.key}`;
+            const reqMirror = {
+                id: rid,
+                date: srcEvent.date,
+                title: srcEvent.title,
+                category: '통합회의및확대회의관련',
+                note: null,
+            };
+            if (sb) { try { await sb.from('request_schedules').upsert(reqMirror); } catch(_) {} }
+            const ridx = allRequests.findIndex(r => r.id === rid);
+            if (ridx >= 0) allRequests[ridx] = reqMirror;
+            else allRequests.push(reqMirror);
+        }
+
+        // 요청자료 패널이 열려있으면 즉시 다시 렌더
+        const panelRequest = document.getElementById('panelRequest');
+        if (panelRequest && panelRequest.style.display === 'flex' && typeof renderRequestCalendar === 'function') {
+            renderRequestCalendar();
         }
     }
 
