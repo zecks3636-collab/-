@@ -1,5 +1,5 @@
 // data.js -- DB fallback for GitHub Pages (static hosting)
-// regenerated: 2026-05-21 09:45 via API
+// regenerated: 2026-05-21 09:48 via API
 
 window.fallbackEvents = [
   {
@@ -1157,16 +1157,16 @@ window.fallbackRequestSchedules = [
     "note": ""
   },
   {
-    "id": "2b5b2b57-e4b7-42cc-80a5-4b225d9f6f2f",
+    "id": "15dbb334-688e-4f93-9a70-db5b309346cf",
     "date": "2026-05-15",
-    "title": "10:30 바이오확대회의",
+    "title": "09:00 엔비티 확대회의",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
   {
-    "id": "15dbb334-688e-4f93-9a70-db5b309346cf",
+    "id": "2b5b2b57-e4b7-42cc-80a5-4b225d9f6f2f",
     "date": "2026-05-15",
-    "title": "09:00 엔비티 확대회의",
+    "title": "10:30 바이오확대회의",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
@@ -1186,8 +1186,15 @@ window.fallbackRequestSchedules = [
   },
   {
     "id": "req-auto-2026-06-strategy",
-    "date": "2026-06-10",
+    "date": "2026-06-05",
     "title": "공통전략지표 5월 마감 업데이트",
+    "category": "정기요청자료",
+    "note": null
+  },
+  {
+    "id": "req-auto-2026-06-teams",
+    "date": "2026-06-05",
+    "title": "팀즈[공통지표관리채널] Upload",
     "category": "정기요청자료",
     "note": null
   },
@@ -1195,13 +1202,6 @@ window.fallbackRequestSchedules = [
     "id": "req-auto-2026-06-revenue-est",
     "date": "2026-06-10",
     "title": "경영실적(예상) 엑셀자료회신",
-    "category": "정기요청자료",
-    "note": null
-  },
-  {
-    "id": "req-auto-2026-06-teams",
-    "date": "2026-06-10",
-    "title": "팀즈[공통지표관리채널] Upload",
     "category": "정기요청자료",
     "note": null
   },
