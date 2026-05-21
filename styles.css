@@ -1630,12 +1630,14 @@ body {
         flex-shrink: 0 !important;
     }
     .calendar-grid.request-grid {
-        flex: 1 1 auto !important;            /* 남은 공간 모두 차지 */
-        grid-auto-rows: 1fr !important;        /* 행이 균등 배분 */
-        gap: 3px !important;
-        height: auto !important;
-        max-height: none !important;
+        flex: 1 1 auto !important;
+        /* viewport 기반 명시 height — 1fr 행 분배가 동작하려면 컨테이너 height 필수.
+           100vh − (인쇄헤더 ~50 + 요일라벨 ~25 + 여백 ~5) ≈ 100vh − 80px */
+        height: calc(100vh - 80px) !important;
         min-height: 0 !important;
+        max-height: calc(100vh - 80px) !important;
+        grid-auto-rows: 1fr !important;
+        gap: 3px !important;
         overflow: hidden !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
