@@ -835,10 +835,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const prevYM = new Date(year, month - 2, 1);
         const prevMonthLabel = `${prevYM.getMonth() + 1}월`;  // 전월 라벨
 
-        // 확대회의 기준 영업일 오프셋 항목
+        // 확대회의 기준 영업일 오프셋 항목 (회의일 기준)
         const offsetItems = [
-            { suffix: 'strategy',     title: `공통전략지표 ${prevMonthLabel} 마감 업데이트`,   cat: '정기요청자료',           offset: -4 },
-            { suffix: 'teams',        title: `팀즈[공통지표관리채널] Upload`,                cat: '정기요청자료',           offset: -4 },
             { suffix: 'revenue-est',  title: `경영실적(예상) 엑셀자료회신`,                   cat: '정기요청자료',           offset: -4 },
             { suffix: 'conf-submit',  title: `확대회의 자료회신 (NBT/BIO/펫/파마)`,         cat: '통합회의및확대회의관련', offset: -3 },
             { suffix: 'conf-minutes', title: `확대회의 회의록회신`,                          cat: '통합회의및확대회의관련', offset: 1 },
@@ -851,6 +849,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             category: it.cat,
             note:     null,
         }));
+
+        // 공통전략지표·팀즈Upload — 해당 월 4번째 영업일 (월초 기준)
+        const day4 = nthBusinessDayOfMonth(year, month - 1, 4);
+        if (day4) {
+            records.push({
+                id:       `req-auto-${ym}-strategy`,
+                date:     fmtDateLocal(day4),
+                title:    `공통전략지표 ${prevMonthLabel} 마감 업데이트`,
+                category: '정기요청자료',
+                note:     null,
+            });
+            records.push({
+                id:       `req-auto-${ym}-teams`,
+                date:     fmtDateLocal(day4),
+                title:    `팀즈[공통지표관리채널] Upload`,
+                category: '정기요청자료',
+                note:     null,
+            });
+        }
 
         // 운전자본 — 해당 월 9번째 영업일 (확대회의일과 무관)
         const workingCapDay = nthBusinessDayOfMonth(year, month - 1, 9);
