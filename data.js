@@ -1,5 +1,5 @@
 // data.js -- DB fallback for GitHub Pages (static hosting)
-// regenerated: 2026-05-21 10:28 via API
+// regenerated: 2026-05-21 11:20 via API
 
 window.fallbackEvents = [
   {
@@ -1038,9 +1038,9 @@ window.fallbackLeavePlans = [
 
 window.fallbackRequestSchedules = [
   {
-    "id": "3b11a93a-5af6-4e84-982d-9db07f07b66e",
+    "id": "7abd9ba1-64a2-4d8e-b083-fe14b2104308",
     "date": "2026-04-09",
-    "title": "경영실적(예상) 엑셀자료회신",
+    "title": "공통전략지표 4월 업데이트",
     "category": "정기요청자료",
     "note": ""
   },
@@ -1052,30 +1052,30 @@ window.fallbackRequestSchedules = [
     "note": ""
   },
   {
-    "id": "7abd9ba1-64a2-4d8e-b083-fe14b2104308",
+    "id": "3b11a93a-5af6-4e84-982d-9db07f07b66e",
     "date": "2026-04-09",
-    "title": "공통전략지표 4월 업데이트",
+    "title": "경영실적(예상) 엑셀자료 회신",
     "category": "정기요청자료",
     "note": ""
   },
   {
     "id": "6d8eea51-33e9-4564-b483-128b6f391ae0",
     "date": "2026-04-10",
-    "title": "확대회의자료회신(펫/파마)",
+    "title": "확대회의자료 회신(펫/파마)",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
   {
     "id": "5b87b45d-eddd-4b2a-abea-27e73f275f91",
     "date": "2026-04-13",
-    "title": "관계사경영회의 발표자료회신",
+    "title": "관계사경영회의 발표자료 회신",
     "category": "관계사경영회의관련",
     "note": ""
   },
   {
     "id": "c59fcb22-1737-4e1d-b4d3-b3bee189d92d",
     "date": "2026-04-13",
-    "title": "운전자본(채권/재고/재무제표) 자료회신",
+    "title": "운전자본(채권/재고/재무제표) 자료 회신",
     "category": "정기요청자료",
     "note": ""
   },
@@ -1117,7 +1117,7 @@ window.fallbackRequestSchedules = [
   {
     "id": "8ce3dff4-6ab7-48f2-aa4b-965b5fb09ec7",
     "date": "2026-04-24",
-    "title": "가마감예상실적(매출) 자료회신",
+    "title": "가마감예상실적(매출) 자료 회신",
     "category": "정기요청자료",
     "note": ""
   },
@@ -1138,7 +1138,7 @@ window.fallbackRequestSchedules = [
   {
     "id": "b586cdbd-a055-4a93-99d6-6578cace69ae",
     "date": "2026-05-12",
-    "title": "경영실적(예상) 엑셀자료회신",
+    "title": "경영실적(예상) 엑셀자료 회신",
     "category": "정기요청자료",
     "note": ""
   },
@@ -1152,7 +1152,7 @@ window.fallbackRequestSchedules = [
   {
     "id": "cf32abea-793c-4084-b805-33c709877a89",
     "date": "2026-05-14",
-    "title": "운전자본(채권/재고/재무제표) 자료회신",
+    "title": "운전자본(채권/재고/재무제표) 자료 회신",
     "category": "정기요청자료",
     "note": ""
   },
@@ -1173,14 +1173,14 @@ window.fallbackRequestSchedules = [
   {
     "id": "fefa2211-9975-4e22-a6ba-87fdd72f3809",
     "date": "2026-05-18",
-    "title": "확대회의 회의록회신",
+    "title": "확대회의 회의록 회신",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
   {
     "id": "c4681006-d146-4724-ac1e-f86f36190cdd",
     "date": "2026-05-22",
-    "title": "가마감예상실적(매출) 자료회신",
+    "title": "가마감예상실적(매출) 자료 회신",
     "category": "정기요청자료",
     "note": ""
   },
@@ -1201,7 +1201,7 @@ window.fallbackRequestSchedules = [
   {
     "id": "req-auto-2026-06-revenue-est",
     "date": "2026-06-10",
-    "title": "경영실적(예상) 엑셀자료회신",
+    "title": "경영실적(예상) 엑셀자료 회신",
     "category": "통합회의및확대회의관련",
     "note": null
   },
@@ -1215,7 +1215,7 @@ window.fallbackRequestSchedules = [
   {
     "id": "req-auto-2026-06-working-capital",
     "date": "2026-06-12",
-    "title": "운전자본(채권/재고/재무제표) 자료회신",
+    "title": "운전자본(채권/재고/재무제표) 자료 회신",
     "category": "정기요청자료",
     "note": null
   },
@@ -1227,9 +1227,9 @@ window.fallbackRequestSchedules = [
     "note": null
   },
   {
-    "id": "req-conf-2026-06-16-nbt",
+    "id": "req-conf-2026-06-16-pet",
     "date": "2026-06-16",
-    "title": "0800 NBT 확대회의(판교)",
+    "title": "1400 코스맥스펫 확대회의(판교)",
     "category": "통합회의및확대회의관련",
     "note": null
   },
@@ -1241,23 +1241,23 @@ window.fallbackRequestSchedules = [
     "note": null
   },
   {
-    "id": "req-conf-2026-06-16-pet",
+    "id": "req-conf-2026-06-16-nbt",
     "date": "2026-06-16",
-    "title": "1400 코스맥스펫 확대회의(판교)",
+    "title": "0800 NBT 확대회의(판교)",
     "category": "통합회의및확대회의관련",
     "note": null
   },
   {
     "id": "req-auto-2026-06-conf-minutes",
     "date": "2026-06-17",
-    "title": "확대회의 회의록회신",
+    "title": "확대회의 회의록 회신",
     "category": "통합회의및확대회의관련",
     "note": null
   },
   {
     "id": "req-auto-2026-06-month-close",
     "date": "2026-06-24",
-    "title": "가마감예상실적(매출) 자료회신",
+    "title": "가마감예상실적(매출) 자료 회신",
     "category": "정기요청자료",
     "note": null
   }
