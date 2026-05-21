@@ -1522,7 +1522,7 @@ body {
 /* ===== @media print — 정기요청자료일정 PDF 출력 ===== */
 @page {
     size: A4 landscape;
-    margin: 12px 10mm 12px 10mm;   /* 상하 12px, 좌우 10mm */
+    margin: 15mm 10mm 15mm 10mm;   /* 상하 15mm, 좌우 10mm */
 }
 @media print {
     /* 배경 orb, 그라데이션 숨김 */
@@ -1618,19 +1618,21 @@ body {
         padding-bottom: 6px !important;
     }
     .calendar-grid.request-grid {
-        grid-auto-rows: auto !important;
+        grid-auto-rows: 1fr !important;   /* 페이지 세로 공간을 행이 균등 배분 */
         gap: 4px !important;
+        height: calc(100vh - 60px) !important;  /* 상단(헤더+요일라벨) 제외 페이지 거의 끝까지 */
+        min-height: 600px !important;
     }
     /* 요청자료 셀: 화면용 height:105px·overflow:hidden 보다 specificity 동등하게 강제 해제 */
     .calendar-grid.request-grid .cal-day {
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
-        min-height: 70px !important;
+        min-height: 100px !important;
     }
     .cal-day {
         overflow: visible !important;
-        min-height: 70px !important;
+        min-height: 100px !important;
         border-radius: 6px !important;
         padding: 6px 5px !important;
         box-shadow: none !important;
