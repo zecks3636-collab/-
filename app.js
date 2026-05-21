@@ -756,6 +756,108 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 기본 배경색 (회사별)
     const DEFAULT_EVENT_BG = { Group: '#eff8ff', NBT: '#f0fdf4', BIO: '#fff7ed' };
 
+    // ── 영업일 계산 유틸 ──
+    function isHolidayDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return !!(holidays[`${y}-${m}-${d}`] || holidays[`${m}-${d}`]);
+    }
+    function isWeekendDate(date) {
+        const dow = date.getDay();
+        return dow === 0 || dow === 6;
+    }
+    function addBusinessDays(startDate, n) {
+        const d = new Date(startDate);
+        if (n === 0) return d;
+        const step = n > 0 ? 1 : -1;
+        const target = Math.abs(n);
+        let count = 0;
+        while (count < target) {
+            d.setDate(d.getDate() + step);
+            if (!isWeekendDate(d) && !isHolidayDate(d)) count++;
+        }
+        return d;
+    }
+    function lastBusinessDayOfMonth(year, monthIdx) {
+        const d = new Date(year, monthIdx + 1, 0);
+        while (isWeekendDate(d) || isHolidayDate(d)) {
+            d.setDate(d.getDate() - 1);
+        }
+        return d;
+    }
+    function fmtDateLocal(d) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    // ── 확대회의 기반 자동 요청자료 생성/삭제 ──
+    async function syncAutoRequestForMonth(ym) {
+        const confs = allEvents
+            .filter(e => e.company === 'Group' && (e.date || '').startsWith(ym) && getMirrorMatches(e.title).length > 0)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        const autoIds = [
+            `req-auto-${ym}-strategy`,
+            `req-auto-${ym}-teams`,
+            `req-auto-${ym}-revenue-est`,
+            `req-auto-${ym}-conf-submit`,
+            `req-auto-${ym}-working-capital`,
+            `req-auto-${ym}-conf-minutes`,
+            `req-auto-${ym}-month-close`,
+        ];
+
+        // 확대회의 0종 → 자동 항목 삭제
+        if (confs.length === 0) {
+            for (const id of autoIds) {
+                if (sb) { try { await sb.from('request_schedules').delete().eq('id', id); } catch(_) {} }
+                allRequests = allRequests.filter(r => r.id !== id);
+            }
+            return;
+        }
+
+        // 확대회의 기준일(D) = 같은 월 그룹 확대회의 중 가장 빠른 날짜
+        const meetingDate = new Date(confs[0].date + 'T00:00:00');
+        if (isNaN(meetingDate)) return;
+
+        const [year, month] = ym.split('-').map(Number);  // month 1-indexed
+        const prevYM = new Date(year, month - 2, 1);
+        const prevMonthLabel = `${prevYM.getMonth() + 1}월`;  // 전월 라벨
+
+        const offsetItems = [
+            { suffix: 'strategy',        title: `공통전략지표 ${prevMonthLabel} 마감 업데이트`,   cat: '정기요청자료',           offset: -4 },
+            { suffix: 'teams',           title: `팀즈[공통지표관리채널] Upload`,                cat: '정기요청자료',           offset: -4 },
+            { suffix: 'revenue-est',     title: `경영실적(예상) 엑셀자료회신`,                   cat: '정기요청자료',           offset: -4 },
+            { suffix: 'conf-submit',     title: `확대회의 자료회신 (NBT/BIO/펫/파마)`,         cat: '통합회의및확대회의관련', offset: -3 },
+            { suffix: 'working-capital', title: `운전자본(채권/재고/재무제표) 자료회신`,         cat: '정기요청자료',           offset: -1 },
+            { suffix: 'conf-minutes',    title: `확대회의 회의록회신`,                          cat: '통합회의및확대회의관련', offset: 1 },
+        ];
+
+        const records = offsetItems.map(it => ({
+            id:       `req-auto-${ym}-${it.suffix}`,
+            date:     fmtDateLocal(addBusinessDays(meetingDate, it.offset)),
+            title:    it.title,
+            category: it.cat,
+            note:     null,
+        }));
+
+        // 가마감 — 해당 월 영업말일 D-4
+        const lastDay = lastBusinessDayOfMonth(year, month - 1);
+        records.push({
+            id:       `req-auto-${ym}-month-close`,
+            date:     fmtDateLocal(addBusinessDays(lastDay, -4)),
+            title:    `가마감예상실적(매출) 자료회신`,
+            category: '정기요청자료',
+            note:     null,
+        });
+
+        if (sb) { try { await sb.from('request_schedules').upsert(records); } catch(_) {} }
+        records.forEach(item => {
+            const idx = allRequests.findIndex(r => r.id === item.id);
+            if (idx >= 0) allRequests[idx] = item;
+            else allRequests.push(item);
+        });
+    }
+
     // ── 그룹↔NBT/BIO/Pet/Pharma 확대회의 자동 동기화 ──
     //  - NBT/BIO 회사 일정 미러 (schedules 테이블)
     //  - 요청자료일정 미러 (request_schedules 테이블, 4종 모두)
@@ -814,6 +916,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ridx = allRequests.findIndex(r => r.id === rid);
             if (ridx >= 0) allRequests[ridx] = reqMirror;
             else allRequests.push(reqMirror);
+        }
+
+        // 확대회의 관련 변경이면 해당 월의 자동 요청자료 동기화
+        if (prevMatches.length > 0 || nowMatches.length > 0) {
+            const ym = srcEvent.date.slice(0, 7);
+            await syncAutoRequestForMonth(ym);
+            // 날짜가 다른 월로 옮겨졌다면 이전 월도 재계산
+            if (prevTitle && prevMatches.length > 0) {
+                const prevYm = (srcEvent._prevDate || srcEvent.date).slice(0, 7);
+                if (prevYm !== ym) await syncAutoRequestForMonth(prevYm);
+            }
         }
 
         // 요청자료 패널이 열려있으면 즉시 다시 렌더
