@@ -70,27 +70,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     allEvents.sort((a, b) => a.date.localeCompare(b.date));
 
-    // ── 기존 중복 일정 1회 정리 (company,date,정규화 title 기준) ──
+    // ── 중복 일정 정리: 로컬에서만 처리 (DB 삭제는 의도치 않은 데이터 손실 위험으로 비활성화) ──
+    //   필요 시 콘솔에서 window.__cleanupDuplicateSchedules() 로 수동 실행 가능
     try {
         const normT = t => (t || '').replace(/\s+/g, ' ').trim().toLowerCase();
-        const groups = new Map();
-        allEvents.filter(e => e.company !== '_COLOR').forEach(e => {
+        const seen = new Set();
+        allEvents = allEvents.filter(e => {
+            if (e.company === '_COLOR') return false;
             const k = `${e.company}||${e.date}||${normT(e.title)}`;
-            if (!groups.has(k)) groups.set(k, []);
-            groups.get(k).push(e);
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
         });
-        const dupIds = [];
-        groups.forEach(arr => { if (arr.length > 1) arr.slice(1).forEach(x => dupIds.push(x.id)); });
-        if (dupIds.length > 0) {
-            console.log(`🧹 중복 일정 ${dupIds.length}건 정리 중...`);
-            if (sb) {
-                const { error } = await sb.from('schedules').delete().in('id', dupIds);
-                if (error) console.warn('중복 삭제 실패:', error.message);
-            }
-            const rm = new Set(dupIds);
-            allEvents = allEvents.filter(e => !rm.has(e.id));
-            console.log(`✅ 중복 ${dupIds.length}건 제거 완료`);
-        }
     } catch (e) {
         console.warn('중복 정리 중 오류:', e.message);
     }
@@ -520,7 +511,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    await loadMenuStore();
+    loadMenuStore();   // 백그라운드 로드 — 주간식단표 탭 진입 시 자동 사용
 
     // 현재 표시 중인 주 (오늘 날짜 기준 → 해당 주 월요일 자동 계산)
     function getTodayMonday() {
@@ -1674,9 +1665,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    await loadLeaves();
-    // null/불완전 항목 방어 정리
-    allLeaves = allLeaves.filter(l => l && l.date && l.employee_name);
+    // 백그라운드 로드 — 연차 탭 진입 시 자동 사용. 완료 후 정리도 함께.
+    loadLeaves().then(() => {
+        allLeaves = allLeaves.filter(l => l && l.date && l.employee_name);
+    });
 
     // ---- 연차 패널 월 이동 버튼 ----
     // 연차 패널 월 이동 공통 함수
@@ -2264,7 +2256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             allRequests = window.fallbackRequestSchedules || [];
         }
     }
-    await loadRequests();
+    loadRequests();   // 백그라운드 로드 — 요청자료 탭/그룹 미러 동기화 시 사용
 
     // request_months (PDF 이미지) 로드
     let requestImageStore = {}; // { 'YYYY-MM': { imageUrl, storagePath, fileName } }
@@ -2288,7 +2280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.warn('request_months 로드 실패:', e.message);
         }
     }
-    await loadRequestImageStore();
+    loadRequestImageStore();   // 백그라운드 로드 — 요청자료 PDF 이미지 보기 시 사용
 
     // ---- 요청자료 캘린더 렌더링 ----
     function renderRequestCalendar() {
