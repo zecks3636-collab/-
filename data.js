@@ -1,5 +1,5 @@
 // data.js -- DB fallback for GitHub Pages (static hosting)
-// regenerated: 2026-05-21 09:56 via API
+// regenerated: 2026-05-21 10:28 via API
 
 window.fallbackEvents = [
   {
@@ -1145,7 +1145,7 @@ window.fallbackRequestSchedules = [
   {
     "id": "dd4756f4-5f7f-43a1-82ba-8289f9950da6",
     "date": "2026-05-13",
-    "title": "확대회의 자료회신 (NBT/BIO/펫/파마)",
+    "title": "확대회의 PPT자료 회신 (NBT/BIO/펫/파마)",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
@@ -1157,16 +1157,16 @@ window.fallbackRequestSchedules = [
     "note": ""
   },
   {
-    "id": "15dbb334-688e-4f93-9a70-db5b309346cf",
+    "id": "2b5b2b57-e4b7-42cc-80a5-4b225d9f6f2f",
     "date": "2026-05-15",
-    "title": "09:00 엔비티 확대회의",
+    "title": "10:30 바이오확대회의",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
   {
-    "id": "2b5b2b57-e4b7-42cc-80a5-4b225d9f6f2f",
+    "id": "15dbb334-688e-4f93-9a70-db5b309346cf",
     "date": "2026-05-15",
-    "title": "10:30 바이오확대회의",
+    "title": "09:00 엔비티 확대회의",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
@@ -1208,7 +1208,7 @@ window.fallbackRequestSchedules = [
   {
     "id": "req-auto-2026-06-conf-submit",
     "date": "2026-06-11",
-    "title": "확대회의 자료회신 (NBT/BIO/펫/파마)",
+    "title": "확대회의 PPT자료 회신 (NBT/BIO/펫/파마)",
     "category": "통합회의및확대회의관련",
     "note": null
   },
@@ -1217,20 +1217,6 @@ window.fallbackRequestSchedules = [
     "date": "2026-06-12",
     "title": "운전자본(채권/재고/재무제표) 자료회신",
     "category": "정기요청자료",
-    "note": null
-  },
-  {
-    "id": "req-conf-2026-06-16-pharma",
-    "date": "2026-06-16",
-    "title": "1500 코스맥스파마 확대회의(판교)",
-    "category": "통합회의및확대회의관련",
-    "note": null
-  },
-  {
-    "id": "req-conf-2026-06-16-pet",
-    "date": "2026-06-16",
-    "title": "1400 코스맥스펫 확대회의(판교)",
-    "category": "통합회의및확대회의관련",
     "note": null
   },
   {
@@ -1244,6 +1230,20 @@ window.fallbackRequestSchedules = [
     "id": "req-conf-2026-06-16-nbt",
     "date": "2026-06-16",
     "title": "0800 NBT 확대회의(판교)",
+    "category": "통합회의및확대회의관련",
+    "note": null
+  },
+  {
+    "id": "req-conf-2026-06-16-pharma",
+    "date": "2026-06-16",
+    "title": "1500 코스맥스파마 확대회의(판교)",
+    "category": "통합회의및확대회의관련",
+    "note": null
+  },
+  {
+    "id": "req-conf-2026-06-16-pet",
+    "date": "2026-06-16",
+    "title": "1400 코스맥스펫 확대회의(판교)",
     "category": "통합회의및확대회의관련",
     "note": null
   },
