@@ -1,5 +1,5 @@
 // data.js -- DB fallback for GitHub Pages (static hosting)
-// regenerated: 2026-05-21 09:48 via API
+// regenerated: 2026-05-21 09:51 via API
 
 window.fallbackEvents = [
   {
@@ -1206,17 +1206,17 @@ window.fallbackRequestSchedules = [
     "note": null
   },
   {
+    "id": "req-auto-2026-06-working-capital",
+    "date": "2026-06-11",
+    "title": "운전자본(채권/재고/재무제표) 자료회신",
+    "category": "정기요청자료",
+    "note": null
+  },
+  {
     "id": "req-auto-2026-06-conf-submit",
     "date": "2026-06-11",
     "title": "확대회의 자료회신 (NBT/BIO/펫/파마)",
     "category": "통합회의및확대회의관련",
-    "note": null
-  },
-  {
-    "id": "req-auto-2026-06-working-capital",
-    "date": "2026-06-12",
-    "title": "운전자본(채권/재고/재무제표) 자료회신",
-    "category": "정기요청자료",
     "note": null
   },
   {
