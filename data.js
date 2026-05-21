@@ -1,5 +1,5 @@
 // data.js -- DB fallback for GitHub Pages (static hosting)
-// regenerated: 2026-05-21 09:04 via API
+// regenerated: 2026-05-21 09:34 via API
 
 window.fallbackEvents = [
   {
@@ -1157,16 +1157,16 @@ window.fallbackRequestSchedules = [
     "note": ""
   },
   {
-    "id": "15dbb334-688e-4f93-9a70-db5b309346cf",
+    "id": "2b5b2b57-e4b7-42cc-80a5-4b225d9f6f2f",
     "date": "2026-05-15",
-    "title": "09:00 엔비티 확대회의",
+    "title": "10:30 바이오확대회의",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
   {
-    "id": "2b5b2b57-e4b7-42cc-80a5-4b225d9f6f2f",
+    "id": "15dbb334-688e-4f93-9a70-db5b309346cf",
     "date": "2026-05-15",
-    "title": "10:30 바이오확대회의",
+    "title": "09:00 엔비티 확대회의",
     "category": "통합회의및확대회의관련",
     "note": ""
   },
@@ -1183,6 +1183,48 @@ window.fallbackRequestSchedules = [
     "title": "가마감예상실적(매출) 자료회신",
     "category": "정기요청자료",
     "note": ""
+  },
+  {
+    "id": "req-auto-2026-06-strategy",
+    "date": "2026-06-10",
+    "title": "공통전략지표 5월 마감 업데이트",
+    "category": "정기요청자료",
+    "note": null
+  },
+  {
+    "id": "req-auto-2026-06-revenue-est",
+    "date": "2026-06-10",
+    "title": "경영실적(예상) 엑셀자료회신",
+    "category": "정기요청자료",
+    "note": null
+  },
+  {
+    "id": "req-auto-2026-06-teams",
+    "date": "2026-06-10",
+    "title": "팀즈[공통지표관리채널] Upload",
+    "category": "정기요청자료",
+    "note": null
+  },
+  {
+    "id": "req-auto-2026-06-conf-submit",
+    "date": "2026-06-11",
+    "title": "확대회의 자료회신 (NBT/BIO/펫/파마)",
+    "category": "통합회의및확대회의관련",
+    "note": null
+  },
+  {
+    "id": "req-auto-2026-06-working-capital",
+    "date": "2026-06-15",
+    "title": "운전자본(채권/재고/재무제표) 자료회신",
+    "category": "정기요청자료",
+    "note": null
+  },
+  {
+    "id": "req-conf-2026-06-16-pharma",
+    "date": "2026-06-16",
+    "title": "1500 코스맥스파마 확대회의(판교)",
+    "category": "통합회의및확대회의관련",
+    "note": null
   },
   {
     "id": "req-conf-2026-06-16-pet",
@@ -1206,10 +1248,17 @@ window.fallbackRequestSchedules = [
     "note": null
   },
   {
-    "id": "req-conf-2026-06-16-pharma",
-    "date": "2026-06-16",
-    "title": "1500 코스맥스파마 확대회의(판교)",
+    "id": "req-auto-2026-06-conf-minutes",
+    "date": "2026-06-17",
+    "title": "확대회의 회의록회신",
     "category": "통합회의및확대회의관련",
+    "note": null
+  },
+  {
+    "id": "req-auto-2026-06-month-close",
+    "date": "2026-06-24",
+    "title": "가마감예상실적(매출) 자료회신",
+    "category": "정기요청자료",
     "note": null
   }
 ];
