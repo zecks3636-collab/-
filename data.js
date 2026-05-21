@@ -1,5 +1,5 @@
 // data.js -- DB fallback for GitHub Pages (static hosting)
-// regenerated: 2026-05-21 09:34 via API
+// regenerated: 2026-05-21 09:45 via API
 
 window.fallbackEvents = [
   {
@@ -1214,7 +1214,7 @@ window.fallbackRequestSchedules = [
   },
   {
     "id": "req-auto-2026-06-working-capital",
-    "date": "2026-06-15",
+    "date": "2026-06-12",
     "title": "운전자본(채권/재고/재무제표) 자료회신",
     "category": "정기요청자료",
     "note": null
