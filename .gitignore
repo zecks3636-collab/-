@@ -22,6 +22,7 @@ _parse_june.py
 _insert_june_api.py
 _parse_bio_june.py
 _parse_nbt_june.py
+_sync_june_conf.py
 
 # 업로드 상태 캐시
 .uploaded_state.json
