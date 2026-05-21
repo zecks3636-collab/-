@@ -1545,7 +1545,7 @@ body {
     .dashboard-container { display: block !important; padding: 0 !important; margin: 0 !important; }
     .main-content { padding: 0 !important; margin: 0 !important; width: 100% !important; }
 
-    /* 요청자료 패널 전체 표시 — 1페이지로 강제 */
+    /* 요청자료 패널 전체 표시 — 1페이지로 강제, flex 레이아웃 */
     #panelRequest {
         display: flex !important;
         flex-direction: column !important;
@@ -1561,6 +1561,15 @@ body {
         break-after: avoid !important;
         backdrop-filter: none !important;
         background: #fff !important;
+    }
+
+    /* 캘린더 래퍼: 헤더 아래 남은 공간 모두 차지 */
+    #requestCalendarWrap {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
     }
 
     /* 인쇄 전용 헤더 — 좌측: 월·부제(좌측 세로 바), 우측: 부서명 */
@@ -1615,17 +1624,18 @@ body {
     #requestImageView     { display: none !important; }
 
     /* 캘린더 그리드 — 인쇄용 */
-    #requestCalendarWrap { display: block !important; flex: none !important; margin: 0 !important; padding: 0 !important; }
     .calendar-header {
         font-size: 9pt !important;
-        padding-bottom: 6px !important;
+        padding-bottom: 4px !important;
+        flex-shrink: 0 !important;
     }
     .calendar-grid.request-grid {
-        grid-auto-rows: 1fr !important;
+        flex: 1 1 auto !important;            /* 남은 공간 모두 차지 */
+        grid-auto-rows: 1fr !important;        /* 행이 균등 배분 */
         gap: 3px !important;
-        /* A4 landscape 가용 높이(180mm) − 인쇄 헤더(~45px) − 요일 라벨(~22px) − 마진 = 약 90mm */
-        height: calc(100vh - 70px) !important;
-        max-height: calc(100vh - 70px) !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
         overflow: hidden !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
