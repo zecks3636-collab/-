@@ -1563,12 +1563,12 @@ body {
         background: #fff !important;
     }
 
-    /* 캘린더 래퍼: 헤더 아래 남은 공간 모두 차지 */
+    /* 캘린더 래퍼: 일반 block 레이아웃 (grid가 mm 단위로 자체 height 지정) */
     #requestCalendarWrap {
-        flex: 1 1 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        min-height: 0 !important;
+        display: block !important;
+        flex: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
         overflow: hidden !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
@@ -1625,20 +1625,23 @@ body {
     .request-panel-header { display: none !important; }
     #requestImageView     { display: none !important; }
 
-    /* 캘린더 그리드 — 인쇄용 (flex 기반, height 명시 없이 채움) */
+    /* 캘린더 그리드 — 인쇄용 (mm 단위 명시 높이) */
     .calendar-header {
         font-size: 9pt !important;
         padding-bottom: 4px !important;
         flex-shrink: 0 !important;
     }
     .calendar-grid.request-grid {
-        flex: 1 1 0 !important;          /* basis 0 → 부모의 남은 공간 정확히 차지 */
+        /* A4 landscape 인쇄가능높이 180mm − 인쇄헤더(~16mm) − 요일라벨(~6mm) − 여백(~3mm) ≈ 155mm */
+        display: grid !important;
+        height: 155mm !important;
+        max-height: 155mm !important;
         min-height: 0 !important;
-        height: auto !important;
-        max-height: none !important;
-        grid-auto-rows: minmax(0, 1fr) !important;  /* 행이 부모 height 안에서 균등 축소·확장 */
+        grid-template-columns: repeat(7, 1fr) !important;
+        grid-auto-rows: 1fr !important;
         gap: 3px !important;
         overflow: hidden !important;
+        flex: none !important;          /* flex 영향 차단 */
     }
     /* 요청자료 셀: 화면용 height:105px·overflow:hidden 보다 specificity 동등하게 강제 해제 */
     .calendar-grid.request-grid .cal-day {
