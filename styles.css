@@ -1612,6 +1612,13 @@ body {
         grid-auto-rows: auto !important;
         gap: 4px !important;
     }
+    /* 요청자료 셀: 화면용 height:105px·overflow:hidden 보다 specificity 동등하게 강제 해제 */
+    .calendar-grid.request-grid .cal-day {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        min-height: 70px !important;
+    }
     .cal-day {
         overflow: visible !important;
         min-height: 70px !important;
@@ -1621,16 +1628,23 @@ body {
         page-break-inside: avoid !important;
         border: 1px solid #cbd5e1 !important;
     }
+    /* 칩 스크롤 컨테이너: 인쇄 시 스크롤 제거하고 자연 확장 */
+    .req-chips-scroll {
+        max-height: none !important;
+        overflow: visible !important;
+    }
     .cal-day.empty { background: #f8fafc !important; }
     .cal-date-row { margin-bottom: 4px !important; }
     .date-num { font-size: 10pt !important; }
     .holiday-label { font-size: 7pt !important; }
 
-    /* 요청자료 칩 인쇄용 */
+    /* 요청자료 칩 인쇄용 — 폰트·간격 더 축소해 잘림 방지 */
     .request-chip {
-        font-size: 7.5pt !important;
-        padding: 2px 4px !important;
-        margin-bottom: 2px !important;
+        font-size: 6.5pt !important;
+        line-height: 1.2 !important;
+        padding: 1px 4px !important;
+        margin-top: 1px !important;
+        margin-bottom: 1px !important;
         border-radius: 3px !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
