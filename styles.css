@@ -1633,7 +1633,7 @@ body {
 
     /* 캘린더 그리드 — 인쇄용 (mm 단위 명시 높이) */
     .calendar-header {
-        font-size: 9pt !important;
+        font-size: 12px !important;       /* 화면과 동일 */
         padding-bottom: 4px !important;
         flex-shrink: 0 !important;
     }
@@ -1673,17 +1673,17 @@ body {
     }
     .cal-day.empty { background: #f8fafc !important; }
     .cal-date-row { margin-bottom: 4px !important; }
-    .date-num { font-size: 10pt !important; }
-    .holiday-label { font-size: 7pt !important; }
+    .date-num { font-size: 13px !important; }       /* 화면과 동일 */
+    .holiday-label { font-size: 9.5px !important; } /* 화면과 동일 */
 
-    /* 요청자료 칩 인쇄용 — 폰트·간격 더 축소해 잘림 방지 */
+    /* 요청자료 칩 인쇄용 — 화면 크기(10.5px) 와 동일 */
     .request-chip {
-        font-size: 6.5pt !important;
-        line-height: 1.2 !important;
-        padding: 1px 4px !important;
-        margin-top: 1px !important;
-        margin-bottom: 1px !important;
-        border-radius: 3px !important;
+        font-size: 10.5px !important;
+        line-height: 1.35 !important;
+        padding: 3px 7px !important;
+        margin-top: 2px !important;
+        margin-bottom: 0 !important;
+        border-radius: 5px !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
