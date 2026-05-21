@@ -1492,15 +1492,15 @@ body {
 /* ===== 요청자료 칩 ===== */
 .request-chip {
     display: block;
-    padding: 2px 7px;
+    padding: 3px 7px;
     border-radius: 5px;
     font-size: 10.5px;
     font-weight: 600;
     margin-top: 2px;
-    line-height: 1.5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    line-height: 1.35;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
     cursor: pointer;
     transition: opacity 0.15s;
 }
