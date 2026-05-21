@@ -1520,10 +1520,18 @@ body {
 .request-print-header-only { display: none; }
 
 /* ===== @media print — 정기요청자료일정 PDF 출력 ===== */
+@page {
+    size: A4 landscape;
+    margin: 6mm 10mm 6mm 10mm;   /* 상하 6mm, 좌우 10mm — 최대 공간 확보 */
+}
 @media print {
     /* 배경 orb, 그라데이션 숨김 */
     .bg-orb { display: none !important; }
-    body { background: #fff !important; }
+    html, body {
+        background: #fff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
 
     /* 사이드바, 상단 헤더, 다른 패널 전부 숨김 */
     .sidebar,
@@ -1534,10 +1542,10 @@ body {
     .modal-overlay { display: none !important; }
 
     /* 메인 영역 여백 제거 */
-    .dashboard-container { display: block !important; }
+    .dashboard-container { display: block !important; padding: 0 !important; margin: 0 !important; }
     .main-content { padding: 0 !important; margin: 0 !important; width: 100% !important; }
 
-    /* 요청자료 패널 전체 표시 */
+    /* 요청자료 패널 전체 표시 — 상하 여백 최소화 */
     #panelRequest {
         display: flex !important;
         flex-direction: column !important;
@@ -1545,7 +1553,8 @@ body {
         height: auto !important;
         box-shadow: none !important;
         border: none !important;
-        padding: 16px 12px !important;
+        padding: 0 2px !important;
+        margin: 0 !important;
         overflow: visible !important;
         backdrop-filter: none !important;
         background: #fff !important;
@@ -1557,8 +1566,8 @@ body {
         align-items: flex-start;
         justify-content: space-between;
         gap: 16px;
-        margin-bottom: 14px;
-        padding: 4px 4px 12px;
+        margin: 0 0 6px !important;
+        padding: 0 2px 6px !important;
         border-bottom: 1.5px solid #cbd5e1;
     }
     .request-print-bar {
