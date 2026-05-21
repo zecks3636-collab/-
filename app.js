@@ -2365,8 +2365,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             dayRequests.forEach(req => {
                 const chip = document.createElement('div');
                 chip.className = `request-chip ${REQUEST_CAT_CLASS[req.category] || 'rcat-regular'}`;
-                // 칩 표시용: 우측 "(판교)" 등 장소 표기는 숨김 (원본 데이터는 유지)
-                chip.textContent = (req.title || '').replace(/\s*\(판교\)\s*$/, '');
+                // 칩 표시용 축약 표기 (원본 title/tooltip 은 그대로 유지)
+                //   - 우측 "(판교)" 위치 표기 제거
+                //   - "코스맥스펫" → "펫", "코스맥스파마" → "파마"
+                chip.textContent = (req.title || '')
+                    .replace(/\s*\(판교\)\s*$/, '')
+                    .replace(/코스맥스펫/g, '펫')
+                    .replace(/코스맥스파마/g, '파마');
                 chip.title = `[${req.category}] ${req.title}${req.note ? ' / ' + req.note : ''}`;
                 chip.addEventListener('click', e => { e.stopPropagation(); openRequestModal(dateStr); });
                 chipsWrap.appendChild(chip);
