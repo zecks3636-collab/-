@@ -159,8 +159,8 @@ def upsert_request_schedules(items: List[RequestSchedule]):
                 cur.execute("""
                     INSERT INTO request_schedules (id, date, title, category, note)
                     VALUES (%s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET title=EXCLUDED.title,
-                    category=EXCLUDED.category, note=EXCLUDED.note
+                    ON CONFLICT (id) DO UPDATE SET date=EXCLUDED.date,
+                    title=EXCLUDED.title, category=EXCLUDED.category, note=EXCLUDED.note
                 """, (item.id, item.date, item.title, item.category, item.note))
         conn.commit()
     return {"status": "ok"}
