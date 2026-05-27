@@ -2313,16 +2313,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // PDF 이미지 업로드 토글 버튼 상태
         const toggleBtn = document.getElementById('requestViewToggleBtn');
-        if (toggleBtn) {
-            if (requestImageStore[monthKey]) {
-                toggleBtn.style.display = '';
-            } else {
-                toggleBtn.style.display = 'none';
-                document.getElementById('requestImageView').style.display = 'none';
-                document.getElementById('requestCalendarWrap').style.display = '';
-                toggleBtn.textContent = '🖼️ PDF 보기';
-            }
-        }
+        if (toggleBtn) toggleBtn.style.display = 'none';
 
         for (let i = 0; i < firstDayIndex; i++) {
             const d = document.createElement('div');
@@ -2587,92 +2578,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter') { e.preventDefault(); submitRequestAdd(); }
     });
 
-    // ---- 요청자료 PDF 업로드 ----
-    const requestPdfInput = document.getElementById('requestPdfInput');
-    document.getElementById('requestUploadBtn').addEventListener('click', () => requestPdfInput.click());
-
-    requestPdfInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        requestPdfInput.value = '';
-
-        const btn = document.getElementById('requestUploadBtn');
-        const origLabel = btn.textContent;
-        btn.textContent = '⏳ 처리 중...';
-        btn.disabled = true;
-
-        try {
-            const ab = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-            const page = await pdf.getPage(1);
-            const vp = page.getViewport({ scale: 2.0 });
-            const canvas = document.createElement('canvas');
-            canvas.width = vp.width;
-            canvas.height = vp.height;
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-
-            const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-            const storagePath = `${monthKey}.jpg`;
-
-            if (sb) {
-                const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.92));
-                const { error: upErr } = await sb.storage
-                    .from('request-images')
-                    .upload(storagePath, blob, { upsert: true, contentType: 'image/jpeg' });
-                if (upErr) throw upErr;
-
-                const { data: urlData } = sb.storage.from('request-images').getPublicUrl(storagePath);
-
-                const { error: dbErr } = await sb.from('request_months').upsert({
-                    month_key: monthKey + '-01',
-                    file_name: file.name,
-                    storage_path: storagePath,
-                    uploaded_at: new Date().toISOString()
-                });
-                if (dbErr) throw dbErr;
-
-                requestImageStore[monthKey] = {
-                    imageUrl: urlData.publicUrl,
-                    storagePath,
-                    fileName: file.name
-                };
-            } else {
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-                requestImageStore[monthKey] = { imageUrl: dataUrl, storagePath, fileName: file.name };
-            }
-
-            // PDF 이미지 표시 및 토글
-            document.getElementById('requestUploadedImg').src = requestImageStore[monthKey].imageUrl;
-            document.getElementById('requestImageView').style.display = 'block';
-            document.getElementById('requestCalendarWrap').style.display = 'none';
-            const toggleBtn = document.getElementById('requestViewToggleBtn');
-            toggleBtn.style.display = '';
-            toggleBtn.textContent = '📅 캘린더 보기';
-            renderRequestCalendar();
-        } catch(err) {
-            alert('PDF 처리 중 오류가 발생했습니다: ' + err.message);
-        } finally {
-            btn.textContent = origLabel;
-            btn.disabled = false;
-        }
-    });
-
-    // PDF/캘린더 토글
-    document.getElementById('requestViewToggleBtn').addEventListener('click', () => {
-        const imageView = document.getElementById('requestImageView');
-        const calWrap   = document.getElementById('requestCalendarWrap');
-        const toggleBtn = document.getElementById('requestViewToggleBtn');
-        if (imageView.style.display === 'none') {
-            imageView.style.display = 'block';
-            calWrap.style.display = 'none';
-            toggleBtn.textContent = '📅 캘린더 보기';
-        } else {
-            imageView.style.display = 'none';
-            calWrap.style.display = '';
-            toggleBtn.textContent = '🖼️ PDF 보기';
-        }
-    });
-
     // PDF 인쇄
     document.getElementById('requestPrintBtn').addEventListener('click', () => {
         const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
@@ -2690,23 +2595,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => window.print(), 100);
     });
 
-    // PDF 이미지 삭제
-    document.getElementById('requestDeleteImgBtn').addEventListener('click', async () => {
-        const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
-        if (!requestImageStore[monthKey]) return;
-        if (!confirm('이 달의 업로드된 PDF 이미지를 삭제할까요?')) return;
-        const storagePath = requestImageStore[monthKey].storagePath;
-        if (sb) {
-            try {
-                await sb.storage.from('request-images').remove([storagePath]);
-                await sb.from('request_months').delete().eq('storage_path', storagePath);
-            } catch(e) { console.warn('삭제 오류:', e.message); }
-        }
-        delete requestImageStore[monthKey];
-        document.getElementById('requestImageView').style.display = 'none';
-        document.getElementById('requestCalendarWrap').style.display = '';
-        document.getElementById('requestViewToggleBtn').style.display = 'none';
-        renderRequestCalendar();
-    });
 
 });

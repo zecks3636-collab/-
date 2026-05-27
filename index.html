@@ -1573,8 +1573,6 @@
                     <div style="display:flex; gap:8px; align-items:center;">
                         <button id="requestViewToggleBtn" class="menu-upload-btn" style="display:none;">🖼️ PDF 보기</button>
                         <button id="requestPrintBtn" class="menu-upload-btn request-print-btn">🖨️ PDF 인쇄</button>
-                        <button id="requestUploadBtn" class="menu-upload-btn">📂 PDF 업로드</button>
-                        <input type="file" id="requestPdfInput" accept=".pdf" style="display:none">
                     </div>
                 </div>
                 <!-- 인쇄 전용 헤더 (화면에는 숨김) -->
@@ -1586,13 +1584,7 @@
                     </div>
                     <div class="request-print-org">COSMAX BTI 경영관리팀</div>
                 </div>
-                <!-- PDF 이미지 뷰 (토글) -->
-                <div id="requestImageView" style="display:none; text-align:center; padding:8px 0 16px;">
-                    <img id="requestUploadedImg" style="width:100%; max-width:960px; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08);" alt="요청자료일정">
-                    <div style="margin-top:10px;">
-                        <button id="requestDeleteImgBtn" class="menu-delete-btn">🗑️ PDF 이미지 삭제</button>
-                    </div>
-                </div>
+                <!-- PDF 이미지 뷰 (제거됨) -->
                 <!-- 캘린더 그리드 -->
                 <div id="requestCalendarWrap">
                     <div class="calendar-header">
