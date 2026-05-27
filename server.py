@@ -605,10 +605,21 @@ def menu_auto_poll():
         if not drive_url.startswith("http"):
             continue
         try:
+            # Sheet 기록 시점(금요일) 기준으로 다음 주 월요일 산출
+            try:
+                sheet_date = datetime.datetime.strptime(timestamp.strip()[:10], "%Y-%m-%d").date()
+            except Exception:
+                sheet_date = datetime.date.today()
+            wk = _next_monday(sheet_date)
+            # 이미 해당 주에 데이터 있으면 스킵
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1 FROM menu_weeks WHERE week_key=%s AND image_data IS NOT NULL", (wk,))
+                    if cur.fetchone():
+                        continue
             with urllib.request.urlopen(drive_url, timeout=30) as r:
                 data = r.read()
             jpeg = _pdf_to_jpeg(data)
-            wk = _next_monday(datetime.date.today())
             with get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
