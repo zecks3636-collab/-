@@ -1,5 +1,5 @@
 import os, json, io, datetime, boto3, psycopg2, psycopg2.extras
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile, HTTPException, Header
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -485,6 +485,43 @@ def delete_file(folder: str, file_id: str):
             )
         conn.commit()
     return {"status": "ok"}
+
+# ── Gmail 식단표 자동 업로드 ──
+MENU_AUTO_TOKEN = os.environ.get("MENU_AUTO_TOKEN", "bti-menu-2026")
+
+def _next_monday(d: datetime.date) -> str:
+    """금요일 수신 기준 → 다음 주 월요일 week_key 산출"""
+    days_ahead = 7 - d.weekday()  # 월=0 → 7, 금=4 → 3
+    if days_ahead == 7:
+        days_ahead = 0
+    return (d + datetime.timedelta(days=days_ahead)).strftime("%Y-%m-%d")
+
+@app.post("/api/menu_auto")
+async def menu_auto_upload(
+    file: UploadFile = File(...),
+    x_menu_token: Optional[str] = Header(None),
+    week_key: Optional[str] = None,
+):
+    if x_menu_token != MENU_AUTO_TOKEN:
+        raise HTTPException(status_code=403, detail="invalid token")
+    data = await file.read()
+    if not (file.content_type == "application/pdf" or
+            file.filename.lower().endswith(".pdf")):
+        raise HTTPException(status_code=400, detail="PDF only")
+    jpeg = _pdf_to_jpeg(data)
+    wk = week_key or _next_monday(datetime.date.today())
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO menu_weeks (week_key, file_name, storage_path, uploaded_at, image_data)
+                   VALUES (%s, %s, %s, now(), %s)
+                   ON CONFLICT (week_key) DO UPDATE
+                   SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                       uploaded_at=now(), image_data=EXCLUDED.image_data""",
+                (wk, file.filename, wk, psycopg2.Binary(jpeg)),
+            )
+        conn.commit()
+    return {"status": "ok", "week_key": wk, "file": file.filename, "jpeg_size": len(jpeg)}
 
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
