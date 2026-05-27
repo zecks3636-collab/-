@@ -580,5 +580,52 @@ def menu_auto_drive(body: MenuAutoDrive):
         conn.commit()
     return {"status": "ok", "week_key": wk, "file": body.filename, "jpeg_size": len(jpeg)}
 
+# ── 식단표 자동 반영 (Google Sheets 큐 폴링) ──
+MENU_SHEET_ID = "1_KLMONstfHH0izaneMF_Y25U_MLbXrLPRVZY7GJN3VM"
+
+@app.post("/api/menu_auto_poll")
+def menu_auto_poll():
+    import urllib.request, csv as csvmod
+    sheet_url = f"https://docs.google.com/spreadsheets/d/{MENU_SHEET_ID}/gviz/tq?tqx=out:csv"
+    try:
+        with urllib.request.urlopen(sheet_url, timeout=15) as r:
+            text = r.read().decode("utf-8-sig")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Sheet read failed: {e}")
+    rows = list(csvmod.reader(text.splitlines()))
+    if len(rows) < 2:
+        return {"status": "no_new", "message": "신규 항목 없음"}
+    processed = []
+    for row in rows[1:]:
+        if len(row) < 4:
+            continue
+        drive_url, filename, timestamp, done = row[0], row[1], row[2], row[3]
+        if done.strip().lower() in ("y", "done", "완료"):
+            continue
+        if not drive_url.startswith("http"):
+            continue
+        try:
+            with urllib.request.urlopen(drive_url, timeout=30) as r:
+                data = r.read()
+            jpeg = _pdf_to_jpeg(data)
+            wk = _next_monday(datetime.date.today())
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """INSERT INTO menu_weeks (week_key, file_name, storage_path, uploaded_at, image_data)
+                           VALUES (%s, %s, %s, now(), %s)
+                           ON CONFLICT (week_key) DO UPDATE
+                           SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                               uploaded_at=now(), image_data=EXCLUDED.image_data""",
+                        (wk, filename, wk, psycopg2.Binary(jpeg)),
+                    )
+                conn.commit()
+            processed.append({"week_key": wk, "file": filename, "jpeg_size": len(jpeg)})
+        except Exception as e:
+            processed.append({"file": filename, "error": str(e)})
+    if not processed:
+        return {"status": "no_new", "message": "처리할 항목 없음"}
+    return {"status": "ok", "processed": processed}
+
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
