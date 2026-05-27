@@ -549,5 +549,36 @@ def menu_auto_b64(body: MenuAutoB64):
         conn.commit()
     return {"status": "ok", "week_key": wk, "file": body.filename, "jpeg_size": len(jpeg)}
 
+class MenuAutoDrive(BaseModel):
+    token: str
+    filename: str
+    drive_url: str
+    week_key: Optional[str] = None
+
+@app.post("/api/menu_auto_drive")
+def menu_auto_drive(body: MenuAutoDrive):
+    if body.token != MENU_AUTO_TOKEN:
+        raise HTTPException(status_code=403, detail="invalid token")
+    import urllib.request
+    try:
+        with urllib.request.urlopen(body.drive_url, timeout=30) as r:
+            data = r.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Drive download failed: {e}")
+    jpeg = _pdf_to_jpeg(data)
+    wk = body.week_key or _next_monday(datetime.date.today())
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO menu_weeks (week_key, file_name, storage_path, uploaded_at, image_data)
+                   VALUES (%s, %s, %s, now(), %s)
+                   ON CONFLICT (week_key) DO UPDATE
+                   SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                       uploaded_at=now(), image_data=EXCLUDED.image_data""",
+                (wk, body.filename, wk, psycopg2.Binary(jpeg)),
+            )
+        conn.commit()
+    return {"status": "ok", "week_key": wk, "file": body.filename, "jpeg_size": len(jpeg)}
+
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
