@@ -1109,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Default date to today
         const today = new Date();
         const dd = document.getElementById('directDate');
-        if (!dd.value) dd.value = today.toISOString().slice(0,10);
+        if (!dd.value) dd.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     });
 
     // 캘린더 날짜 셀 클릭 → 직접 입력 모달 (해당 날짜 자동 채움)
@@ -2217,10 +2217,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const cur = new Date(startStr + 'T00:00:00');
         const end = new Date(endStr   + 'T00:00:00');
         if (cur > end) return result;
+        const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         while (cur <= end) {
             const dow = cur.getDay();
             if (dow !== 0 && dow !== 6) { // 주말 제외
-                result.push(cur.toISOString().slice(0, 10));
+                result.push(fmt(cur));
             }
             cur.setDate(cur.getDate() + 1);
         }
