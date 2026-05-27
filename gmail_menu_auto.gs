@@ -1,17 +1,20 @@
 /**
- * Gmail 주간메뉴표 자동 업로드 - Google Apps Script (Drive 경유 방식)
+ * Gmail 주간메뉴표 자동 업로드 - Google Apps Script (Sheets 큐 방식)
  *
- * 설정 방법:
+ * 흐름:
+ *   금요일 2시 트리거 → Gmail PDF 검색 → Drive 임시 저장 → Sheet에 URL 기록
+ *   → 대시보드 접속 시 서버가 Sheet 읽어서 자동 반영
+ *
+ * 설정:
  * 1. https://script.google.com 에서 새 프로젝트 생성
  * 2. 이 코드를 붙여넣기
- * 3. 트리거 설정: sendMenuToServer → 시간 기반 → 매주 금요일 오후 1~2시
+ * 3. 트리거: sendMenuToSheet → 시간 기반 → 매주 금요일 오후 1~2시
  */
 
-var SERVER_URL = "https://7prxbbpwnm.ap-northeast-1.awsapprunner.com/api/menu_auto_drive";
-var AUTH_TOKEN = "bti-menu-2026";
+var SHEET_ID = "1_KLMONstfHH0izaneMF_Y25U_MLbXrLPRVZY7GJN3VM";
 var SEARCH_QUERY = 'subject:(주간메뉴표) has:attachment filename:pdf newer_than:7d';
 
-function sendMenuToServer() {
+function sendMenuToSheet() {
   var threads = GmailApp.search(SEARCH_QUERY, 0, 1);
   if (threads.length === 0) { Logger.log("최근 7일 내 주간메뉴표 메일 없음"); return; }
 
@@ -29,7 +32,7 @@ function sendMenuToServer() {
   if (!pdf) { Logger.log("PDF 없음"); return; }
   Logger.log("PDF: " + pdf.getName() + " (" + pdf.getSize() + " bytes)");
 
-  // 1) Google Drive에 임시 저장
+  // 1) Google Drive에 저장 (공개 링크)
   var blob = pdf.copyBlob();
   blob.setName(pdf.getName());
   var file = DriveApp.createFile(blob);
@@ -38,40 +41,30 @@ function sendMenuToServer() {
   var downloadUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
   Logger.log("Drive URL: " + downloadUrl);
 
-  // 2) 서버에 Drive URL만 전송 (작은 JSON)
-  var jsonStr = JSON.stringify({
-    token: AUTH_TOKEN,
-    filename: pdf.getName(),
-    drive_url: downloadUrl
-  });
-  Logger.log("JSON 크기: " + jsonStr.length + " chars");
+  // 2) Google Sheet에 기록
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
 
-  try {
-    var response = UrlFetchApp.fetch(SERVER_URL, {
-      method: "post",
-      contentType: "application/json; charset=utf-8",
-      payload: jsonStr,
-      muteHttpExceptions: true
-    });
-    var code = response.getResponseCode();
-    var body = response.getContentText();
-    Logger.log("서버 응답: " + code + " " + body);
-
-    if (code === 200) {
-      var label = GmailApp.getUserLabelByName("식단표_자동업로드");
-      if (!label) label = GmailApp.createLabel("식단표_자동업로드");
-      threads[0].addLabel(label);
-      Logger.log("✅ 업로드 성공");
-    } else {
-      Logger.log("❌ 업로드 실패: " + code);
+  // 중복 체크 (같은 파일명이 이미 있으면 스킵)
+  var data = sheet.getDataRange().getValues();
+  for (var r = 1; r < data.length; r++) {
+    if (data[r][1] === pdf.getName()) {
+      Logger.log("이미 등록된 파일: " + pdf.getName());
+      // Drive 임시파일 삭제
+      try { DriveApp.getFileById(fileId).setTrashed(true); } catch(e) {}
+      return;
     }
-  } catch (e) {
-    Logger.log("❌ fetch 예외: " + e.message);
   }
 
-  // 3) Drive 임시 파일 삭제
-  try { DriveApp.getFileById(fileId).setTrashed(true); } catch(e) {}
-  Logger.log("Drive 임시파일 삭제 완료");
+  var now = Utilities.formatDate(new Date(), "Asia/Seoul", "yyyy-MM-dd HH:mm:ss");
+  sheet.appendRow([downloadUrl, pdf.getName(), now, ""]);
+  Logger.log("✅ Sheet에 기록 완료");
+
+  // 3) Gmail 라벨 부착
+  var label = GmailApp.getUserLabelByName("식단표_자동업로드");
+  if (!label) label = GmailApp.createLabel("식단표_자동업로드");
+  threads[0].addLabel(label);
+  Logger.log("✅ 완료: " + pdf.getName());
 }
 
-function testMenuUpload() { sendMenuToServer(); }
+// 수동 테스트용
+function testMenuToSheet() { sendMenuToSheet(); }
