@@ -1,4 +1,4 @@
-import os, json, io, datetime, boto3, psycopg2, psycopg2.extras
+import os, json, io, datetime, base64, boto3, psycopg2, psycopg2.extras
 from fastapi import FastAPI, File, UploadFile, HTTPException, Header
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -522,6 +522,32 @@ async def menu_auto_upload(
             )
         conn.commit()
     return {"status": "ok", "week_key": wk, "file": file.filename, "jpeg_size": len(jpeg)}
+
+class MenuAutoB64(BaseModel):
+    token: str
+    filename: str
+    pdf_base64: str
+    week_key: Optional[str] = None
+
+@app.post("/api/menu_auto_b64")
+def menu_auto_b64(body: MenuAutoB64):
+    if body.token != MENU_AUTO_TOKEN:
+        raise HTTPException(status_code=403, detail="invalid token")
+    data = base64.b64decode(body.pdf_base64)
+    jpeg = _pdf_to_jpeg(data)
+    wk = body.week_key or _next_monday(datetime.date.today())
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO menu_weeks (week_key, file_name, storage_path, uploaded_at, image_data)
+                   VALUES (%s, %s, %s, now(), %s)
+                   ON CONFLICT (week_key) DO UPDATE
+                   SET file_name=EXCLUDED.file_name, storage_path=EXCLUDED.storage_path,
+                       uploaded_at=now(), image_data=EXCLUDED.image_data""",
+                (wk, body.filename, wk, psycopg2.Binary(jpeg)),
+            )
+        conn.commit()
+    return {"status": "ok", "week_key": wk, "file": body.filename, "jpeg_size": len(jpeg)}
 
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
