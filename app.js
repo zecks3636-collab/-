@@ -525,6 +525,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             })
             .catch(_ => {});
+
+        // 일정표 자동 반영 (Drive 폴더 감시 + 자동 추가 적용)
+        fetch('/api/schedule_imports/poll', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.status === 'ok' && d.processed && d.processed.length) {
+                    console.log('✅ 일정표 자동 반영:', d.processed);
+                    // 추가된 일정 있으면 다시 로드
+                    const hasAdds = d.processed.some(p => (p.applied_adds || 0) > 0);
+                    if (hasAdds && typeof loadSchedules === 'function') {
+                        loadSchedules().then(() => renderCalendar && renderCalendar());
+                    }
+                }
+            })
+            .catch(_ => {});
     }
 
     // 현재 표시 중인 주 (오늘 날짜 기준 → 해당 주 월요일 자동 계산)

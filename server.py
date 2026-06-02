@@ -866,7 +866,22 @@ def schedule_imports_poll():
                 filename=filename, drive_url=drive_url
             )
             result = schedule_imports_submit(req_body)
-            processed.append({"file": filename, "company": company, "result": result})
+            # 옵션 A: 자동 추가 적용 (삭제는 안 함)
+            if result.get("status") == "ok" and result.get("id"):
+                try:
+                    apply_result = schedule_imports_apply(
+                        result["id"],
+                        ScheduleApplyBody(apply_adds=True, apply_removes=False)
+                    )
+                    processed.append({
+                        "file": filename, "company": company,
+                        "diff": result.get("diff_summary"),
+                        "applied_adds": apply_result.get("applied_adds", 0),
+                    })
+                except Exception as e:
+                    processed.append({"file": filename, "auto_apply_error": str(e)})
+            else:
+                processed.append({"file": filename, "company": company, "result": result})
         except HTTPException as e:
             processed.append({"file": filename, "error": e.detail})
         except Exception as e:
