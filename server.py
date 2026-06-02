@@ -713,8 +713,8 @@ def schedule_imports_submit(body: ScheduleImportSubmit):
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute(
-                "SELECT id, company, to_char(date,'YYYY-MM-DD') as date, title FROM schedules "
-                "WHERE company=%s AND to_char(date,'YYYY-MM')=%s",
+                "SELECT id, company, date, title FROM schedules "
+                "WHERE company=%s AND substring(date::text, 1, 7)=%s",
                 (body.company, target_month))
             existing = cur.fetchall()
 
