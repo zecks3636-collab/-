@@ -15,16 +15,29 @@ _NOISE_PATTERNS = [
     re.compile(r'^\d{1,2}:\d{2}(:\d{2})?$'),       # 시간만 (예: "13:30:00")
     re.compile(r'^\(.*\)$'),                       # 괄호만 둘러싼 텍스트 (연속행, 별도 필터됨)
 ]
-_HOLIDAY_KEYWORDS = ['지방선거', '현충일', '공휴일', '대체', '광복절', '개천절', '한글날', '신정', '설날', '추석']
+_HOLIDAY_KEYWORDS = [
+    '지방선거', '현충일', '광복절', '개천절', '한글날', '신정', '설날', '추석',
+    '어린이날', '부처님오신날', '석가탄신일', '대체공휴일', '임시공휴일',
+    '근로자의날', '근로자의 날', '제헌절', '성탄절', '크리스마스',
+    '신정연휴', '설연휴', '추석연휴', '공휴일', '국경일',
+]
 
 def _norm(s):
     return re.sub(r'\s+', ' ', str(s or '')).strip()
+
+def _is_holiday(text):
+    """공휴일 키워드 포함 여부 — XLS 파싱에서 제외 (대시보드 자체 공휴일 로직과 중복)"""
+    t = _norm(text)
+    for kw in _HOLIDAY_KEYWORDS:
+        if kw in t: return True
+    return False
 
 def _is_noise(text):
     t = _norm(text)
     if not t or len(t) < 2: return True
     for p in _NOISE_PATTERNS:
         if p.match(t): return True
+    if _is_holiday(t): return True
     return False
 
 def _split_cell(text):
