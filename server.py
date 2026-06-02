@@ -718,23 +718,26 @@ def schedule_imports_submit(body: ScheduleImportSubmit):
                 (body.company, target_month))
             existing = cur.fetchall()
 
-    # diff 계산: 자동생성 ID (mirror, req-auto) 제외
+    # 자동 생성 ID 식별 (미러/요청자료)
     def is_auto(s):
         sid = s.get('id', '')
-        return 'mirror' in sid or sid.startswith('req-auto-') or 'Group-' in sid and 'mirror' in sid
-
-    manual_existing = [s for s in existing if not is_auto(s)]
+        return 'mirror' in sid or sid.startswith('req-auto-')
 
     # 키: (date, normalized_title)
     def key(s):
         return (s['date'], re.sub(r'\s+', ' ', s['title']).strip())
 
     parsed_keys = {key(p): p for p in parsed}
-    existing_keys = {key(s): s for s in manual_existing}
+    # dedup 비교에는 모든 기존 항목 포함 (자동 미러 중복 방지)
+    all_existing_keys = {key(s): s for s in existing}
 
-    adds = [p for k, p in parsed_keys.items() if k not in existing_keys]
-    removes = [s for k, s in existing_keys.items() if k not in parsed_keys]
-    unchanged = [s for k, s in existing_keys.items() if k in parsed_keys]
+    # 추가: 파싱본에 있고 DB에 없는 것
+    adds = [p for k, p in parsed_keys.items() if k not in all_existing_keys]
+    # 삭제 후보: DB에는 있으나 파싱본에 없는 것 — 단 자동 생성 항목은 제외
+    manual_existing = [s for s in existing if not is_auto(s)]
+    manual_keys = {key(s): s for s in manual_existing}
+    removes = [s for k, s in manual_keys.items() if k not in parsed_keys]
+    unchanged = [s for k, s in manual_keys.items() if k in parsed_keys]
 
     diff = {
         "target_month": target_month,
