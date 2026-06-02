@@ -25,9 +25,19 @@ var COMPANIES = ["Group", "NBT", "BIO"];
 // Gmail 검색: 일정표 제목 + XLS 첨부 + 자동처리 라벨 없음 + 최근 30일
 var GMAIL_QUERY = 'subject:일정표 has:attachment filename:(xlsx OR xls) -label:일정표_자동처리 newer_than:30d';
 
-// 첨부파일명/제목/발신자로 회사 식별
-function detectCompany(filename, subject, sender) {
-  var s = (filename + ' ' + subject + ' ' + sender).toLowerCase();
+// 회사 식별 — 원본 발신자(낸 사람 라인) 우선
+function detectCompany(filename, subject, sender, body) {
+  // 1순위: 본문 "낸 사람:" 라인 (Outlook 자동전달 시 원본 발신자 명시)
+  var fromMatch = (body || '').match(/(낸\s*사람|보낸\s*사람|From)\s*[:：]\s*[^\n\r]+/i);
+  if (fromMatch) {
+    var origSender = fromMatch[0].toLowerCase();
+    if (origSender.indexOf('cosmax nbt') >= 0 || origSender.indexOf('nbt') >= 0 ||
+        origSender.indexOf('엔비티') >= 0) return 'NBT';
+    if (origSender.indexOf('cosmax bio') >= 0 || origSender.indexOf('bio') >= 0 ||
+        origSender.indexOf('바이오') >= 0) return 'BIO';
+  }
+  // 2순위: 첨부파일명 / 제목
+  var s = (filename + ' ' + subject).toLowerCase();
   if (s.indexOf('nbt') >= 0 || s.indexOf('엔비티') >= 0) return 'NBT';
   if (s.indexOf('bio') >= 0 || s.indexOf('바이오') >= 0) return 'BIO';
   if (s.indexOf('그룹') >= 0 || s.indexOf('group') >= 0) return 'Group';
@@ -57,6 +67,8 @@ function scanGmailToDrive() {
     var msg = thread.getMessages()[thread.getMessages().length - 1];
     var subject = msg.getSubject();
     var sender  = msg.getFrom();
+    var body    = '';
+    try { body = msg.getPlainBody().substring(0, 2000); } catch(e) {}
     var attachments = msg.getAttachments();
 
     var handled = false;
@@ -65,10 +77,10 @@ function scanGmailToDrive() {
       var lower = fname.toLowerCase();
       if (!lower.endsWith('.xls') && !lower.endsWith('.xlsx')) return;
 
-      var company = detectCompany(fname, subject, sender);
+      var company = detectCompany(fname, subject, sender, body);
       if (!company || company === 'Group') {
         // Group은 자동전달 대상 아님 (사용자 수동)
-        Logger.log('회사 식별 실패 또는 Group: ' + fname + ' / ' + subject);
+        Logger.log('회사 식별 실패 또는 Group: ' + fname + ' / from=' + sender);
         return;
       }
 
