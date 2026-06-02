@@ -1,4 +1,4 @@
-import os, json, io, datetime, base64, boto3, psycopg2, psycopg2.extras
+import os, json, io, re, datetime, base64, boto3, psycopg2, psycopg2.extras
 from fastapi import FastAPI, File, UploadFile, HTTPException, Header
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -637,6 +637,254 @@ def menu_auto_poll():
     if not processed:
         return {"status": "no_new", "message": "처리할 항목 없음"}
     return {"status": "ok", "processed": processed}
+
+# ── 일정표 자동 import (Google Drive 폴더 감시 + diff 미리보기) ──
+SCHEDULE_DRIVE_FOLDER = "1RDMeEGEq88IIUC4TdLSWHZJKDa9WtdYC"
+SCHEDULE_AUTO_TOKEN = os.environ.get("SCHEDULE_AUTO_TOKEN", "bti-schedule-2026")
+
+def _ensure_schedule_imports_table():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS schedule_imports (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    company TEXT NOT NULL,
+                    filename TEXT NOT NULL,
+                    drive_url TEXT NOT NULL,
+                    target_month TEXT,
+                    parsed_json JSONB,
+                    diff_json JSONB,
+                    status TEXT DEFAULT 'pending',
+                    detected_at TIMESTAMP DEFAULT now(),
+                    applied_at TIMESTAMP,
+                    UNIQUE(filename, company)
+                )
+            """)
+        conn.commit()
+
+class ScheduleImportSubmit(BaseModel):
+    token: str
+    company: str   # Group/NBT/BIO
+    filename: str
+    drive_url: str
+
+@app.post("/api/schedule_imports/submit")
+def schedule_imports_submit(body: ScheduleImportSubmit):
+    """Apps Script가 신규 파일 발견 시 호출 → 파싱 + diff 계산 + 저장"""
+    if body.token != SCHEDULE_AUTO_TOKEN:
+        raise HTTPException(status_code=403, detail="invalid token")
+    if body.company not in ("Group", "NBT", "BIO"):
+        raise HTTPException(status_code=400, detail="invalid company")
+    _ensure_schedule_imports_table()
+
+    # 중복 체크
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id::text, status FROM schedule_imports WHERE filename=%s AND company=%s",
+                       (body.filename, body.company))
+            row = cur.fetchone()
+            if row:
+                return {"status": "duplicate", "id": row[0], "existing_status": row[1]}
+
+    # Drive에서 PDF 다운로드
+    import urllib.request
+    try:
+        with urllib.request.urlopen(body.drive_url, timeout=60) as r:
+            data = r.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Drive download failed: {e}")
+
+    # 파싱
+    import xls_parsers
+    parser = {"Group": xls_parsers.parse_group,
+              "NBT":   xls_parsers.parse_nbt,
+              "BIO":   xls_parsers.parse_bio}[body.company]
+    try:
+        parsed = parser(data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Parse failed: {e}")
+    if not parsed:
+        raise HTTPException(status_code=400, detail="파싱 결과 0건 — 양식 확인 필요")
+
+    # 대상 월 식별
+    target_month = parsed[0]['date'][:7]
+
+    # 기존 DB schedules와 비교 (해당 월·회사)
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                "SELECT id, company, to_char(date,'YYYY-MM-DD') as date, title FROM schedules "
+                "WHERE company=%s AND to_char(date,'YYYY-MM')=%s",
+                (body.company, target_month))
+            existing = cur.fetchall()
+
+    # diff 계산: 자동생성 ID (mirror, req-auto) 제외
+    def is_auto(s):
+        sid = s.get('id', '')
+        return 'mirror' in sid or sid.startswith('req-auto-') or 'Group-' in sid and 'mirror' in sid
+
+    manual_existing = [s for s in existing if not is_auto(s)]
+
+    # 키: (date, normalized_title)
+    def key(s):
+        return (s['date'], re.sub(r'\s+', ' ', s['title']).strip())
+
+    parsed_keys = {key(p): p for p in parsed}
+    existing_keys = {key(s): s for s in manual_existing}
+
+    adds = [p for k, p in parsed_keys.items() if k not in existing_keys]
+    removes = [s for k, s in existing_keys.items() if k not in parsed_keys]
+    unchanged = [s for k, s in existing_keys.items() if k in parsed_keys]
+
+    diff = {
+        "target_month": target_month,
+        "adds": adds,
+        "removes": [{"id": s["id"], "date": s["date"], "title": s["title"]} for s in removes],
+        "unchanged_count": len(unchanged),
+    }
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO schedule_imports (company, filename, drive_url, target_month, parsed_json, diff_json, status)
+                VALUES (%s, %s, %s, %s, %s, %s, 'pending')
+                RETURNING id::text
+            """, (body.company, body.filename, body.drive_url, target_month,
+                  json.dumps(parsed), json.dumps(diff)))
+            new_id = cur.fetchone()[0]
+        conn.commit()
+    return {"status": "ok", "id": new_id, "diff_summary": {
+        "adds": len(adds), "removes": len(removes), "unchanged": len(unchanged)
+    }}
+
+@app.get("/api/schedule_imports")
+def schedule_imports_list(status: Optional[str] = None):
+    _ensure_schedule_imports_table()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            if status:
+                cur.execute("SELECT id::text, company, filename, target_month, diff_json, status, "
+                           "detected_at::text, applied_at::text FROM schedule_imports "
+                           "WHERE status=%s ORDER BY detected_at DESC LIMIT 20", (status,))
+            else:
+                cur.execute("SELECT id::text, company, filename, target_month, diff_json, status, "
+                           "detected_at::text, applied_at::text FROM schedule_imports "
+                           "ORDER BY detected_at DESC LIMIT 20")
+            return JSONResponse(cur.fetchall())
+
+@app.get("/api/schedule_imports/{import_id}")
+def schedule_imports_detail(import_id: str):
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id::text, company, filename, drive_url, target_month, "
+                       "parsed_json, diff_json, status, detected_at::text, applied_at::text "
+                       "FROM schedule_imports WHERE id=%s::uuid", (import_id,))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="not found")
+    return JSONResponse(row)
+
+class ScheduleApplyBody(BaseModel):
+    apply_adds: bool = True
+    apply_removes: bool = False  # 기본은 삭제 안 함 (안전 우선)
+    remove_ids: Optional[List[str]] = None  # 명시적으로 삭제할 ID 목록
+
+@app.post("/api/schedule_imports/{import_id}/apply")
+def schedule_imports_apply(import_id: str, body: ScheduleApplyBody):
+    import uuid
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id::text, company, diff_json, status FROM schedule_imports "
+                       "WHERE id=%s::uuid", (import_id,))
+            row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="not found")
+    if row['status'] != 'pending':
+        raise HTTPException(status_code=400, detail=f"이미 처리됨 (status={row['status']})")
+
+    diff = row['diff_json']
+    company = row['company']
+    applied_adds = 0
+    applied_removes = 0
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            # 추가
+            if body.apply_adds:
+                for item in diff.get('adds', []):
+                    new_id = f"{company}-{item['date']}-{uuid.uuid4().hex[:8]}"
+                    cur.execute("""
+                        INSERT INTO schedules (id, company, date, title)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (id) DO NOTHING
+                    """, (new_id, company, item['date'], item['title']))
+                    applied_adds += 1
+            # 삭제 (사용자가 명시한 ID만)
+            if body.apply_removes and body.remove_ids:
+                for rid in body.remove_ids:
+                    cur.execute("DELETE FROM schedules WHERE id=%s", (rid,))
+                    applied_removes += cur.rowcount
+            cur.execute("UPDATE schedule_imports SET status='applied', applied_at=now() WHERE id=%s::uuid",
+                       (import_id,))
+        conn.commit()
+    return {"status": "ok", "applied_adds": applied_adds, "applied_removes": applied_removes}
+
+@app.post("/api/schedule_imports/poll")
+def schedule_imports_poll():
+    """Sheet의 'schedules' 탭에서 신규 파일 감지 → submit 처리"""
+    import urllib.request, csv as csvmod
+    _ensure_schedule_imports_table()
+    sheet_url = f"https://docs.google.com/spreadsheets/d/{MENU_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=schedules"
+    try:
+        with urllib.request.urlopen(sheet_url, timeout=15) as r:
+            text = r.read().decode("utf-8-sig")
+    except Exception as e:
+        return {"status": "error", "message": f"Sheet read failed: {e}"}
+    rows = list(csvmod.reader(text.splitlines()))
+    if len(rows) < 2:
+        return {"status": "no_new", "message": "큐 비어있음"}
+
+    processed = []
+    for row in rows[1:]:
+        if len(row) < 5:
+            continue
+        company, drive_url, filename, timestamp, done = row[0], row[1], row[2], row[3], row[4]
+        if done.strip().lower() in ("y", "done", "완료"):
+            continue
+        if not drive_url.startswith("http") or company not in ("Group", "NBT", "BIO"):
+            continue
+        # 중복 체크 (이미 import 기록 있으면 스킵)
+        with get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM schedule_imports WHERE filename=%s AND company=%s",
+                           (filename, company))
+                if cur.fetchone():
+                    continue
+        try:
+            req_body = ScheduleImportSubmit(
+                token=SCHEDULE_AUTO_TOKEN, company=company,
+                filename=filename, drive_url=drive_url
+            )
+            result = schedule_imports_submit(req_body)
+            processed.append({"file": filename, "company": company, "result": result})
+        except HTTPException as e:
+            processed.append({"file": filename, "error": e.detail})
+        except Exception as e:
+            processed.append({"file": filename, "error": str(e)})
+    if not processed:
+        return {"status": "no_new"}
+    return {"status": "ok", "processed": processed}
+
+@app.post("/api/schedule_imports/{import_id}/reject")
+def schedule_imports_reject(import_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE schedule_imports SET status='rejected', applied_at=now() "
+                       "WHERE id=%s::uuid AND status='pending'", (import_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="pending 항목 없음")
+        conn.commit()
+    return {"status": "ok"}
 
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
