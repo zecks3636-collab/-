@@ -437,11 +437,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderLeaveCalendar();
     }
 
-    function switchToRequest() {
+    async function switchToRequest() {
         _hidePanels();
         tabRequest.classList.add('active');
         panelRequest.style.display = 'flex';
         panelRequest.style.flexDirection = 'column';
+        // 첫 클릭 시 데이터 미로드 상태면 대기 후 렌더
+        if (!allRequests || allRequests.length === 0) {
+            await loadRequests();
+        }
         renderRequestCalendar();
     }
 
