@@ -34,10 +34,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { eventColorMap = JSON.parse(localStorage.getItem('eventCustomColors')) || {}; } catch { eventColorMap = {}; }
 
     // 그룹 주요 회의 키워드 — 캘린더에서 자동 검은 배경 적용
+    // 관계사경영회의는 '건기식'이 명시된 경우에만 (화장품 관계사경영회의 제외)
     const HIGHLIGHT_GROUP_KEYWORDS = [
         '월례조회', '임원회의', '확대경영회의',
         '건기식 통합회의', '건기식통합회의',
-        '관계사경영회의', '관계사 경영회의',
+        '건기식 관계사경영회의', '건기식 관계사 경영회의', '건기식관계사경영회의',
         'NBT 확대', '엔비티 확대', '바이오 확대',
         '코스맥스펫 확대', '펫 확대',
         '코스맥스파마 확대', '파마 확대',
