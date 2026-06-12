@@ -544,6 +544,58 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             })
             .catch(_ => {});
+
+        // Outlook 게시 캘린더 → Group 일정 자동 동기화
+        syncGroupFromOutlookICS().catch(_ => {});
+    }
+
+    // ── Outlook ICS → Group schedules 자동 동기화 ──
+    async function syncGroupFromOutlookICS() {
+        if (!sb) return;
+        let resp;
+        try {
+            resp = await fetch('/api/group_ics_events?months=3').then(r => r.json());
+        } catch(e) { return; }
+        const icsEvents = resp.events || [];
+        if (!icsEvents.length) return;
+
+        // 기존 Group 일정 키 (date + 정규화 title)
+        const norm = t => (t || '').replace(/\s+/g, ' ').trim();
+        const existingKeys = new Set(
+            (allEvents || []).filter(e => e.company === 'Group')
+                .map(e => `${e.date}::${norm(e.title)}`)
+        );
+
+        const toInsert = [];
+        for (const ev of icsEvents) {
+            const key = `${ev.date}::${norm(ev.title)}`;
+            if (existingKeys.has(key)) continue;
+            toInsert.push({
+                id: ev.ics_id,
+                company: 'Group',
+                date: ev.date,
+                title: ev.title,
+            });
+        }
+        if (!toInsert.length) {
+            console.log('✅ Outlook ICS — 신규 Group 일정 없음');
+            return;
+        }
+        try {
+            const { error } = await sb.from('schedules').upsert(toInsert);
+            if (error) throw error;
+            console.log(`✅ Outlook ICS — Group 일정 ${toInsert.length}건 추가`);
+            // 미러 + 자동 요청자료 동기화
+            for (const ev of toInsert) {
+                allEvents.push(ev);
+                if (typeof syncGroupMirror === 'function') {
+                    await syncGroupMirror(ev, 'upsert');
+                }
+            }
+            if (typeof renderCalendar === 'function') renderCalendar();
+        } catch(e) {
+            console.warn('ICS 동기화 실패:', e.message);
+        }
     }
 
     // 현재 표시 중인 주 (오늘 날짜 기준 → 해당 주 월요일 자동 계산)

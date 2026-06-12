@@ -904,5 +904,60 @@ def schedule_imports_reject(import_id: str):
         conn.commit()
     return {"status": "ok"}
 
+# ── Outlook 게시 캘린더 ICS 자동 동기화 (Group 일정) ──
+OUTLOOK_ICS_URL = "https://outlook.office365.com/owa/calendar/27d06359762b4e96a7c3102dae00775d@cosmax.com/188eacc2345441b3887165570d809da02925121739593846469/calendar.ics"
+
+@app.get("/api/group_ics_events")
+def group_ics_events(months: int = 3):
+    """Outlook 게시 캘린더 ICS → 현재월 + N개월 일정 JSON 반환"""
+    import urllib.request, hashlib
+    req = urllib.request.Request(OUTLOOK_ICS_URL, headers={
+        'User-Agent': 'Mozilla/5.0', 'Accept': '*/*', 'Expect': ''
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = r.read().decode('utf-8', errors='replace')
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ICS fetch failed: {e}")
+
+    # 대상 월 범위 (today + months)
+    today = datetime.date.today()
+    target_months = set()
+    y, m = today.year, today.month
+    for _ in range(months + 1):
+        target_months.add(f"{y:04d}-{m:02d}")
+        m += 1
+        if m > 12:
+            m = 1; y += 1
+
+    events = []
+    for block in data.split('BEGIN:VEVENT')[1:]:
+        block = block.split('END:VEVENT')[0]
+        def grab(field):
+            mm = re.search(r'(?:^|\n)' + field + r'[^:]*:([^\r\n]+)', block)
+            return mm.group(1).strip() if mm else ''
+        summary = grab('SUMMARY')
+        dtstart = grab('DTSTART')
+        uid     = grab('UID')
+        mm = re.match(r'(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})', dtstart)
+        if not mm: continue
+        yy, mo, dd, hh, mi = mm.groups()
+        ym = f'{yy}-{mo}'
+        if ym not in target_months: continue
+        date = f'{yy}-{mo}-{dd}'
+        # title: "HHMM SUMMARY" (시간이 00:00이면 시간 prefix 없음)
+        time_prefix = f'{hh}{mi}' if hh != '00' else ''
+        title = (time_prefix + ' ' + summary).strip() if time_prefix else summary
+        # 결정적 ID: UID 해시 (Group-ICS-{8자})
+        uid_hash = hashlib.md5(uid.encode()).hexdigest()[:8]
+        events.append({
+            'ics_id': f'Group-ICS-{uid_hash}',
+            'date': date,
+            'title': title,
+            'uid': uid,
+        })
+    events.sort(key=lambda e: (e['date'], e['title']))
+    return {'count': len(events), 'events': events}
+
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
