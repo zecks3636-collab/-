@@ -22,6 +22,13 @@ _HOLIDAY_KEYWORDS = [
     '신정연휴', '설연휴', '추석연휴', '공휴일', '국경일',
 ]
 
+# NBT/BIO 일정표에 적혀있어도 사실은 Group 일정이라 중복 표시되어 제외할 키워드
+# (Group ICS·XLS 에서 정식으로 들어오므로 NBT/BIO 파서는 무시)
+_GROUP_ONLY_KEYWORDS = [
+    '건기식 통합회의', '건기식통합회의',
+    '관계사경영회의', '관계사 경영회의',
+]
+
 def _norm(s):
     return re.sub(r'\s+', ' ', str(s or '')).strip()
 
@@ -29,6 +36,13 @@ def _is_holiday(text):
     """공휴일 키워드 포함 여부 — XLS 파싱에서 제외 (대시보드 자체 공휴일 로직과 중복)"""
     t = _norm(text)
     for kw in _HOLIDAY_KEYWORDS:
+        if kw in t: return True
+    return False
+
+def _is_group_only(text):
+    """NBT/BIO 파서가 Group 일정을 중복 추출하지 않도록 필터"""
+    t = _norm(text)
+    for kw in _GROUP_ONLY_KEYWORDS:
         if kw in t: return True
     return False
 
@@ -107,6 +121,8 @@ def _parse_grid_single_col(rows, date_rows, year, month, company):
                         day_items[-1] = day_items[-1] + ' ' + line
                         continue
                     if _is_noise(line): continue
+                    # NBT/BIO 는 Group 일정으로 중복되는 키워드 제외
+                    if company in ('NBT', 'BIO') and _is_group_only(line): continue
                     day_items.append(line)
             for title in day_items:
                 items.append({
@@ -202,6 +218,9 @@ def parse_nbt(data: bytes):
                         s = _norm(time_v)
                         if s and not _is_noise(s):
                             title = s
+                # NBT 는 Group 일정으로 중복되는 키워드 제외
+                if title and _is_group_only(title):
+                    title = None
                 if title:
                     items.append({
                         'company': 'NBT',
