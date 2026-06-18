@@ -979,10 +979,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     //  - NBT/BIO 회사 일정 미러 (schedules 테이블)
     //  - 요청자료일정 미러 (request_schedules 테이블, 4종 모두)
     const MIRROR_MAP = [
-        { regex: /(nbt|엔비티)\s*확대/i, key: 'nbt',    target: 'NBT' },
-        { regex: /바이오\s*확대/i,       key: 'bio',    target: 'BIO' },
-        { regex: /펫\s*확대/i,           key: 'pet',    target: null },
-        { regex: /파마\s*확대/i,         key: 'pharma', target: null },
+        { regex: /(nbt|엔비티)\s*확대/i,        key: 'nbt',        target: 'NBT' },
+        { regex: /바이오\s*확대/i,              key: 'bio',        target: 'BIO' },
+        { regex: /펫\s*확대/i,                  key: 'pet',        target: null },
+        { regex: /파마\s*확대/i,                key: 'pharma',     target: null },
+        { regex: /건기식\s*통합회의/i,          key: 'gh-tonghap', target: null,
+          category: '통합회의및확대회의관련' },
+        { regex: /건기식\s*관계사\s*경영회의/i, key: 'gh-related', target: null,
+          category: '관계사경영회의관련' },
     ];
     function getMirrorMatches(title) {
         return MIRROR_MAP.filter(m => m.regex.test(title || ''));
@@ -1020,13 +1024,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (idx >= 0) allEvents[idx] = mirror;
                 else allEvents.push(mirror);
             }
-            // 2) 요청자료 미러 (4종 모두)
+            // 2) 요청자료 미러 (모든 매칭 항목)
             const rid = `req-conf-${srcEvent.date}-${m.key}`;
             const reqMirror = {
                 id: rid,
                 date: srcEvent.date,
                 title: srcEvent.title,
-                category: '통합회의및확대회의관련',
+                category: m.category || '통합회의및확대회의관련',
                 note: null,
             };
             if (sb) { try { await sb.from('request_schedules').upsert(reqMirror); } catch(_) {} }
