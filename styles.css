@@ -1674,16 +1674,19 @@ body {
     .cal-day.empty { background: #f8fafc !important; }
     .cal-date-row { margin-bottom: 4px !important; }
     .date-num { font-size: 13px !important; }       /* 화면과 동일 */
-    .holiday-label { font-size: 9.5px !important; } /* 화면과 동일 */
+    .holiday-label { font-size: 11px !important; }  /* 인쇄 가독성 향상 */
 
-    /* 요청자료 칩 인쇄용 — 화면 크기(10.5px) 와 동일 */
+    /* 요청자료 칩 인쇄용 — 인쇄 가독성을 위해 12px */
     .request-chip {
-        font-size: 10.5px !important;
+        font-size: 12px !important;
         line-height: 1.35 !important;
         padding: 3px 7px !important;
         margin-top: 2px !important;
         margin-bottom: 0 !important;
         border-radius: 5px !important;
+        white-space: normal !important;
+        word-break: keep-all !important;
+        overflow-wrap: anywhere !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
