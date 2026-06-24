@@ -1674,10 +1674,16 @@ body {
     .cal-day.empty { background: #f8fafc !important; }
     .cal-date-row { margin-bottom: 4px !important; }
     .date-num { font-size: 13px !important; }       /* 화면과 동일 */
-    .holiday-label { font-size: 12px !important; }  /* 인쇄 가독성 향상 */
+    /* specificity 강화 — 다른 선택자가 덮어쓰지 못하도록 */
+    body .cal-day .holiday-label,
+    .calendar-grid .holiday-label {
+        font-size: 12px !important;
+    }
 
     /* 요청자료 칩 인쇄용 — 인쇄 가독성을 위해 13px */
-    .request-chip {
+    body .cal-day .request-chip,
+    .calendar-grid.request-grid .cal-day .request-chip,
+    .calendar-grid .request-chip {
         font-size: 13px !important;
         line-height: 1.35 !important;
         padding: 3px 7px !important;
