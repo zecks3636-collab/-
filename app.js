@@ -604,57 +604,54 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderThanksCards();
         }
     }
-    document.addEventListener('DOMContentLoaded', () => {
-        const prevBtn = document.getElementById('thanksPrevBtn');
-        const nextBtn = document.getElementById('thanksNextBtn');
-        if (prevBtn) prevBtn.addEventListener('click', () => {
-            if (currentMonth === 0) { currentMonth = 11; currentYear--; }
-            else currentMonth--;
-            if (typeof renderCalendar === 'function') renderCalendar();
+    // 즉시 바인딩 (외부 DOMContentLoaded 안에서 이미 실행 중이라 중첩 리스너 불필요)
+    const _thanksPrevBtn = document.getElementById('thanksPrevBtn');
+    const _thanksNextBtn = document.getElementById('thanksNextBtn');
+    if (_thanksPrevBtn) _thanksPrevBtn.addEventListener('click', () => {
+        if (currentMonth === 0) { currentMonth = 11; currentYear--; }
+        else currentMonth--;
+        if (typeof renderCalendar === 'function') renderCalendar();
+        renderThanksCards();
+    });
+    if (_thanksNextBtn) _thanksNextBtn.addEventListener('click', () => {
+        if (currentMonth === 11) { currentMonth = 0; currentYear++; }
+        else currentMonth++;
+        if (typeof renderCalendar === 'function') renderCalendar();
+        renderThanksCards();
+    });
+    const _thanksMeSel = document.getElementById('thanksMeSelect');
+    if (_thanksMeSel) _thanksMeSel.addEventListener('change', () => {
+        localStorage.setItem('thanksMyName', _thanksMeSel.value);
+        renderThanksCards();
+    });
+    const _thanksSubmitBtn = document.getElementById('thanksSubmitBtn');
+    if (_thanksSubmitBtn) _thanksSubmitBtn.addEventListener('click', async () => {
+        const me   = (document.getElementById('thanksMeSelect') || {}).value;
+        const to   = (document.getElementById('thanksToSelect') || {}).value;
+        const tag  = (document.getElementById('thanksTagSelect') || {}).value;
+        const msg  = (document.getElementById('thanksMessageInput') || {}).value.trim();
+        if (!me)  { alert('내 이름을 먼저 선택해주세요 (상단 우측)'); return; }
+        if (!to)  { alert('받는 사람을 선택해주세요'); return; }
+        if (!msg) { alert('메시지를 입력해주세요'); return; }
+        if (me === to) { alert('자기 자신에게는 보낼 수 없습니다'); return; }
+        _thanksSubmitBtn.disabled = true; _thanksSubmitBtn.textContent = '전송 중...';
+        try {
+            const res = await fetch('/api/praise_cards', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ from_name: me, to_name: to, message: msg, tag })
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const created = await res.json();
+            thanksCards.unshift(created);
+            document.getElementById('thanksMessageInput').value = '';
+            document.getElementById('thanksToSelect').value = '';
             renderThanksCards();
-        });
-        if (nextBtn) nextBtn.addEventListener('click', () => {
-            if (currentMonth === 11) { currentMonth = 0; currentYear++; }
-            else currentMonth++;
-            if (typeof renderCalendar === 'function') renderCalendar();
-            renderThanksCards();
-        });
-
-        const meSel = document.getElementById('thanksMeSelect');
-        if (meSel) meSel.addEventListener('change', () => {
-            localStorage.setItem('thanksMyName', meSel.value);
-            renderThanksCards();
-        });
-
-        const submitBtn = document.getElementById('thanksSubmitBtn');
-        if (submitBtn) submitBtn.addEventListener('click', async () => {
-            const me   = (document.getElementById('thanksMeSelect') || {}).value;
-            const to   = (document.getElementById('thanksToSelect') || {}).value;
-            const tag  = (document.getElementById('thanksTagSelect') || {}).value;
-            const msg  = (document.getElementById('thanksMessageInput') || {}).value.trim();
-            if (!me)  { alert('내 이름을 먼저 선택해주세요 (상단 우측)'); return; }
-            if (!to)  { alert('받는 사람을 선택해주세요'); return; }
-            if (!msg) { alert('메시지를 입력해주세요'); return; }
-            if (me === to) { alert('자기 자신에게는 보낼 수 없습니다'); return; }
-            submitBtn.disabled = true; submitBtn.textContent = '전송 중...';
-            try {
-                const res = await fetch('/api/praise_cards', {
-                    method: 'POST',
-                    headers: {'Content-Type':'application/json'},
-                    body: JSON.stringify({ from_name: me, to_name: to, message: msg, tag })
-                });
-                if (!res.ok) throw new Error(await res.text());
-                const created = await res.json();
-                thanksCards.unshift(created);
-                document.getElementById('thanksMessageInput').value = '';
-                document.getElementById('thanksToSelect').value = '';
-                renderThanksCards();
-            } catch(err) {
-                alert('전송 오류: ' + err.message);
-            } finally {
-                submitBtn.disabled = false; submitBtn.textContent = '💌 카드 보내기';
-            }
-        });
+        } catch(err) {
+            alert('전송 오류: ' + err.message);
+        } finally {
+            _thanksSubmitBtn.disabled = false; _thanksSubmitBtn.textContent = '💌 카드 보내기';
+        }
     });
 
 
