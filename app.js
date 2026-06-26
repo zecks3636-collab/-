@@ -382,11 +382,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== EVENT LISTENERS ==========
     filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // 식단표/연차/요청자료/Thanks 보는 중이면 캘린더로 자동 전환
-            if (panelMenuView.style.display === 'flex' ||
-                panelLeave.style.display === 'flex' ||
-                panelRequest.style.display === 'flex' ||
-                (panelThanks && panelThanks.style.display === 'flex')) {
+            // 다른 패널 보는 중이면 캘린더로 자동 전환
+            if (tabMenu.classList.contains('active') ||
+                tabLeave.classList.contains('active') ||
+                tabRequest.classList.contains('active') ||
+                (tabThanks && tabThanks.classList.contains('active'))) {
                 switchToCalendar();
             }
             filterBtns.forEach(b => b.classList.remove('active'));
@@ -459,18 +459,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderRequestCalendar();
     }
 
+    // 탭 토글은 active class 기반 — 더 견고
     tabMenu.addEventListener('click', () => {
-        if (panelMenuView.style.display === 'flex') switchToCalendar();
+        if (tabMenu.classList.contains('active')) switchToCalendar();
         else switchToMenu();
     });
 
     tabLeave.addEventListener('click', () => {
-        if (panelLeave.style.display === 'flex') switchToCalendar();
+        if (tabLeave.classList.contains('active')) switchToCalendar();
         else switchToLeave();
     });
 
     tabRequest.addEventListener('click', () => {
-        if (panelRequest.style.display === 'flex') switchToCalendar();
+        if (tabRequest.classList.contains('active')) switchToCalendar();
         else switchToRequest();
     });
 
@@ -487,7 +488,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (tabThanks) {
         tabThanks.addEventListener('click', () => {
-            if (panelThanks.style.display === 'flex') switchToCalendar();
+            if (tabThanks.classList.contains('active')) switchToCalendar();
             else switchToThanks();
         });
     }
