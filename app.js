@@ -382,10 +382,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== EVENT LISTENERS ==========
     filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // 식단표/연차/요청자료 보는 중이면 캘린더로 자동 전환
+            // 식단표/연차/요청자료/Thanks 보는 중이면 캘린더로 자동 전환
             if (panelMenuView.style.display === 'flex' ||
                 panelLeave.style.display === 'flex' ||
-                panelRequest.style.display === 'flex') {
+                panelRequest.style.display === 'flex' ||
+                (panelThanks && panelThanks.style.display === 'flex')) {
                 switchToCalendar();
             }
             filterBtns.forEach(b => b.classList.remove('active'));
