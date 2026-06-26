@@ -470,11 +470,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     async function switchToThanks() {
+        console.log('[Thanks] switchToThanks 호출');
         _hidePanels();
         tabThanks.classList.add('active');
-        panelThanks.style.display = 'flex';
-        panelThanks.style.flexDirection = 'column';
+        // cssText로 강제 적용 — 다른 CSS 우선순위 회피
+        panelThanks.style.cssText = 'display:flex; flex-direction:column; flex:1; overflow-y:auto; min-height:0;';
+        const rect = panelThanks.getBoundingClientRect();
+        console.log('[Thanks] panelThanks size:', rect.width, 'x', rect.height);
         await loadThanksCards();
+        console.log('[Thanks] 카드 로드 완료, 총', thanksCards.length, '건');
     }
     if (tabThanks) {
         tabThanks.addEventListener('click', () => {
