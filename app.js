@@ -413,23 +413,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const panelRequest  = document.getElementById('panelRequest');
     const panelThanks   = document.getElementById('panelThanks');
     function _hidePanels() {
-        panelCalendar.style.display = 'none';
-        panelMenuView.style.display = 'none';
-        panelLeave.style.display    = 'none';
-        panelRequest.style.display  = 'none';
-        if (panelThanks) panelThanks.style.display = 'none';
+        [panelCalendar, panelMenuView, panelLeave, panelRequest, panelThanks].forEach(p => {
+            if (p) {
+                p.style.setProperty('display', 'none', 'important');
+            }
+        });
         [tabMenu, tabLeave, tabRequest, tabThanks].filter(Boolean).forEach(t => t.classList.remove('active'));
+    }
+
+    function _showPanel(panel, displayValue) {
+        // _hidePanels의 !important를 회피하기 위해 setProperty 사용
+        panel.style.setProperty('display', displayValue, 'important');
     }
 
     function switchToCalendar() {
         _hidePanels();
-        panelCalendar.style.display = '';
+        panelCalendar.style.removeProperty('display');
     }
 
     function switchToMenu() {
         _hidePanels();
         tabMenu.classList.add('active');
-        panelMenuView.style.display = 'flex';
+        _showPanel(panelMenuView, 'flex');
         panelMenuView.style.flexDirection = 'column';
         renderMenuWeek();
     }
@@ -437,7 +442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function switchToLeave() {
         _hidePanels();
         tabLeave.classList.add('active');
-        panelLeave.style.display = 'flex';
+        _showPanel(panelLeave, 'flex');
         panelLeave.style.flexDirection = 'column';
         renderLeaveCalendar();
     }
@@ -445,7 +450,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function switchToRequest() {
         _hidePanels();
         tabRequest.classList.add('active');
-        panelRequest.style.display = 'flex';
+        _showPanel(panelRequest, 'flex');
         panelRequest.style.flexDirection = 'column';
         // 첫 클릭 시 데이터 미로드 상태면 대기 후 렌더
         if (!allRequests || allRequests.length === 0) {
@@ -473,8 +478,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('[Thanks] switchToThanks 호출');
         _hidePanels();
         tabThanks.classList.add('active');
-        // cssText로 강제 적용 — 다른 CSS 우선순위 회피
-        panelThanks.style.cssText = 'display:flex; flex-direction:column; flex:1; overflow-y:auto; min-height:0;';
+        _showPanel(panelThanks, 'flex');
+        panelThanks.style.flexDirection = 'column';
         const rect = panelThanks.getBoundingClientRect();
         console.log('[Thanks] panelThanks size:', rect.width, 'x', rect.height);
         await loadThanksCards();
