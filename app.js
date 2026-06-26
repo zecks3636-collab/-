@@ -556,7 +556,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         grid.innerHTML = monthCards.map(c => {
             const color = THANKS_TAG_COLORS[c.tag] || { bg:'#f1f5f9', text:'#334155' };
-            const created = (c.created_at || '').slice(5, 10).replace('-', '.');
+            // 작성일자 — YYYY.MM.DD 형식 + 시간 HH:MM
+            const ca = c.created_at || '';
+            const dPart = ca.slice(0, 10).replace(/-/g, '.');  // 2026.06.26
+            const tPart = ca.slice(11, 16);                     // 10:30
+            const created = dPart + (tPart ? ' ' + tPart : '');
             const canDelete = myName && myName === c.from_name;
             return `
                 <div class="thanks-card">
