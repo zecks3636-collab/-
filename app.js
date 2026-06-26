@@ -404,17 +404,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tabMenu    = document.getElementById('tabMenu');
     const tabLeave   = document.getElementById('tabLeave');
     const tabRequest = document.getElementById('tabRequest');
+    const tabThanks  = document.getElementById('tabThanks');
 
     const panelCalendar = document.getElementById('panelCalendar');
     const panelMenuView = document.getElementById('panelMenuView');
     const panelLeave    = document.getElementById('panelLeave');
     const panelRequest  = document.getElementById('panelRequest');
+    const panelThanks   = document.getElementById('panelThanks');
     function _hidePanels() {
         panelCalendar.style.display = 'none';
         panelMenuView.style.display = 'none';
         panelLeave.style.display    = 'none';
         panelRequest.style.display  = 'none';
-        [tabMenu, tabLeave, tabRequest].forEach(t => t.classList.remove('active'));
+        if (panelThanks) panelThanks.style.display = 'none';
+        [tabMenu, tabLeave, tabRequest, tabThanks].filter(Boolean).forEach(t => t.classList.remove('active'));
     }
 
     function switchToCalendar() {
@@ -463,6 +466,195 @@ document.addEventListener('DOMContentLoaded', async () => {
     tabRequest.addEventListener('click', () => {
         if (panelRequest.style.display === 'flex') switchToCalendar();
         else switchToRequest();
+    });
+
+    async function switchToThanks() {
+        _hidePanels();
+        tabThanks.classList.add('active');
+        panelThanks.style.display = 'flex';
+        panelThanks.style.flexDirection = 'column';
+        await loadThanksCards();
+    }
+    if (tabThanks) {
+        tabThanks.addEventListener('click', () => {
+            if (panelThanks.style.display === 'flex') switchToCalendar();
+            else switchToThanks();
+        });
+    }
+
+    // ========== COSMAX Thanks Board ==========
+    const THANKS_MEMBERS = [
+        { dept: '건기식관리부문', title: '부문장', name: '이진우' },
+        { dept: '경영관리팀',     title: '팀장',   name: '이종현' },
+        { dept: '경영관리팀',     title: '과장',   name: '최건' },
+        { dept: '경영관리팀',     title: '사원',   name: '임정빈' },
+        { dept: '사업관리팀',     title: '팀장',   name: '조경훈' },
+        { dept: '사업관리팀',     title: '대리',   name: '김홍순' },
+        { dept: '사업관리팀',     title: '대리',   name: '김보현' },
+        { dept: '사업관리팀',     title: '대리',   name: '이병우' },
+    ];
+    const THANKS_TAG_COLORS = {
+        '협업': { bg: '#dbeafe', text: '#1e3a8a' },
+        '노력': { bg: '#fef3c7', text: '#78350f' },
+        '성과': { bg: '#dcfce7', text: '#14532d' },
+        '응원': { bg: '#fce7f3', text: '#831843' },
+        '감사': { bg: '#ede9fe', text: '#4c1d95' },
+    };
+    let thanksCards = [];
+
+    function getThanksYM() {
+        return `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}`;
+    }
+
+    function populateThanksDropdowns() {
+        const toSel  = document.getElementById('thanksToSelect');
+        const meSel  = document.getElementById('thanksMeSelect');
+        if (!toSel || !meSel) return;
+        // 명단 채우기 (중복 방지 위해 한 번만)
+        if (toSel.options.length <= 1) {
+            THANKS_MEMBERS.forEach(m => {
+                const label = `${m.name} (${m.dept} ${m.title})`;
+                toSel.add(new Option(label, m.name));
+                meSel.add(new Option(label, m.name));
+            });
+            // localStorage 본인 복원
+            const savedMe = localStorage.getItem('thanksMyName') || '';
+            if (savedMe) meSel.value = savedMe;
+        }
+    }
+
+    function renderThanksCards() {
+        const grid = document.getElementById('thanksCardGrid');
+        const title = document.getElementById('thanksMonthTitle');
+        if (!grid || !title) return;
+
+        title.textContent = `${currentYear}년 ${currentMonth + 1}월 Thanks Board`;
+        const ym = getThanksYM();
+        const monthCards = thanksCards.filter(c => c.ym === ym);
+        const myName = (document.getElementById('thanksMeSelect') || {}).value || '';
+
+        if (!monthCards.length) {
+            grid.innerHTML = `
+                <div class="thanks-empty">
+                    <div class="thanks-empty-icon">💌</div>
+                    <div class="thanks-empty-title">이번 달은 아직 칭찬이 없어요</div>
+                    <div class="thanks-empty-sub">위 폼에서 첫 칭찬을 남겨보세요</div>
+                </div>`;
+            return;
+        }
+
+        grid.innerHTML = monthCards.map(c => {
+            const color = THANKS_TAG_COLORS[c.tag] || { bg:'#f1f5f9', text:'#334155' };
+            const created = (c.created_at || '').slice(5, 10).replace('-', '.');
+            const canDelete = myName && myName === c.from_name;
+            return `
+                <div class="thanks-card">
+                    <div class="thanks-card-top">
+                        <span class="thanks-card-to">TO. ${escapeHtml(c.to_name)}</span>
+                        <span class="thanks-card-tag" style="background:${color.bg};color:${color.text}">#${escapeHtml(c.tag || '감사')}</span>
+                    </div>
+                    <div class="thanks-card-msg">${escapeHtml(c.message)}</div>
+                    <div class="thanks-card-bottom">
+                        <span class="thanks-card-from">— ${escapeHtml(c.from_name)}</span>
+                        <span class="thanks-card-date">${created}</span>
+                        ${canDelete ? `<button class="thanks-card-del" data-id="${c.id}" title="내가 쓴 카드 삭제">🗑</button>` : ''}
+                    </div>
+                </div>`;
+        }).join('');
+
+        // 삭제 버튼 바인딩
+        grid.querySelectorAll('.thanks-card-del').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = btn.getAttribute('data-id');
+                if (!confirm('이 카드를 삭제할까요?')) return;
+                try {
+                    const res = await fetch(`/api/praise_cards/${id}`, { method: 'DELETE' });
+                    if (!res.ok) throw new Error('삭제 실패');
+                    thanksCards = thanksCards.filter(x => x.id !== id);
+                    renderThanksCards();
+                } catch(err) {
+                    alert('삭제 오류: ' + err.message);
+                }
+            });
+        });
+    }
+
+    function escapeHtml(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+
+    async function loadThanksCards() {
+        populateThanksDropdowns();
+        try {
+            const res = await fetch('/api/praise_cards');
+            if (!res.ok) throw new Error('load failed');
+            thanksCards = await res.json();
+        } catch(e) {
+            console.warn('praise_cards 로드 실패:', e.message);
+            thanksCards = [];
+        }
+        renderThanksCards();
+    }
+
+    // 월 이동 버튼 (메인 캘린더 월과 공유)
+    function syncThanksMonthDisplay() {
+        if (panelThanks && panelThanks.style.display === 'flex') {
+            renderThanksCards();
+        }
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const prevBtn = document.getElementById('thanksPrevBtn');
+        const nextBtn = document.getElementById('thanksNextBtn');
+        if (prevBtn) prevBtn.addEventListener('click', () => {
+            if (currentMonth === 0) { currentMonth = 11; currentYear--; }
+            else currentMonth--;
+            if (typeof renderCalendar === 'function') renderCalendar();
+            renderThanksCards();
+        });
+        if (nextBtn) nextBtn.addEventListener('click', () => {
+            if (currentMonth === 11) { currentMonth = 0; currentYear++; }
+            else currentMonth++;
+            if (typeof renderCalendar === 'function') renderCalendar();
+            renderThanksCards();
+        });
+
+        const meSel = document.getElementById('thanksMeSelect');
+        if (meSel) meSel.addEventListener('change', () => {
+            localStorage.setItem('thanksMyName', meSel.value);
+            renderThanksCards();
+        });
+
+        const submitBtn = document.getElementById('thanksSubmitBtn');
+        if (submitBtn) submitBtn.addEventListener('click', async () => {
+            const me   = (document.getElementById('thanksMeSelect') || {}).value;
+            const to   = (document.getElementById('thanksToSelect') || {}).value;
+            const tag  = (document.getElementById('thanksTagSelect') || {}).value;
+            const msg  = (document.getElementById('thanksMessageInput') || {}).value.trim();
+            if (!me)  { alert('내 이름을 먼저 선택해주세요 (상단 우측)'); return; }
+            if (!to)  { alert('받는 사람을 선택해주세요'); return; }
+            if (!msg) { alert('메시지를 입력해주세요'); return; }
+            if (me === to) { alert('자기 자신에게는 보낼 수 없습니다'); return; }
+            submitBtn.disabled = true; submitBtn.textContent = '전송 중...';
+            try {
+                const res = await fetch('/api/praise_cards', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ from_name: me, to_name: to, message: msg, tag })
+                });
+                if (!res.ok) throw new Error(await res.text());
+                const created = await res.json();
+                thanksCards.unshift(created);
+                document.getElementById('thanksMessageInput').value = '';
+                document.getElementById('thanksToSelect').value = '';
+                renderThanksCards();
+            } catch(err) {
+                alert('전송 오류: ' + err.message);
+            } finally {
+                submitBtn.disabled = false; submitBtn.textContent = '💌 카드 보내기';
+            }
+        });
     });
 
 
