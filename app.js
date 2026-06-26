@@ -431,11 +431,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         panelCalendar.style.removeProperty('display');
     }
 
-    function switchToMenu() {
+    async function switchToMenu() {
         _hidePanels();
         tabMenu.classList.add('active');
         _showPanel(panelMenuView, 'flex');
         panelMenuView.style.flexDirection = 'column';
+        // menuStore 미로드 상태면 대기 후 렌더 (빈 상태 메시지 깜빡임 방지)
+        if (!menuStore || Object.keys(menuStore).length === 0) {
+            await loadMenuStore();
+        }
         renderMenuWeek();
     }
 
