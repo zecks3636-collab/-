@@ -959,5 +959,69 @@ def group_ics_events(months: int = 3):
     events.sort(key=lambda e: (e['date'], e['title']))
     return {'count': len(events), 'events': events}
 
+# ── COSMAX Thanks Board ──
+def _ensure_praise_cards_table():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS praise_cards (
+                    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    from_name   TEXT NOT NULL,
+                    to_name     TEXT NOT NULL,
+                    message     TEXT NOT NULL,
+                    tag         TEXT,
+                    ym          TEXT NOT NULL,
+                    created_at  TIMESTAMP DEFAULT now()
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS praise_ym_idx ON praise_cards(ym)")
+        conn.commit()
+
+class PraiseCardCreate(BaseModel):
+    from_name: str
+    to_name:   str
+    message:   str
+    tag:       Optional[str] = None
+
+@app.get("/api/praise_cards")
+def list_praise_cards(ym: Optional[str] = None):
+    _ensure_praise_cards_table()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            if ym:
+                cur.execute("SELECT id::text, from_name, to_name, message, tag, ym, "
+                            "created_at::text FROM praise_cards WHERE ym=%s "
+                            "ORDER BY created_at DESC", (ym,))
+            else:
+                cur.execute("SELECT id::text, from_name, to_name, message, tag, ym, "
+                            "created_at::text FROM praise_cards ORDER BY created_at DESC")
+            return JSONResponse(cur.fetchall())
+
+@app.post("/api/praise_cards")
+def create_praise_card(body: PraiseCardCreate):
+    _ensure_praise_cards_table()
+    today = datetime.date.today()
+    ym = f"{today.year:04d}-{today.month:02d}"
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO praise_cards (from_name, to_name, message, tag, ym)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id::text, from_name, to_name, message, tag, ym, created_at::text
+            """, (body.from_name, body.to_name, body.message, body.tag, ym))
+            row = cur.fetchone()
+        conn.commit()
+    return JSONResponse(row)
+
+@app.delete("/api/praise_cards/{card_id}")
+def delete_praise_card(card_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM praise_cards WHERE id=%s::uuid", (card_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="not found")
+        conn.commit()
+    return {"status": "ok"}
+
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")

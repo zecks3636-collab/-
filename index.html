@@ -48,6 +48,7 @@
 
             <!-- 탭 버튼 그룹 -->
             <div style="display:flex; flex-direction:column; gap:6px;">
+                <button class="sidebar-menu-tab" id="tabThanks">💌 COSMAX Thanks Board</button>
                 <button class="sidebar-menu-tab" id="tabMenu">🍽️ 주간식단표</button>
                 <button class="sidebar-menu-tab" id="tabLeave">📋 연차계획</button>
                 <button class="sidebar-menu-tab" id="tabRequest">📊 요청자료일정</button>
@@ -1720,6 +1721,56 @@
                     <button id="requestAddBtn" class="save-btn" style="font-size:13px;padding:9px 22px;">➕ 추가</button>
                 </div>
             </div>
+        </div>
+
+        <!-- ============== COSMAX Thanks Board ============== -->
+        <div id="panelThanks" class="calendar-wrapper glass-panel" style="display:none; flex-direction:column; overflow-y:auto;">
+            <div class="thanks-panel-header">
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <button class="thanks-nav-btn" id="thanksPrevBtn">‹</button>
+                    <h2 id="thanksMonthTitle" class="thanks-month-title">2026년 6월 Thanks Board</h2>
+                    <button class="thanks-nav-btn" id="thanksNextBtn">›</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="thanks-me-label">내 이름:</span>
+                    <select id="thanksMeSelect" class="thanks-input">
+                        <option value="">-- 선택 --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 작성 폼 -->
+            <div class="thanks-form-card">
+                <div class="thanks-form-header">💌 새 칭찬 카드 작성</div>
+                <div class="thanks-form-grid">
+                    <div>
+                        <label class="thanks-form-label">받는 사람</label>
+                        <select id="thanksToSelect" class="thanks-input">
+                            <option value="">-- 선택 --</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="thanks-form-label">태그</label>
+                        <select id="thanksTagSelect" class="thanks-input">
+                            <option value="협업">협업</option>
+                            <option value="노력">노력</option>
+                            <option value="성과">성과</option>
+                            <option value="응원">응원</option>
+                            <option value="감사">감사</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label class="thanks-form-label">메시지</label>
+                    <textarea id="thanksMessageInput" class="thanks-input thanks-textarea" rows="3" placeholder="진심을 담아 따뜻한 한마디를 남겨주세요"></textarea>
+                </div>
+                <div style="margin-top:12px; text-align:right;">
+                    <button id="thanksSubmitBtn" class="thanks-submit-btn">💌 카드 보내기</button>
+                </div>
+            </div>
+
+            <!-- 카드 그리드 -->
+            <div id="thanksCardGrid" class="thanks-card-grid"></div>
         </div>
     </div>
 
