@@ -434,9 +434,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function switchToMenu() {
         _hidePanels();
         tabMenu.classList.add('active');
+        // 패널 표시 전 모든 콘텐츠 영역을 미리 숨겨 깜빡임 차단
+        const _imgEl = document.getElementById('menuContentImage');
+        const _emptyEl = document.getElementById('menuContentEmpty');
+        if (_imgEl) _imgEl.style.display = 'none';
+        if (_emptyEl) _emptyEl.style.display = 'none';
+        if (typeof HARDCODED_WEEKS === 'object') {
+            Object.values(HARDCODED_WEEKS).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+        }
         _showPanel(panelMenuView, 'flex');
         panelMenuView.style.flexDirection = 'column';
-        // menuStore 미로드 상태면 대기 후 렌더 (빈 상태 메시지 깜빡임 방지)
+        // menuStore 미로드 상태면 대기 후 렌더 (깜빡임 방지)
         if (!menuStore || Object.keys(menuStore).length === 0) {
             await loadMenuStore();
         }
