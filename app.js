@@ -571,11 +571,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         grid.innerHTML = monthCards.map(c => {
             const color = THANKS_TAG_COLORS[c.tag] || { bg:'#f1f5f9', text:'#334155' };
-            // 작성일자 — YYYY.MM.DD 형식 + 시간 HH:MM
+            // 작성일자 — UTC → KST 변환 후 YYYY.MM.DD HH:MM 형식
+            let created = '';
             const ca = c.created_at || '';
-            const dPart = ca.slice(0, 10).replace(/-/g, '.');  // 2026.06.26
-            const tPart = ca.slice(11, 16);                     // 10:30
-            const created = dPart + (tPart ? ' ' + tPart : '');
+            if (ca) {
+                // PostgreSQL TIMESTAMP는 timezone 없이 UTC로 저장됨 → UTC로 명시 후 로컬 변환
+                const utcStr = ca.replace(' ', 'T').replace(/(\.\d+)?$/, '') + 'Z';
+                const d = new Date(utcStr);
+                if (!isNaN(d.getTime())) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hh = String(d.getHours()).padStart(2, '0');
+                    const mm = String(d.getMinutes()).padStart(2, '0');
+                    created = `${y}.${m}.${day} ${hh}:${mm}`;
+                }
+            }
             const canDelete = myName && myName === c.from_name;
             return `
                 <div class="thanks-card">
