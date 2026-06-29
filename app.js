@@ -205,9 +205,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dateRow.appendChild(hl);
             }
 
-            dayDiv.appendChild(dateRow);
-
             const dayString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            // 생일자 라벨 — 해당 일자 우측에 표시 (전체보기 + Group 필터에서만)
+            if (currentFilter === 'all' || currentFilter === 'Group') {
+                const birthdayEvts = allEvents.filter(e =>
+                    e.company === 'Birthday' && e.date === dayString
+                );
+                birthdayEvts.forEach(b => {
+                    const bl = document.createElement('span');
+                    bl.className = 'birthday-label';
+                    bl.textContent = b.title;  // "🎂 김보현 생일"
+                    dateRow.appendChild(bl);
+                });
+            }
+
+            dayDiv.appendChild(dateRow);
 
             // 시간 추출 함수 (HH:MM 형식 → 분 단위 숫자, 없으면 9999로 후순위)
             const getTimeVal = title => {
@@ -253,10 +266,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             );
 
             dayEvents.forEach(evt => {
-                // 생일자는 전체보기 + Group 필터에서 표시 (NBT/BIO 필터에선 미표시)
-                if (evt.company === 'Birthday') {
-                    if (currentFilter !== 'all' && currentFilter !== 'Group') return;
-                } else if (currentFilter !== 'all' && evt.company !== currentFilter) return;
+                // 생일자는 셀 우측 라벨로만 표시 (이벤트 칩에서는 제외 — 중복 방지)
+                if (evt.company === 'Birthday') return;
+                if (currentFilter !== 'all' && evt.company !== currentFilter) return;
                 if (currentSearch && !evt.title.toLowerCase().includes(currentSearch)) return;
 
                 const eventDiv = document.createElement('div');
@@ -266,11 +278,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (customColor) {
                     eventDiv.style.background = customColor.bg;
                     eventDiv.style.color = customColor.text;
-                } else if (evt.company === 'Birthday') {
-                    // 생일 이벤트 — 분홍 톤
-                    eventDiv.style.background = '#fce7f3';
-                    eventDiv.style.color = '#9d174d';
-                    eventDiv.style.fontWeight = '700';
                 }
 
                 let timeStr = "";
