@@ -805,6 +805,20 @@ body {
 }
 .holiday-label.sat { color: #2563eb; }   /* 토요일 휴일 → 토요일 파란색 */
 
+.birthday-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #9d174d;
+    background: #fce7f3;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-left: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+
 /* Holiday & Weekend cell tints */
 .cal-day.holiday-day {
     background: linear-gradient(180deg, #fff5f6 0%, #fff 60%);
