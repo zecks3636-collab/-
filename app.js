@@ -78,18 +78,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(_) {}
     function injectBirthdayEvents(yearStart, yearEnd) {
         const evs = [];
-        for (let y = yearStart; y <= yearEnd; y++) {
-            birthdays.forEach(b => {
-                const mm = String(b.birth_month).padStart(2,'0');
-                const dd = String(b.birth_day).padStart(2,'0');
-                evs.push({
-                    id: `birthday-${b.id}-${y}`,
-                    company: 'Birthday',
-                    date: `${y}-${mm}-${dd}`,
-                    title: `🎂 ${b.name} 생일`,
+        birthdays.forEach(b => {
+            if (b.is_lunar && Array.isArray(b.solar_dates) && b.solar_dates.length) {
+                // 음력 → 서버가 변환한 양력 일자들 사용
+                b.solar_dates.forEach(sd => {
+                    const mm = String(sd.month).padStart(2,'0');
+                    const dd = String(sd.day).padStart(2,'0');
+                    evs.push({
+                        id: `birthday-${b.id}-${sd.year}`,
+                        company: 'Birthday',
+                        date: `${sd.year}-${mm}-${dd}`,
+                        title: `🎂 ${b.name} 생일 (음력)`,
+                    });
                 });
-            });
-        }
+            } else {
+                // 양력은 매년 같은 월·일
+                for (let y = yearStart; y <= yearEnd; y++) {
+                    const mm = String(b.birth_month).padStart(2,'0');
+                    const dd = String(b.birth_day).padStart(2,'0');
+                    evs.push({
+                        id: `birthday-${b.id}-${y}`,
+                        company: 'Birthday',
+                        date: `${y}-${mm}-${dd}`,
+                        title: `🎂 ${b.name} 생일`,
+                    });
+                }
+            }
+        });
         allEvents = allEvents.filter(e => e.company !== 'Birthday');
         allEvents.push(...evs);
         allEvents.sort((a, b) => a.date.localeCompare(b.date));
