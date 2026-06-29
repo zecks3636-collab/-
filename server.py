@@ -1023,5 +1023,67 @@ def delete_praise_card(card_id: str):
         conn.commit()
     return {"status": "ok"}
 
+# ── 생일자 관리 (관리부문 구성원) ──
+def _ensure_birthdays_table():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS birthdays (
+                    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    name         TEXT NOT NULL,
+                    dept         TEXT,
+                    title        TEXT,
+                    birth_month  INT NOT NULL CHECK (birth_month BETWEEN 1 AND 12),
+                    birth_day    INT NOT NULL CHECK (birth_day BETWEEN 1 AND 31),
+                    birth_year   INT,
+                    created_at   TIMESTAMP DEFAULT now(),
+                    UNIQUE(name, birth_month, birth_day)
+                )
+            """)
+        conn.commit()
+
+class BirthdayCreate(BaseModel):
+    name:        str
+    dept:        Optional[str] = None
+    title:       Optional[str] = None
+    birth_month: int
+    birth_day:   int
+    birth_year:  Optional[int] = None
+
+@app.get("/api/birthdays")
+def list_birthdays():
+    _ensure_birthdays_table()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id::text, name, dept, title, birth_month, birth_day, birth_year "
+                        "FROM birthdays ORDER BY birth_month, birth_day")
+            return JSONResponse(cur.fetchall())
+
+@app.post("/api/birthdays")
+def create_birthday(body: BirthdayCreate):
+    _ensure_birthdays_table()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO birthdays (name, dept, title, birth_month, birth_day, birth_year)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (name, birth_month, birth_day) DO UPDATE
+                SET dept=EXCLUDED.dept, title=EXCLUDED.title, birth_year=EXCLUDED.birth_year
+                RETURNING id::text, name, dept, title, birth_month, birth_day, birth_year
+            """, (body.name, body.dept, body.title, body.birth_month, body.birth_day, body.birth_year))
+            row = cur.fetchone()
+        conn.commit()
+    return JSONResponse(row)
+
+@app.delete("/api/birthdays/{birthday_id}")
+def delete_birthday(birthday_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM birthdays WHERE id=%s::uuid", (birthday_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="not found")
+        conn.commit()
+    return {"status": "ok"}
+
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")

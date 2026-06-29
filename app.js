@@ -70,6 +70,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     allEvents.sort((a, b) => a.date.localeCompare(b.date));
 
+    // ── 생일자 데이터 로드 + 캘린더에 합성 (전체보기·Group 필터에서 표시) ──
+    let birthdays = [];
+    try {
+        const bRes = await fetch('/api/birthdays');
+        if (bRes.ok) birthdays = await bRes.json();
+    } catch(_) {}
+    function injectBirthdayEvents(yearStart, yearEnd) {
+        const evs = [];
+        for (let y = yearStart; y <= yearEnd; y++) {
+            birthdays.forEach(b => {
+                const mm = String(b.birth_month).padStart(2,'0');
+                const dd = String(b.birth_day).padStart(2,'0');
+                evs.push({
+                    id: `birthday-${b.id}-${y}`,
+                    company: 'Birthday',
+                    date: `${y}-${mm}-${dd}`,
+                    title: `🎂 ${b.name} 생일`,
+                });
+            });
+        }
+        allEvents = allEvents.filter(e => e.company !== 'Birthday');
+        allEvents.push(...evs);
+        allEvents.sort((a, b) => a.date.localeCompare(b.date));
+    }
+    if (birthdays.length) {
+        const ny = new Date().getFullYear();
+        injectBirthdayEvents(ny - 1, ny + 1);
+        console.log(`🎂 생일자 ${birthdays.length}명 캘린더 합성 완료`);
+    }
+
     // ── 중복 일정 정리: 로컬에서만 처리 (DB 삭제는 의도치 않은 데이터 손실 위험으로 비활성화) ──
     //   필요 시 콘솔에서 window.__cleanupDuplicateSchedules() 로 수동 실행 가능
     try {
@@ -223,7 +253,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             );
 
             dayEvents.forEach(evt => {
-                if (currentFilter !== 'all' && evt.company !== currentFilter) return;
+                // 생일자는 전체보기 + Group 필터에서 표시 (NBT/BIO 필터에선 미표시)
+                if (evt.company === 'Birthday') {
+                    if (currentFilter !== 'all' && currentFilter !== 'Group') return;
+                } else if (currentFilter !== 'all' && evt.company !== currentFilter) return;
                 if (currentSearch && !evt.title.toLowerCase().includes(currentSearch)) return;
 
                 const eventDiv = document.createElement('div');
@@ -233,6 +266,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (customColor) {
                     eventDiv.style.background = customColor.bg;
                     eventDiv.style.color = customColor.text;
+                } else if (evt.company === 'Birthday') {
+                    // 생일 이벤트 — 분홍 톤
+                    eventDiv.style.background = '#fce7f3';
+                    eventDiv.style.color = '#9d174d';
+                    eventDiv.style.fontWeight = '700';
                 }
 
                 let timeStr = "";
@@ -346,7 +384,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const filtered = allEvents.filter(evt => {
             if (evt.date < wsStr || evt.date > weStr) return false;
-            if (currentFilter !== 'all' && evt.company !== currentFilter) return false;
+            // 생일자는 전체보기 + Group 필터에서만
+            if (evt.company === 'Birthday') {
+                if (currentFilter !== 'all' && currentFilter !== 'Group') return false;
+            } else if (currentFilter !== 'all' && evt.company !== currentFilter) return false;
             if (currentSearch && !evt.title.toLowerCase().includes(currentSearch)) return false;
             return true;
         });
