@@ -1036,11 +1036,30 @@ def _ensure_birthdays_table():
                     birth_month  INT NOT NULL CHECK (birth_month BETWEEN 1 AND 12),
                     birth_day    INT NOT NULL CHECK (birth_day BETWEEN 1 AND 31),
                     birth_year   INT,
+                    is_lunar     BOOLEAN DEFAULT FALSE,
                     created_at   TIMESTAMP DEFAULT now(),
                     UNIQUE(name, birth_month, birth_day)
                 )
             """)
+            # 기존 테이블에 is_lunar 컬럼 추가 (없을 때만)
+            cur.execute("""
+                ALTER TABLE birthdays
+                ADD COLUMN IF NOT EXISTS is_lunar BOOLEAN DEFAULT FALSE
+            """)
         conn.commit()
+
+def _lunar_to_solar(year: int, month: int, day: int):
+    """음력 → 양력 변환. 실패 시 (None,None,None) 반환."""
+    try:
+        from korean_lunar_calendar import KoreanLunarCalendar
+        cal = KoreanLunarCalendar()
+        ok = cal.setLunarDate(year, month, day, False)
+        if not ok:
+            return (None, None, None)
+        return (cal.solarYear, cal.solarMonth, cal.solarDay)
+    except Exception as e:
+        print(f"[warn] lunar conversion failed: {e}")
+        return (None, None, None)
 
 class BirthdayCreate(BaseModel):
     name:        str
@@ -1049,15 +1068,28 @@ class BirthdayCreate(BaseModel):
     birth_month: int
     birth_day:   int
     birth_year:  Optional[int] = None
+    is_lunar:    Optional[bool] = False
 
 @app.get("/api/birthdays")
 def list_birthdays():
+    """양력 기준 생일 반환. is_lunar=true 항목은 현재±1년 양력 변환된 dates 추가."""
     _ensure_birthdays_table()
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT id::text, name, dept, title, birth_month, birth_day, birth_year "
-                        "FROM birthdays ORDER BY birth_month, birth_day")
-            return JSONResponse(cur.fetchall())
+            cur.execute("SELECT id::text, name, dept, title, birth_month, birth_day, birth_year, "
+                        "is_lunar FROM birthdays ORDER BY birth_month, birth_day")
+            rows = cur.fetchall()
+    # 음력 항목은 현재±1년 양력 변환된 (year, month, day) 리스트 추가
+    today = datetime.date.today()
+    for row in rows:
+        if row.get('is_lunar'):
+            solar_dates = []
+            for y in (today.year - 1, today.year, today.year + 1):
+                sy, sm, sd = _lunar_to_solar(y, row['birth_month'], row['birth_day'])
+                if sy:
+                    solar_dates.append({'year': sy, 'month': sm, 'day': sd})
+            row['solar_dates'] = solar_dates
+    return JSONResponse(rows)
 
 @app.post("/api/birthdays")
 def create_birthday(body: BirthdayCreate):
@@ -1065,12 +1097,14 @@ def create_birthday(body: BirthdayCreate):
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
-                INSERT INTO birthdays (name, dept, title, birth_month, birth_day, birth_year)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO birthdays (name, dept, title, birth_month, birth_day, birth_year, is_lunar)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (name, birth_month, birth_day) DO UPDATE
-                SET dept=EXCLUDED.dept, title=EXCLUDED.title, birth_year=EXCLUDED.birth_year
-                RETURNING id::text, name, dept, title, birth_month, birth_day, birth_year
-            """, (body.name, body.dept, body.title, body.birth_month, body.birth_day, body.birth_year))
+                SET dept=EXCLUDED.dept, title=EXCLUDED.title, birth_year=EXCLUDED.birth_year,
+                    is_lunar=EXCLUDED.is_lunar
+                RETURNING id::text, name, dept, title, birth_month, birth_day, birth_year, is_lunar
+            """, (body.name, body.dept, body.title, body.birth_month, body.birth_day,
+                  body.birth_year, body.is_lunar or False))
             row = cur.fetchone()
         conn.commit()
     return JSONResponse(row)
