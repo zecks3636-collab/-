@@ -2127,6 +2127,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 hl.style.cssText = 'font-size:10px;margin-left:4px;font-weight:600;opacity:0.85;';
                 dateSpan.appendChild(hl);
             }
+            // 생일자 라벨 (연차 캘린더에도 표시)
+            const dayBirthdays = allEvents.filter(e =>
+                e.company === 'Birthday' && e.date === dateStr
+            );
+            dayBirthdays.forEach(b => {
+                const bl = document.createElement('span');
+                bl.className = 'birthday-label';
+                bl.textContent = b.title;
+                bl.style.marginLeft = '6px';
+                dateSpan.appendChild(bl);
+            });
             dayDiv.appendChild(dateSpan);
 
             // 해당 날짜 연차: 팀→직급→이름 정렬
