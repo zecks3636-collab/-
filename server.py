@@ -1023,6 +1023,76 @@ def delete_praise_card(card_id: str):
         conn.commit()
     return {"status": "ok"}
 
+# ── 칭찬 스티커 (Option C — 개인별 컬렉션) ──
+def _ensure_praise_stickers_table():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS praise_stickers (
+                    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    card_id    UUID NOT NULL REFERENCES praise_cards(id) ON DELETE CASCADE,
+                    from_name  TEXT NOT NULL,
+                    to_name    TEXT NOT NULL,
+                    sticker    TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT now(),
+                    UNIQUE(card_id, from_name, sticker)
+                )
+            """)
+            cur.execute("CREATE INDEX IF NOT EXISTS praise_stickers_to_idx ON praise_stickers(to_name)")
+        conn.commit()
+
+class StickerCreate(BaseModel):
+    card_id:   str
+    from_name: str
+    to_name:   str
+    sticker:   str
+
+@app.post("/api/praise_stickers")
+def add_sticker(body: StickerCreate):
+    _ensure_praise_stickers_table()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            try:
+                cur.execute("""
+                    INSERT INTO praise_stickers (card_id, from_name, to_name, sticker)
+                    VALUES (%s::uuid, %s, %s, %s)
+                    RETURNING id::text, card_id::text, from_name, to_name, sticker, created_at::text
+                """, (body.card_id, body.from_name, body.to_name, body.sticker))
+                row = cur.fetchone()
+                conn.commit()
+                return JSONResponse(row)
+            except psycopg2.errors.UniqueViolation:
+                conn.rollback()
+                return JSONResponse({"status": "duplicate"}, status_code=200)
+
+@app.get("/api/praise_stickers")
+def list_stickers(to_name: Optional[str] = None, card_id: Optional[str] = None):
+    _ensure_praise_stickers_table()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            if to_name:
+                cur.execute("SELECT id::text, card_id::text, from_name, to_name, sticker, "
+                            "created_at::text FROM praise_stickers WHERE to_name=%s "
+                            "ORDER BY created_at DESC", (to_name,))
+            elif card_id:
+                cur.execute("SELECT id::text, card_id::text, from_name, to_name, sticker, "
+                            "created_at::text FROM praise_stickers WHERE card_id=%s::uuid "
+                            "ORDER BY created_at DESC", (card_id,))
+            else:
+                cur.execute("SELECT id::text, card_id::text, from_name, to_name, sticker, "
+                            "created_at::text FROM praise_stickers ORDER BY created_at DESC LIMIT 200")
+            return JSONResponse(cur.fetchall())
+
+@app.delete("/api/praise_stickers/{sticker_id}")
+def delete_sticker(sticker_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM praise_stickers WHERE id=%s::uuid", (sticker_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="not found")
+        conn.commit()
+    return {"status": "ok"}
+
 # ── 생일자 관리 (관리부문 구성원) ──
 def _ensure_birthdays_table():
     with get_conn() as conn:

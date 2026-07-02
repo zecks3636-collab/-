@@ -651,8 +651,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             const canDelete = myName && myName === c.from_name;
+            // 내 이름이 카드 받는 사람인 경우엔 스티커 붙일 수 없음 (자기 자신에게 X)
+            const canSticker = myName && myName !== c.to_name;
             return `
-                <div class="thanks-card">
+                <div class="thanks-card" data-card-id="${c.id}" data-to-name="${escapeHtml(c.to_name)}">
                     <div class="thanks-card-top">
                         <span class="thanks-card-to">TO. ${escapeHtml(c.to_name)}</span>
                         <span class="thanks-card-tag" style="background:${color.bg};color:${color.text}">#${escapeHtml(c.tag || '감사')}</span>
@@ -663,12 +665,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="thanks-card-date">${created}</span>
                         ${canDelete ? `<button class="thanks-card-del" data-id="${c.id}" title="내가 쓴 카드 삭제">🗑</button>` : ''}
                     </div>
+                    ${canSticker ? `<button class="thanks-sticker-add" data-card-id="${c.id}" data-to="${escapeHtml(c.to_name)}" title="스티커 붙이기">+ 😊</button>` : ''}
                 </div>`;
         }).join('');
 
         // 삭제 버튼 바인딩
         grid.querySelectorAll('.thanks-card-del').forEach(btn => {
             btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const id = btn.getAttribute('data-id');
                 if (!confirm('이 카드를 삭제할까요?')) return;
                 try {
@@ -681,7 +685,129 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         });
+
+        // 스티커 붙이기 버튼 바인딩
+        grid.querySelectorAll('.thanks-sticker-add').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openStickerPalette(btn);
+            });
+        });
     }
+
+    // ========== 스티커 팔레트 팝업 ==========
+    const THANKS_STICKERS = ['🌟','🎉','💪','❤️','👏','🙏','☕','🍀'];
+    let _openPalette = null;
+
+    function openStickerPalette(anchorBtn) {
+        closeStickerPalette();
+        const me = localStorage.getItem('thanksMyName') || '';
+        if (!me) { alert('먼저 상단 우측에서 "내 이름"을 선택하세요.'); return; }
+        const cardId = anchorBtn.getAttribute('data-card-id');
+        const toName = anchorBtn.getAttribute('data-to');
+
+        const pop = document.createElement('div');
+        pop.className = 'thanks-sticker-palette';
+        pop.innerHTML = THANKS_STICKERS.map(s =>
+            `<button class="thanks-sticker-emoji" data-sticker="${s}">${s}</button>`
+        ).join('');
+        document.body.appendChild(pop);
+        const rect = anchorBtn.getBoundingClientRect();
+        pop.style.top  = (rect.top + window.scrollY - pop.offsetHeight - 8) + 'px';
+        pop.style.left = (rect.left + window.scrollX - pop.offsetWidth/2 + rect.width/2) + 'px';
+        // 재배치 (offsetWidth 정확한 값 이용)
+        setTimeout(() => {
+            const r2 = anchorBtn.getBoundingClientRect();
+            pop.style.top  = (r2.top + window.scrollY - pop.offsetHeight - 8) + 'px';
+            pop.style.left = (r2.left + window.scrollX - pop.offsetWidth/2 + r2.width/2) + 'px';
+        }, 0);
+        _openPalette = pop;
+
+        pop.querySelectorAll('.thanks-sticker-emoji').forEach(b => {
+            b.addEventListener('click', async () => {
+                const sticker = b.getAttribute('data-sticker');
+                closeStickerPalette();
+                try {
+                    const res = await fetch('/api/praise_stickers', {
+                        method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify({card_id: cardId, from_name: me, to_name: toName, sticker})
+                    });
+                    if (res.ok) {
+                        console.log('스티커 전송:', sticker);
+                        // 내가 받은 스티커가 아니므로 배지 갱신 불필요, 그냥 확인만
+                    }
+                } catch(e) { alert('스티커 전송 실패: ' + e.message); }
+            });
+        });
+
+        // 외부 클릭 시 닫기
+        setTimeout(() => document.addEventListener('click', _paletteOutsideClick, {once:true}), 10);
+    }
+    function _paletteOutsideClick(e) {
+        if (_openPalette && !_openPalette.contains(e.target)) closeStickerPalette();
+    }
+    function closeStickerPalette() {
+        if (_openPalette) { _openPalette.remove(); _openPalette = null; }
+    }
+
+    // ========== 스티커 컬렉션 모달 ==========
+    async function loadMyStickers() {
+        const me = localStorage.getItem('thanksMyName') || '';
+        const badge = document.getElementById('thanksStickerBadge');
+        const countEl = document.getElementById('thanksStickerCount');
+        if (!me || !badge) {
+            if (badge) badge.style.display = 'none';
+            return [];
+        }
+        try {
+            const res = await fetch('/api/praise_stickers?to_name=' + encodeURIComponent(me));
+            if (!res.ok) return [];
+            const stickers = await res.json();
+            badge.style.display = '';
+            if (countEl) countEl.textContent = stickers.length;
+            return stickers;
+        } catch(e) { return []; }
+    }
+    async function openStickerCollectionModal() {
+        const me = localStorage.getItem('thanksMyName') || '';
+        if (!me) { alert('먼저 "내 이름"을 선택하세요.'); return; }
+        const modal = document.getElementById('stickerCollectionModal');
+        const owner = document.getElementById('stickerModalOwner');
+        const body  = document.getElementById('stickerModalBody');
+        if (!modal || !owner || !body) return;
+        owner.textContent = `${me} 님이 받은 스티커`;
+
+        const stickers = await loadMyStickers();
+        if (!stickers.length) {
+            body.innerHTML = `<p style="text-align:center;color:#94a3b8;padding:20px;">아직 받은 스티커가 없어요</p>`;
+        } else {
+            // 스티커별 카운트
+            const counts = {};
+            stickers.forEach(s => { counts[s.sticker] = (counts[s.sticker]||0) + 1; });
+            const summaryHtml = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([s,c]) =>
+                `<div class="sticker-count-item"><span class="sticker-count-icon">${s}</span><span class="sticker-count-num">x ${c}</span></div>`
+            ).join('');
+            // 최근 목록
+            const recent = stickers.slice(0, 10).map(s => {
+                const t = (s.created_at || '').slice(0,10).replace(/-/g,'.');
+                return `<div class="sticker-recent-item"><span class="sticker-recent-emoji">${s.sticker}</span><span class="sticker-recent-from">${escapeHtml(s.from_name)}</span><span class="sticker-recent-date">${t}</span></div>`;
+            }).join('');
+            body.innerHTML = `
+                <div class="sticker-summary">${summaryHtml}</div>
+                <div style="font-size:12px;font-weight:700;color:#64748b;margin:16px 4px 8px;">— 최근 받은 스티커 —</div>
+                <div class="sticker-recent-list">${recent}</div>
+            `;
+        }
+        modal.style.display = 'flex';
+    }
+    // 배지·모달 이벤트 바인딩
+    const _badge = document.getElementById('thanksStickerBadge');
+    if (_badge) _badge.addEventListener('click', openStickerCollectionModal);
+    const _closeBtn = document.getElementById('closeStickerModal');
+    if (_closeBtn) _closeBtn.addEventListener('click', () => {
+        document.getElementById('stickerCollectionModal').style.display = 'none';
+    });
 
     function escapeHtml(s) {
         return String(s || '').replace(/[&<>"']/g, c => ({
@@ -700,6 +826,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             thanksCards = [];
         }
         renderThanksCards();
+        loadMyStickers();  // 배지 카운트 갱신
     }
 
     // 월 이동 버튼 (메인 캘린더 월과 공유)
@@ -727,6 +854,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (_thanksMeSel) _thanksMeSel.addEventListener('change', () => {
         localStorage.setItem('thanksMyName', _thanksMeSel.value);
         renderThanksCards();
+        loadMyStickers();  // 배지 갱신
     });
     const _thanksSubmitBtn = document.getElementById('thanksSubmitBtn');
     if (_thanksSubmitBtn) _thanksSubmitBtn.addEventListener('click', async () => {
