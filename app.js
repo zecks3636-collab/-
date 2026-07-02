@@ -687,28 +687,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderMonthSummary(monthCards);
     }
 
-    // 이달 받은 카드 요약 라인 (Option C — 콤팩트 인라인)
+    // 이달 받은·보낸 카드 요약 라인 (Option C — 콤팩트 인라인 2줄)
     function renderMonthSummary(monthCards) {
-        const el = document.getElementById('thanksMonthSummary');
-        if (!el) return;
-        if (!monthCards.length) { el.style.display = 'none'; return; }
+        const recvEl = document.getElementById('thanksMonthSummary');
+        const sentEl = document.getElementById('thanksMonthSentSummary');
+        if (!recvEl || !sentEl) return;
+        if (!monthCards.length) {
+            recvEl.style.display = 'none';
+            sentEl.style.display = 'none';
+            return;
+        }
 
-        // 8명 전원 표시 (0건도 포함)
-        const counts = {};
-        THANKS_MEMBERS.forEach(m => { counts[m.name] = 0; });
-        monthCards.forEach(c => {
-            if (counts[c.to_name] === undefined) counts[c.to_name] = 0;
-            counts[c.to_name] += 1;
-        });
-        // 카운트 내림차순 정렬
-        const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
-        const maxCnt = sorted[0] ? sorted[0][1] : 0;
-        const items = sorted.map(([name, cnt]) => {
-            const isTop = cnt > 0 && cnt === maxCnt;
-            return `<span class="ms-item${isTop ? ' ms-top' : ''}${cnt === 0 ? ' ms-zero' : ''}">${escapeHtml(name)} <b>${cnt || '-'}</b></span>`;
-        }).join('<span class="ms-sep">·</span>');
-        el.innerHTML = `<span class="ms-label">이달의 받은 카드</span><span class="ms-arrow">→</span>${items}`;
-        el.style.display = '';
+        function buildLine(label, labelClass, groupKey) {
+            const counts = {};
+            THANKS_MEMBERS.forEach(m => { counts[m.name] = 0; });
+            monthCards.forEach(c => {
+                const key = c[groupKey];
+                if (counts[key] === undefined) counts[key] = 0;
+                counts[key] += 1;
+            });
+            const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+            const maxCnt = sorted[0] ? sorted[0][1] : 0;
+            const items = sorted.map(([name, cnt]) => {
+                const isTop = cnt > 0 && cnt === maxCnt;
+                return `<span class="ms-item${isTop ? ' ms-top' : ''}${cnt === 0 ? ' ms-zero' : ''}">${escapeHtml(name)} <b>${cnt || '-'}</b></span>`;
+            }).join('<span class="ms-sep">·</span>');
+            return `<span class="ms-label ${labelClass}">${label}</span><span class="ms-arrow">→</span>${items}`;
+        }
+
+        recvEl.innerHTML = buildLine('이달의 받은 카드', 'ms-label-recv', 'to_name');
+        sentEl.innerHTML = buildLine('이달의 보낸 카드', 'ms-label-sent', 'from_name');
+        recvEl.style.display = '';
+        sentEl.style.display = '';
     }
 
     function escapeHtml(s) {
