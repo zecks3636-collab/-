@@ -822,9 +822,12 @@ def schedule_imports_apply(import_id: str, body: ScheduleApplyBody):
                         ON CONFLICT (id) DO NOTHING
                     """, (new_id, company, item['date'], item['title']))
                     applied_adds += 1
-            # 삭제 (사용자가 명시한 ID만)
-            if body.apply_removes and body.remove_ids:
-                for rid in body.remove_ids:
+            # 삭제 — 명시적 remove_ids 우선, 없으면 diff.removes 전체 사용
+            if body.apply_removes:
+                remove_ids = body.remove_ids
+                if not remove_ids:
+                    remove_ids = [r['id'] for r in diff.get('removes', []) if r.get('id')]
+                for rid in remove_ids:
                     cur.execute("DELETE FROM schedules WHERE id=%s", (rid,))
                     applied_removes += cur.rowcount
             cur.execute("UPDATE schedule_imports SET status='applied', applied_at=now() WHERE id=%s::uuid",
@@ -872,14 +875,16 @@ def schedule_imports_poll():
             # 옵션 A: 자동 추가 적용 (삭제는 안 함)
             if result.get("status") == "ok" and result.get("id"):
                 try:
+                    # 완전 자동 동기화 — 추가·삭제 모두 자동 적용
                     apply_result = schedule_imports_apply(
                         result["id"],
-                        ScheduleApplyBody(apply_adds=True, apply_removes=False)
+                        ScheduleApplyBody(apply_adds=True, apply_removes=True)
                     )
                     processed.append({
                         "file": filename, "company": company,
                         "diff": result.get("diff_summary"),
                         "applied_adds": apply_result.get("applied_adds", 0),
+                        "applied_removes": apply_result.get("applied_removes", 0),
                     })
                 except Exception as e:
                     processed.append({"file": filename, "auto_apply_error": str(e)})
