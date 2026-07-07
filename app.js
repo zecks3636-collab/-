@@ -881,7 +881,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         syncGroupFromOutlookICS().catch(_ => {});
     }
 
-    // ── Outlook ICS → Group schedules 자동 동기화 ──
+    // ── Outlook ICS → Group schedules 완전 자동 동기화 (추가·변경·삭제) ──
     async function syncGroupFromOutlookICS() {
         if (!sb) return;
         let resp;
@@ -889,41 +889,86 @@ document.addEventListener('DOMContentLoaded', async () => {
             resp = await fetch('/api/group_ics_events?months=3').then(r => r.json());
         } catch(e) { return; }
         const icsEvents = resp.events || [];
-        if (!icsEvents.length) return;
+        // 안전장치: ICS 응답 0건이면 삭제 로직 스킵 (일시 오류로 대량 삭제 방지)
+        if (!icsEvents.length) {
+            console.log('⚠️ Outlook ICS 응답 비어있음 — 동기화 스킵');
+            return;
+        }
 
-        // 기존 Group 일정 키 (date + 정규화 title)
-        const norm = t => (t || '').replace(/\s+/g, ' ').trim();
-        const existingKeys = new Set(
-            (allEvents || []).filter(e => e.company === 'Group')
-                .map(e => `${e.date}::${norm(e.title)}`)
+        // ICS UID 해시 세트 (ID 형식: Group-ICS-{hash})
+        const icsIdSet = new Set(icsEvents.map(e => e.ics_id));
+
+        // 현재 DB Group 일정 중 ICS 원본 (Group-ICS-*) 만 추출
+        const dbIcsGroup = (allEvents || []).filter(e =>
+            e.company === 'Group' && (e.id || '').startsWith('Group-ICS-')
         );
+        const dbIcsMap = new Map(dbIcsGroup.map(e => [e.id, e]));
 
-        const toInsert = [];
+        // === 1) 삭제 대상 — DB에 있는 Group-ICS-*이 ICS에서 사라진 것 ===
+        const toDelete = dbIcsGroup.filter(e => !icsIdSet.has(e.id));
+
+        // === 2) 추가·변경 대상 판별 ===
+        const toUpsert = [];
+        const changedForMirror = [];  // 미러/요청자료 재동기화용
         for (const ev of icsEvents) {
-            const key = `${ev.date}::${norm(ev.title)}`;
-            if (existingKeys.has(key)) continue;
-            toInsert.push({
+            const existing = dbIcsMap.get(ev.ics_id);
+            const desired = {
                 id: ev.ics_id,
                 company: 'Group',
                 date: ev.date,
                 title: ev.title,
-            });
+            };
+            if (!existing) {
+                toUpsert.push(desired);
+                changedForMirror.push({ prev: null, next: desired });
+            } else if (existing.date !== ev.date || existing.title !== ev.title) {
+                toUpsert.push(desired);
+                changedForMirror.push({ prev: existing, next: desired });
+            }
         }
-        if (!toInsert.length) {
-            console.log('✅ Outlook ICS — 신규 Group 일정 없음');
+
+        // 변경사항 없으면 로그만 남기고 종료
+        if (!toUpsert.length && !toDelete.length) {
+            console.log('✅ Outlook ICS — Group 일정 변경 없음 (완전 동기화 상태)');
             return;
         }
+
         try {
-            const { error } = await sb.from('schedules').upsert(toInsert);
-            if (error) throw error;
-            console.log(`✅ Outlook ICS — Group 일정 ${toInsert.length}건 추가`);
-            // 미러 + 자동 요청자료 동기화
-            for (const ev of toInsert) {
-                allEvents.push(ev);
+            // 삭제 실행
+            const affectedMonths = new Set();
+            for (const d of toDelete) {
+                await sb.from('schedules').delete().eq('id', d.id);
+                affectedMonths.add((d.date || '').slice(0, 7));
+                // 미러도 함께 삭제 (syncGroupMirror의 delete 액션)
                 if (typeof syncGroupMirror === 'function') {
-                    await syncGroupMirror(ev, 'upsert');
+                    await syncGroupMirror({ ...d, _prevDate: d.date }, 'delete');
+                }
+                allEvents = allEvents.filter(e => e.id !== d.id);
+            }
+
+            // 추가·변경 upsert
+            if (toUpsert.length) {
+                const { error } = await sb.from('schedules').upsert(toUpsert);
+                if (error) throw error;
+            }
+
+            // 로컬 allEvents 업데이트 + 미러/요청자료 동기화
+            for (const {prev, next} of changedForMirror) {
+                affectedMonths.add((next.date || '').slice(0, 7));
+                if (prev) {
+                    affectedMonths.add((prev.date || '').slice(0, 7));
+                    // 기존 항목 교체
+                    const idx = allEvents.findIndex(e => e.id === next.id);
+                    if (idx >= 0) allEvents[idx] = next;
+                } else {
+                    allEvents.push(next);
+                }
+                if (typeof syncGroupMirror === 'function') {
+                    await syncGroupMirror(next, 'upsert', prev ? prev.title : undefined);
                 }
             }
+
+            console.log(`✅ Outlook ICS — 추가·변경 ${toUpsert.length}건, 삭제 ${toDelete.length}건`);
             if (typeof renderCalendar === 'function') renderCalendar();
         } catch(e) {
             console.warn('ICS 동기화 실패:', e.message);
