@@ -2024,3 +2024,26 @@ body {
     color: #cbd5e1;
     font-size: 11px;
 }
+
+/* ===== 그룹 주요 회의 자동 검은 배경 (화면 전용) ===== */
+.event-black-screen {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+}
+.event-black-screen .event-time,
+.event-black-screen .event-content,
+.event-black-screen .event-company {
+    color: #ffffff !important;
+}
+/* PDF 인쇄 시에는 원래 색상 복원 — 검은색 아님 */
+@media print {
+    .event-black-screen {
+        background: inherit !important;
+        color: inherit !important;
+    }
+    .event-black-screen .event-time,
+    .event-black-screen .event-content,
+    .event-black-screen .event-company {
+        color: inherit !important;
+    }
+}
