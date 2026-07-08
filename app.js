@@ -33,6 +33,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     let eventColorMap = {};
     try { eventColorMap = JSON.parse(localStorage.getItem('eventCustomColors')) || {}; } catch { eventColorMap = {}; }
 
+    // 그룹 주요 회의 — 화면에서 자동 검은 배경 (인쇄에는 미적용)
+    const BLACK_GROUP_KEYWORDS = [
+        'NBT 확대', '엔비티 확대',
+        '바이오 확대',
+        '코스맥스펫 확대', '펫 확대',
+        '건기식 통합회의', '건기식통합회의',
+        '건기식 관계사경영회의', '건기식 관계사 경영회의', '건기식관계사경영회의',
+        '월례조회',
+        '확대경영회의',
+    ];
+    function isBlackGroupEvent(title) {
+        if (!title) return false;
+        return BLACK_GROUP_KEYWORDS.some(kw => title.includes(kw));
+    }
+
     // ========== DATA LAYER (사내 DB + fallback) ==========
     let allEvents = [];
     if (sb) {
@@ -293,6 +308,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (customColor) {
                     eventDiv.style.background = customColor.bg;
                     eventDiv.style.color = customColor.text;
+                } else if (evt.company === 'Group' && isBlackGroupEvent(evt.title)) {
+                    // 그룹 주요 회의 자동 검은 배경 (화면 전용, 인쇄엔 미적용)
+                    eventDiv.classList.add('event-black-screen');
                 }
 
                 let timeStr = "";
