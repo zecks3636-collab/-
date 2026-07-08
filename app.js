@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         '건기식 관계사경영회의', '건기식 관계사 경영회의', '건기식관계사경영회의',
         '월례조회',
         '확대경영회의',
+        '임원회의',
     ];
     function isBlackGroupEvent(title) {
         if (!title) return false;
