@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { eventColorMap = JSON.parse(localStorage.getItem('eventCustomColors')) || {}; } catch { eventColorMap = {}; }
 
     // 그룹 주요 회의 — 화면에서 자동 검은 배경 (인쇄에는 미적용)
+    // 확대경영회의는 순수한 '확대경영회의(판교)' 만 대상.
+    // '중국·동남아 법인 확대경영회의', '코스맥스USA 확대경영회의' 등은 제외.
     const BLACK_GROUP_KEYWORDS = [
         'NBT 확대', '엔비티 확대',
         '바이오 확대',
@@ -41,12 +43,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         '건기식 통합회의', '건기식통합회의',
         '건기식 관계사경영회의', '건기식 관계사 경영회의', '건기식관계사경영회의',
         '월례조회',
-        '확대경영회의',
         '임원회의',
     ];
+    // '확대경영회의' 은 접두어에 다른 회사/지역명이 없을 때만 매칭
+    const BLACK_GROUP_EXPAND_EXCLUDES = ['중국', '동남아', '법인', 'USA', 'usa', '해외', '글로벌', '네오', '믹스앤매치'];
     function isBlackGroupEvent(title) {
         if (!title) return false;
-        return BLACK_GROUP_KEYWORDS.some(kw => title.includes(kw));
+        // 1. 명시적 키워드 매칭
+        if (BLACK_GROUP_KEYWORDS.some(kw => title.includes(kw))) return true;
+        // 2. '확대경영회의' — 접두어에 예외 회사/지역 없어야 함
+        if (title.includes('확대경영회의')) {
+            if (BLACK_GROUP_EXPAND_EXCLUDES.every(k => !title.includes(k))) return true;
+        }
+        return false;
     }
 
     // ========== DATA LAYER (사내 DB + fallback) ==========
