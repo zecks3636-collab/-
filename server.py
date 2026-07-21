@@ -910,7 +910,7 @@ def schedule_imports_reject(import_id: str):
     return {"status": "ok"}
 
 # ── Outlook 게시 캘린더 ICS 자동 동기화 (Group 일정) ──
-OUTLOOK_ICS_URL = "https://outlook.office365.com/owa/calendar/27d06359762b4e96a7c3102dae00775d@cosmax.com/188eacc2345441b3887165570d809da02925121739593846469/calendar.ics"
+OUTLOOK_ICS_URL = "https://outlook.office365.com/owa/calendar/27d06359762b4e96a7c3102dae00775d@cosmax.com/ffc008c89607475b83819a1a32a93fc91534436992104340242/calendar.ics"
 
 @app.get("/api/group_ics_events")
 def group_ics_events(months: int = 3):
