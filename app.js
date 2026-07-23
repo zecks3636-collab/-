@@ -1383,9 +1383,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── 그룹↔NBT/BIO/Pet/Pharma 확대회의 자동 동기화 ──
     //  - NBT/BIO 회사 일정 미러 (schedules 테이블)
     //  - 요청자료일정 미러 (request_schedules 테이블, 4종 모두)
+    // 요청자료일정 미러만 생성. NBT/BIO 회사 대시보드에는 미러 표시 안 함 (target: null)
     const MIRROR_MAP = [
-        { regex: /(nbt|엔비티)\s*확대/i,        key: 'nbt',        target: 'NBT' },
-        { regex: /바이오\s*확대/i,              key: 'bio',        target: 'BIO' },
+        { regex: /(nbt|엔비티)\s*확대/i,        key: 'nbt',        target: null },
+        { regex: /바이오\s*확대/i,              key: 'bio',        target: null },
         { regex: /펫\s*확대/i,                  key: 'pet',        target: null },
         { regex: /파마\s*확대/i,                key: 'pharma',     target: null },
         { regex: /건기식\s*통합회의/i,          key: 'gh-tonghap', target: null,
