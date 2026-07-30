@@ -1194,5 +1194,283 @@ def delete_birthday(birthday_id: str):
         conn.commit()
     return {"status": "ok"}
 
+# ── 목표관리 (Goals / Activities / Executive Tasks) ──
+def _ensure_goals_tables():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS goals (
+                    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    team        TEXT NOT NULL,
+                    objective   TEXT NOT NULL,
+                    kr          TEXT,
+                    name        TEXT NOT NULL,
+                    cycle       TEXT,
+                    target_total INT DEFAULT 0,
+                    q1_target   INT DEFAULT 0,
+                    q2_target   INT DEFAULT 0,
+                    q3_target   INT DEFAULT 0,
+                    q4_target   INT DEFAULT 0,
+                    sort_order  INT DEFAULT 0,
+                    created_at  TIMESTAMP DEFAULT now()
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS goal_activities (
+                    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    goal_id     UUID NOT NULL REFERENCES goals(id) ON DELETE CASCADE,
+                    quarter     INT NOT NULL CHECK (quarter BETWEEN 1 AND 4),
+                    actual      INT DEFAULT 0,
+                    summary     TEXT,
+                    issue       TEXT,
+                    support     TEXT,
+                    next_plan   TEXT,
+                    reporter    TEXT,
+                    reported_at TIMESTAMP DEFAULT now(),
+                    UNIQUE(goal_id, quarter)
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS executive_tasks (
+                    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    name        TEXT NOT NULL,
+                    team        TEXT,
+                    owner       TEXT,
+                    due_date    DATE,
+                    progress    INT DEFAULT 0 CHECK (progress BETWEEN 0 AND 100),
+                    status      TEXT DEFAULT 'progress',
+                    summary     TEXT,
+                    issue       TEXT,
+                    created_at  TIMESTAMP DEFAULT now(),
+                    updated_at  TIMESTAMP DEFAULT now()
+                )
+            """)
+        conn.commit()
+
+# ── Models ──
+class GoalCreate(BaseModel):
+    team: str
+    objective: str
+    kr: Optional[str] = None
+    name: str
+    cycle: Optional[str] = None
+    target_total: Optional[int] = 0
+    q1_target: Optional[int] = 0
+    q2_target: Optional[int] = 0
+    q3_target: Optional[int] = 0
+    q4_target: Optional[int] = 0
+    sort_order: Optional[int] = 0
+
+class GoalUpdate(BaseModel):
+    team: Optional[str] = None
+    objective: Optional[str] = None
+    kr: Optional[str] = None
+    name: Optional[str] = None
+    cycle: Optional[str] = None
+    target_total: Optional[int] = None
+    q1_target: Optional[int] = None
+    q2_target: Optional[int] = None
+    q3_target: Optional[int] = None
+    q4_target: Optional[int] = None
+    sort_order: Optional[int] = None
+
+class ActivityUpsert(BaseModel):
+    goal_id: str
+    quarter: int
+    actual: Optional[int] = 0
+    summary: Optional[str] = None
+    issue: Optional[str] = None
+    support: Optional[str] = None
+    next_plan: Optional[str] = None
+    reporter: Optional[str] = None
+
+class TaskCreate(BaseModel):
+    name: str
+    team: Optional[str] = None
+    owner: Optional[str] = None
+    due_date: Optional[str] = None
+    progress: Optional[int] = 0
+    status: Optional[str] = 'progress'
+    summary: Optional[str] = None
+    issue: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    name: Optional[str] = None
+    team: Optional[str] = None
+    owner: Optional[str] = None
+    due_date: Optional[str] = None
+    progress: Optional[int] = None
+    status: Optional[str] = None
+    summary: Optional[str] = None
+    issue: Optional[str] = None
+
+# ── goals endpoints ──
+@app.get("/api/goals")
+def list_goals():
+    _ensure_goals_tables()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id::text, team, objective, kr, name, cycle, "
+                        "target_total, q1_target, q2_target, q3_target, q4_target, sort_order "
+                        "FROM goals ORDER BY team, sort_order, created_at")
+            return JSONResponse(cur.fetchall())
+
+@app.post("/api/goals")
+def create_goal(body: GoalCreate):
+    _ensure_goals_tables()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO goals (team, objective, kr, name, cycle, target_total,
+                                   q1_target, q2_target, q3_target, q4_target, sort_order)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                RETURNING id::text, team, objective, kr, name, cycle, target_total,
+                          q1_target, q2_target, q3_target, q4_target, sort_order
+            """, (body.team, body.objective, body.kr, body.name, body.cycle,
+                  body.target_total, body.q1_target, body.q2_target,
+                  body.q3_target, body.q4_target, body.sort_order))
+            row = cur.fetchone()
+        conn.commit()
+    return JSONResponse(row)
+
+@app.put("/api/goals/{goal_id}")
+def update_goal(goal_id: str, body: GoalUpdate):
+    fields = {k: v for k, v in body.dict().items() if v is not None}
+    if not fields:
+        raise HTTPException(status_code=400, detail="no fields to update")
+    sets = ", ".join([f"{k}=%s" for k in fields.keys()])
+    values = list(fields.values()) + [goal_id]
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"UPDATE goals SET {sets} WHERE id=%s::uuid", values)
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="not found")
+        conn.commit()
+    return {"status": "ok"}
+
+@app.delete("/api/goals/{goal_id}")
+def delete_goal(goal_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM goals WHERE id=%s::uuid", (goal_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="not found")
+        conn.commit()
+    return {"status": "ok"}
+
+# ── goal_activities endpoints ──
+@app.get("/api/goal_activities")
+def list_activities(goal_id: Optional[str] = None, quarter: Optional[int] = None):
+    _ensure_goals_tables()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            if goal_id and quarter:
+                cur.execute("SELECT id::text, goal_id::text, quarter, actual, summary, issue, "
+                            "support, next_plan, reporter, reported_at::text "
+                            "FROM goal_activities WHERE goal_id=%s::uuid AND quarter=%s",
+                            (goal_id, quarter))
+            elif goal_id:
+                cur.execute("SELECT id::text, goal_id::text, quarter, actual, summary, issue, "
+                            "support, next_plan, reporter, reported_at::text "
+                            "FROM goal_activities WHERE goal_id=%s::uuid ORDER BY quarter",
+                            (goal_id,))
+            else:
+                cur.execute("SELECT id::text, goal_id::text, quarter, actual, summary, issue, "
+                            "support, next_plan, reporter, reported_at::text "
+                            "FROM goal_activities ORDER BY goal_id, quarter")
+            return JSONResponse(cur.fetchall())
+
+@app.post("/api/goal_activities")
+def upsert_activity(body: ActivityUpsert):
+    _ensure_goals_tables()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO goal_activities (goal_id, quarter, actual, summary, issue,
+                                              support, next_plan, reporter, reported_at)
+                VALUES (%s::uuid, %s, %s, %s, %s, %s, %s, %s, now())
+                ON CONFLICT (goal_id, quarter) DO UPDATE
+                SET actual=EXCLUDED.actual, summary=EXCLUDED.summary,
+                    issue=EXCLUDED.issue, support=EXCLUDED.support,
+                    next_plan=EXCLUDED.next_plan, reporter=EXCLUDED.reporter,
+                    reported_at=now()
+                RETURNING id::text, goal_id::text, quarter, actual, summary, issue,
+                          support, next_plan, reporter, reported_at::text
+            """, (body.goal_id, body.quarter, body.actual, body.summary,
+                  body.issue, body.support, body.next_plan, body.reporter))
+            row = cur.fetchone()
+        conn.commit()
+    return JSONResponse(row)
+
+@app.delete("/api/goal_activities/{activity_id}")
+def delete_activity(activity_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM goal_activities WHERE id=%s::uuid", (activity_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="not found")
+        conn.commit()
+    return {"status": "ok"}
+
+# ── executive_tasks endpoints ──
+@app.get("/api/executive_tasks")
+def list_tasks(status: Optional[str] = None, team: Optional[str] = None):
+    _ensure_goals_tables()
+    q = "SELECT id::text, name, team, owner, due_date::text, progress, status, summary, issue, updated_at::text FROM executive_tasks"
+    conds, params = [], []
+    if status:
+        conds.append("status=%s"); params.append(status)
+    if team:
+        conds.append("team=%s"); params.append(team)
+    if conds:
+        q += " WHERE " + " AND ".join(conds)
+    q += " ORDER BY due_date, created_at"
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(q, params)
+            return JSONResponse(cur.fetchall())
+
+@app.post("/api/executive_tasks")
+def create_task(body: TaskCreate):
+    _ensure_goals_tables()
+    with get_conn() as conn:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO executive_tasks (name, team, owner, due_date, progress,
+                                              status, summary, issue)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id::text, name, team, owner, due_date::text, progress, status,
+                          summary, issue, updated_at::text
+            """, (body.name, body.team, body.owner, body.due_date,
+                  body.progress, body.status, body.summary, body.issue))
+            row = cur.fetchone()
+        conn.commit()
+    return JSONResponse(row)
+
+@app.put("/api/executive_tasks/{task_id}")
+def update_task(task_id: str, body: TaskUpdate):
+    fields = {k: v for k, v in body.dict().items() if v is not None}
+    if not fields:
+        raise HTTPException(status_code=400, detail="no fields to update")
+    sets = ", ".join([f"{k}=%s" for k in fields.keys()])
+    values = list(fields.values()) + [task_id]
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"UPDATE executive_tasks SET {sets}, updated_at=now() WHERE id=%s::uuid", values)
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="not found")
+        conn.commit()
+    return {"status": "ok"}
+
+@app.delete("/api/executive_tasks/{task_id}")
+def delete_task(task_id: str):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM executive_tasks WHERE id=%s::uuid", (task_id,))
+            if cur.rowcount == 0:
+                raise HTTPException(status_code=404, detail="not found")
+        conn.commit()
+    return {"status": "ok"}
+
 # ── 정적 파일 서빙 ──
 app.mount("/", StaticFiles(directory=".", html=True), name="static")
