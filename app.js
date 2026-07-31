@@ -477,7 +477,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (tabMenu.classList.contains('active') ||
                 tabLeave.classList.contains('active') ||
                 tabRequest.classList.contains('active') ||
-                (tabThanks && tabThanks.classList.contains('active'))) {
+                (tabThanks && tabThanks.classList.contains('active')) ||
+                (tabGoals && tabGoals.classList.contains('active'))) {
                 switchToCalendar();
             }
             filterBtns.forEach(b => b.classList.remove('active'));
@@ -497,19 +498,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tabLeave   = document.getElementById('tabLeave');
     const tabRequest = document.getElementById('tabRequest');
     const tabThanks  = document.getElementById('tabThanks');
+    const tabGoals   = document.getElementById('tabGoals');
 
     const panelCalendar = document.getElementById('panelCalendar');
     const panelMenuView = document.getElementById('panelMenuView');
     const panelLeave    = document.getElementById('panelLeave');
     const panelRequest  = document.getElementById('panelRequest');
     const panelThanks   = document.getElementById('panelThanks');
+    const panelGoals    = document.getElementById('panelGoals');
     function _hidePanels() {
-        [panelCalendar, panelMenuView, panelLeave, panelRequest, panelThanks].forEach(p => {
+        [panelCalendar, panelMenuView, panelLeave, panelRequest, panelThanks, panelGoals].forEach(p => {
             if (p) {
                 p.style.setProperty('display', 'none', 'important');
             }
         });
-        [tabMenu, tabLeave, tabRequest, tabThanks].filter(Boolean).forEach(t => t.classList.remove('active'));
+        [tabMenu, tabLeave, tabRequest, tabThanks, tabGoals].filter(Boolean).forEach(t => t.classList.remove('active'));
     }
 
     function _showPanel(panel, displayValue) {
@@ -596,6 +599,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         tabThanks.addEventListener('click', () => {
             if (tabThanks.classList.contains('active')) switchToCalendar();
             else switchToThanks();
+        });
+    }
+
+    async function switchToGoals() {
+        _hidePanels();
+        tabGoals.classList.add('active');
+        _showPanel(panelGoals, 'flex');
+        panelGoals.style.flexDirection = 'column';
+        await loadGoalsData();
+        renderGoalsAll();
+    }
+    if (tabGoals) {
+        tabGoals.addEventListener('click', () => {
+            if (tabGoals.classList.contains('active')) switchToCalendar();
+            else switchToGoals();
         });
     }
 
@@ -824,6 +842,528 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+
+    // ========== 목표관리 (Goal Management) ==========
+    const GOAL_TEAMS = ['경영관리팀', '사업관리팀'];
+    const GOAL_MEMBERS = {
+        '경영관리팀': ['이종현', '최건', '임정빈'],
+        '사업관리팀': ['조경훈', '김홍순', '김보현', '이병우'],
+    };
+    let goalsCache = [];
+    let activitiesCache = [];
+    let tasksCache = [];
+    let currentGoalTeam = '전체';
+    let currentGoalPage = 'goalsDashboard';
+    let currentGoalQuarter = Math.ceil((new Date().getMonth()+1)/3);
+    let currentTaskFilter = 'all';
+
+    async function loadGoalsData() {
+        try {
+            const [g,a,t] = await Promise.all([
+                fetch('/api/goals').then(r=>r.json()),
+                fetch('/api/goal_activities').then(r=>r.json()),
+                fetch('/api/executive_tasks').then(r=>r.json()),
+            ]);
+            goalsCache = Array.isArray(g)?g:[];
+            activitiesCache = Array.isArray(a)?a:[];
+            tasksCache = Array.isArray(t)?t:[];
+        } catch(err) {
+            console.error('[Goals] load failed', err);
+            goalsCache = []; activitiesCache = []; tasksCache = [];
+        }
+    }
+
+    function _filterByTeam(list) {
+        if (currentGoalTeam === '전체') return list;
+        return list.filter(g => g.team === currentGoalTeam);
+    }
+    function _activityFor(goalId, q) {
+        return activitiesCache.find(x => x.goal_id === goalId && Number(x.quarter) === Number(q)) || null;
+    }
+    function _quarterTarget(g, q) {
+        return Number(g['q'+q+'_target']||0);
+    }
+    function _quarterActual(goalId, q) {
+        const a = _activityFor(goalId, q);
+        return a ? Number(a.actual||0) : 0;
+    }
+    function _cumulActual(goalId, upTo) {
+        let s = 0;
+        for (let q=1; q<=upTo; q++) s += _quarterActual(goalId, q);
+        return s;
+    }
+    function _cumulTarget(g, upTo) {
+        let s = 0;
+        for (let q=1; q<=upTo; q++) s += _quarterTarget(g, q);
+        return s;
+    }
+    function _totalActual(goalId) {
+        return activitiesCache.filter(a=>a.goal_id===goalId).reduce((s,a)=>s+Number(a.actual||0),0);
+    }
+    function _pct(actual, target) {
+        if (!target) return 0;
+        return Math.min(999, Math.round(actual*1000/target)/10);
+    }
+    function _pctColor(p) {
+        if (p >= 100) return '#16a34a';
+        if (p >= 75)  return '#0ea5e9';
+        if (p >= 50)  return '#eab308';
+        return '#ef4444';
+    }
+    function _todayStr() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function _esc(s) {
+        return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function _quarterLabel(q) { return q + '분기'; }
+    function _statusOf(t) {
+        if (t.status === 'done' || Number(t.progress||0) >= 100) return 'done';
+        if (t.status === 'hold') return 'hold';
+        if (t.due_date && t.due_date < _todayStr() && (t.status||'') !== 'done') return 'delayed';
+        return t.status || 'progress';
+    }
+    function _statusLabel(s) {
+        return {done:'완료', delayed:'지연', progress:'진행 중', hold:'보류'}[s] || '진행 중';
+    }
+
+    function renderGoalsAll() {
+        _updateGoalsTimestamp();
+        renderGoalsDashboard();
+        renderGoalsQuarter();
+        renderGoalsTasks();
+    }
+    function _updateGoalsTimestamp() {
+        const el = document.getElementById('goalsUpdatedAt');
+        if (!el) return;
+        const d = new Date();
+        el.textContent = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+
+    // ----- Page 1: Dashboard -----
+    function renderGoalsDashboard() {
+        const list = _filterByTeam(goalsCache);
+        const totalTarget = list.reduce((s,g)=>s+Number(g.target_total||0),0);
+        const totalActual = list.reduce((s,g)=>s+_totalActual(g.id),0);
+        const pct = _pct(totalActual, totalTarget);
+        const prog = document.getElementById('goalsHeroProgress');
+        const bar  = document.getElementById('goalsHeroBar');
+        const det  = document.getElementById('goalsHeroDetail');
+        if (prog) prog.textContent = pct + '%';
+        if (bar)  { bar.style.width = Math.min(100,pct) + '%'; bar.style.background = _pctColor(pct); }
+        if (det)  det.textContent = `연간 목표 ${totalTarget.toLocaleString()}건 중 누적 ${totalActual.toLocaleString()}건 실적`;
+
+        const teamProg = document.getElementById('goalsHeroTeamProgress');
+        if (teamProg) {
+            teamProg.innerHTML = GOAL_TEAMS.map(team => {
+                const tg = goalsCache.filter(g=>g.team===team);
+                const tT = tg.reduce((s,g)=>s+Number(g.target_total||0),0);
+                const tA = tg.reduce((s,g)=>s+_totalActual(g.id),0);
+                const p = _pct(tA, tT);
+                return `
+                  <div class="goals-team-chip">
+                    <span class="goals-team-chip-name">${team}</span>
+                    <span class="goals-team-chip-pct" style="color:${_pctColor(p)}">${p}%</span>
+                    <span class="goals-team-chip-sub">${tA.toLocaleString()} / ${tT.toLocaleString()}</span>
+                  </div>`;
+            }).join('');
+        }
+
+        const metricGrid = document.getElementById('goalsMetrics');
+        if (metricGrid) {
+            const teams = currentGoalTeam === '전체' ? GOAL_TEAMS : [currentGoalTeam];
+            metricGrid.innerHTML = teams.map(team => {
+                const tg = goalsCache.filter(g=>g.team===team);
+                const nGoals = tg.length;
+                const tT = tg.reduce((s,g)=>s+Number(g.target_total||0),0);
+                const tA = tg.reduce((s,g)=>s+_totalActual(g.id),0);
+                const tPct = _pct(tA, tT);
+                const qT = tg.reduce((s,g)=>s+_quarterTarget(g, currentGoalQuarter),0);
+                const qA = tg.reduce((s,g)=>s+_quarterActual(g.id, currentGoalQuarter),0);
+                const qPct = _pct(qA, qT);
+                return `
+                  <div class="goals-metric-card">
+                    <div class="goals-metric-team">${team}</div>
+                    <div class="goals-metric-count">활동목표 <strong>${nGoals}</strong>건</div>
+                    <div class="goals-metric-row"><span>연간 진척률</span><b style="color:${_pctColor(tPct)}">${tPct}%</b></div>
+                    <div class="goals-metric-sub">${tA.toLocaleString()} / ${tT.toLocaleString()}</div>
+                    <div class="goals-metric-row"><span>${_quarterLabel(currentGoalQuarter)}</span><b style="color:${_pctColor(qPct)}">${qPct}%</b></div>
+                    <div class="goals-metric-sub">${qA.toLocaleString()} / ${qT.toLocaleString()}</div>
+                  </div>`;
+            }).join('');
+        }
+
+        const objRows = document.getElementById('goalsObjectiveRows');
+        if (objRows) {
+            if (!list.length) {
+                objRows.innerHTML = '<tr><td colspan="8" class="goals-empty">등록된 목표가 없습니다.</td></tr>';
+            } else {
+                objRows.innerHTML = list.map(g => {
+                    const actual = _totalActual(g.id);
+                    const p = _pct(actual, g.target_total);
+                    const acts = activitiesCache.filter(a=>a.goal_id===g.id).sort((a,b)=>Number(b.quarter)-Number(a.quarter));
+                    const recent = acts[0];
+                    const recentTxt = recent ? `${recent.quarter}Q · ${_esc((recent.summary||'').slice(0,40))}` : '-';
+                    return `
+                      <tr>
+                        <td class="goals-td-team">${g.team}</td>
+                        <td class="goals-td-name">${_esc(g.objective)}</td>
+                        <td class="goals-td-detail">${_esc(g.name)}</td>
+                        <td class="goals-td-cycle">${g.cycle||'-'}</td>
+                        <td class="goals-td-num">${Number(g.target_total||0).toLocaleString()}</td>
+                        <td class="goals-td-num">${actual.toLocaleString()}</td>
+                        <td class="goals-td-num"><span class="goals-inline-bar"><i style="width:${Math.min(100,p)}%;background:${_pctColor(p)}"></i></span><b style="color:${_pctColor(p)}">${p}%</b></td>
+                        <td class="goals-td-note">${recentTxt}</td>
+                      </tr>`;
+                }).join('');
+            }
+        }
+    }
+
+    // ----- Page 2: Quarterly Activity -----
+    function renderGoalsQuarter() {
+        const q = currentGoalQuarter;
+        const list = _filterByTeam(goalsCache);
+        const qSel = document.getElementById('goalsQuarterSelect');
+        if (qSel && Number(qSel.value) !== q) qSel.value = String(q);
+        const eyebrow = document.getElementById('goalsQuarterEyebrow');
+        if (eyebrow) eyebrow.textContent = `${q}분기 · CHECK-IN`;
+        const head = document.getElementById('goalsQuarterHeading');
+        if (head) head.innerHTML = `<em>${q}분기</em>의<br>실행 현황을 확인합니다.`;
+        const title = document.getElementById('goalsQuarterTableTitle');
+        if (title) title.textContent = `${q}분기 활동목표 실적`;
+
+        const qT = list.reduce((s,g)=>s+_quarterTarget(g, q),0);
+        const qA = list.reduce((s,g)=>s+_quarterActual(g.id, q),0);
+        const qPct = _pct(qA, qT);
+        const prog = document.getElementById('goalsQuarterProgress');
+        const bar  = document.getElementById('goalsQuarterBar');
+        const det  = document.getElementById('goalsQuarterDetail');
+        if (prog) prog.textContent = qPct + '%';
+        if (bar)  { bar.style.width = Math.min(100,qPct) + '%'; bar.style.background = _pctColor(qPct); }
+        if (det)  det.textContent = `${q}분기 목표 ${qT.toLocaleString()}건 중 ${qA.toLocaleString()}건 실적`;
+
+        const metricGrid = document.getElementById('goalsQuarterMetrics');
+        if (metricGrid) {
+            const teams = currentGoalTeam === '전체' ? GOAL_TEAMS : [currentGoalTeam];
+            metricGrid.innerHTML = teams.map(team => {
+                const tg = goalsCache.filter(g=>g.team===team);
+                const tT = tg.reduce((s,g)=>s+_quarterTarget(g, q),0);
+                const tA = tg.reduce((s,g)=>s+_quarterActual(g.id, q),0);
+                const p = _pct(tA, tT);
+                const cT = tg.reduce((s,g)=>s+_cumulTarget(g, q),0);
+                const cA = tg.reduce((s,g)=>s+_cumulActual(g.id, q),0);
+                const cP = _pct(cA, cT);
+                return `
+                  <div class="goals-metric-card">
+                    <div class="goals-metric-team">${team}</div>
+                    <div class="goals-metric-row"><span>${q}분기</span><b style="color:${_pctColor(p)}">${p}%</b></div>
+                    <div class="goals-metric-sub">${tA.toLocaleString()} / ${tT.toLocaleString()}</div>
+                    <div class="goals-metric-row"><span>누적</span><b style="color:${_pctColor(cP)}">${cP}%</b></div>
+                    <div class="goals-metric-sub">${cA.toLocaleString()} / ${cT.toLocaleString()}</div>
+                  </div>`;
+            }).join('');
+        }
+
+        const rows = document.getElementById('goalsQuarterActivityRows');
+        if (rows) {
+            if (!list.length) {
+                rows.innerHTML = '<tr><td colspan="9" class="goals-empty">등록된 목표가 없습니다.</td></tr>';
+            } else {
+                rows.innerHTML = list.map(g => {
+                    const t = _quarterTarget(g, q);
+                    const a = _quarterActual(g.id, q);
+                    const p = _pct(a, t);
+                    const act = _activityFor(g.id, q);
+                    const summary = act ? _esc(act.summary||'') : '';
+                    const issue   = act ? _esc(act.issue||'') : '';
+                    const upd     = act ? (act.reported_at||'').slice(0,16).replace('T',' ') : '-';
+                    return `
+                      <tr data-goal-id="${g.id}">
+                        <td class="goals-td-team">${g.team}</td>
+                        <td class="goals-td-detail">${_esc(g.name)}<div class="goals-td-sub">${_esc(g.objective||'')}</div></td>
+                        <td class="goals-td-cycle">${g.cycle||'-'}</td>
+                        <td class="goals-td-num">${t.toLocaleString()}</td>
+                        <td class="goals-td-num">${a.toLocaleString()}</td>
+                        <td class="goals-td-num"><span class="goals-inline-bar"><i style="width:${Math.min(100,p)}%;background:${_pctColor(p)}"></i></span><b style="color:${_pctColor(p)}">${p}%</b></td>
+                        <td class="goals-td-note">${summary || '-'}</td>
+                        <td class="goals-td-note">${issue || '-'}</td>
+                        <td class="goals-td-note">${upd}<br><button class="goals-btn-input" data-goal-id="${g.id}">${act?'수정':'입력'}</button></td>
+                      </tr>`;
+                }).join('');
+                rows.querySelectorAll('.goals-btn-input').forEach(btn => {
+                    btn.addEventListener('click', () => openActivityModal(btn.dataset.goalId, q));
+                });
+            }
+        }
+    }
+
+    // ----- Page 3: Executive Tasks -----
+    function renderGoalsTasks() {
+        let tList = tasksCache.filter(t => currentGoalTeam === '전체' || t.team === currentGoalTeam);
+        // status normalization
+        tList = tList.map(t => ({...t, _statusEff: _statusOf(t)}));
+        if (currentTaskFilter !== 'all') {
+            tList = tList.filter(t => t._statusEff === currentTaskFilter);
+        }
+        tList.sort((a,b) => {
+            const s1 = {progress:0, delayed:1, done:2}[a._statusEff] ?? 3;
+            const s2 = {progress:0, delayed:1, done:2}[b._statusEff] ?? 3;
+            if (s1 !== s2) return s1 - s2;
+            return (a.due_date||'9999').localeCompare(b.due_date||'9999');
+        });
+
+        const metricGrid = document.getElementById('goalsTaskMetrics');
+        if (metricGrid) {
+            const cnt = (s) => tasksCache.filter(t => (currentGoalTeam==='전체' || t.team===currentGoalTeam) && _statusOf(t) === s).length;
+            const total = tasksCache.filter(t => currentGoalTeam==='전체' || t.team===currentGoalTeam).length;
+            metricGrid.innerHTML = `
+              <div class="goals-metric-card"><div class="goals-metric-label">전체</div><div class="goals-metric-big">${total}</div></div>
+              <div class="goals-metric-card"><div class="goals-metric-label">진행 중</div><div class="goals-metric-big" style="color:#0ea5e9">${cnt('progress')}</div></div>
+              <div class="goals-metric-card"><div class="goals-metric-label">지연</div><div class="goals-metric-big" style="color:#ef4444">${cnt('delayed')}</div></div>
+              <div class="goals-metric-card"><div class="goals-metric-label">완료</div><div class="goals-metric-big" style="color:#16a34a">${cnt('done')}</div></div>
+            `;
+        }
+
+        const wrap = document.getElementById('goalsTaskList');
+        if (!wrap) return;
+        if (!tList.length) {
+            wrap.innerHTML = '<div class="goals-empty">등록된 수명업무가 없습니다.</div>';
+            return;
+        }
+        wrap.innerHTML = tList.map(t => {
+            const s = t._statusEff;
+            const p = Number(t.progress||0);
+            return `
+              <div class="goals-task-card goals-task-${s}">
+                <div class="goals-task-head">
+                  <span class="goals-task-team">${t.team||''}</span>
+                  <span class="goals-task-name">${_esc(t.name)}</span>
+                  <span class="goals-task-status goals-status-${s}">${_statusLabel(s)}</span>
+                </div>
+                <div class="goals-task-meta">담당 ${t.owner||'-'} · 목표일 ${t.due_date||'-'} · 진척률 <b style="color:${_pctColor(p)}">${p}%</b></div>
+                <div class="goals-task-bar"><i style="width:${Math.min(100,p)}%;background:${_pctColor(p)}"></i></div>
+                ${t.summary ? `<div class="goals-task-summary">${_esc(t.summary)}</div>` : ''}
+                ${t.issue ? `<div class="goals-task-issue">⚠ ${_esc(t.issue)}</div>` : ''}
+                <div class="goals-task-actions">
+                  <button class="goals-btn-edit-task" data-id="${t.id}">수정</button>
+                </div>
+              </div>`;
+        }).join('');
+        wrap.querySelectorAll('.goals-btn-edit-task').forEach(b => {
+            b.addEventListener('click', () => openTaskModal(b.dataset.id));
+        });
+    }
+
+    // ---- Events: navigation, filters ----
+    document.querySelectorAll('.goals-nav-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const page = btn.dataset.goalPage;
+            currentGoalPage = page;
+            document.querySelectorAll('.goals-nav-item').forEach(b => b.classList.toggle('active', b===btn));
+            document.querySelectorAll('.goals-page').forEach(p => {
+                p.classList.toggle('active-page', p.id === page);
+            });
+            const label = {goalsDashboard:'대시보드', goalsActivity:'분기 활동실적·수명업무실적'}[page] || '';
+            const lbl = document.getElementById('goalsPageLabel');
+            if (lbl) lbl.textContent = label;
+        });
+    });
+    // 앵커 링크: 활동실적↔수명업무 부드러운 스크롤 (panelGoals 내부)
+    document.querySelectorAll('.goals-anchor-link').forEach(a => {
+        a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = document.querySelector(a.getAttribute('href'));
+            if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
+        });
+    });
+    document.querySelectorAll('[data-goal-page-link]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const page = btn.dataset.goalPageLink;
+            document.querySelector(`.goals-nav-item[data-goal-page="${page}"]`)?.click();
+        });
+    });
+    document.querySelectorAll('#goalTeamFilter button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentGoalTeam = btn.dataset.team;
+            document.querySelectorAll('#goalTeamFilter button').forEach(b => b.classList.toggle('selected', b===btn));
+            renderGoalsAll();
+        });
+    });
+    document.getElementById('goalsQuarterSelect')?.addEventListener('change', (e) => {
+        currentGoalQuarter = Number(e.target.value);
+        renderGoalsDashboard();
+        renderGoalsQuarter();
+    });
+    document.querySelectorAll('#goalsTaskTabs button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentTaskFilter = btn.dataset.taskFilter;
+            document.querySelectorAll('#goalsTaskTabs button').forEach(b => b.classList.toggle('selected', b===btn));
+            renderGoalsTasks();
+        });
+    });
+
+    // ---- Activity Modal ----
+    function _fillActivityGoalSelect() {
+        const sel = document.getElementById('goalActivityGoalId');
+        if (!sel) return;
+        // 팀 필터와 무관하게 전체 목표를 항상 표시 (모달 안에서는 자유롭게 선택 가능)
+        sel.innerHTML = goalsCache.map(g => `<option value="${g.id}">[${g.team}] ${g.name}</option>`).join('');
+    }
+    function _fillReporterSelect(selectedGoalId) {
+        const sel = document.getElementById('goalActivityReporter');
+        if (!sel) return;
+        // 선택된 목표의 팀에 속한 담당자만 보여줌 (팀 필터 아님)
+        const g = goalsCache.find(x => x.id === selectedGoalId);
+        const team = g ? g.team : (currentGoalTeam === '전체' ? null : currentGoalTeam);
+        const members = team
+            ? (GOAL_MEMBERS[team] || [])
+            : [].concat(...GOAL_TEAMS.map(t => GOAL_MEMBERS[t]||[]));
+        sel.innerHTML = members.map(m => `<option value="${m}">${m}</option>`).join('');
+    }
+    function _fillTaskOwnerSelect(team, current) {
+        const sel = document.getElementById('goalTaskOwner');
+        if (!sel) return;
+        const members = GOAL_MEMBERS[team] || [];
+        sel.innerHTML = members.map(m => `<option value="${m}"${m===current?' selected':''}>${m}</option>`).join('');
+    }
+
+    function openActivityModal(goalId, quarter) {
+        _fillActivityGoalSelect();
+        const modal = document.getElementById('goalActivityModal');
+        const q = quarter || currentGoalQuarter;
+        // goalId가 지정되면 그 값을, 아니면 팀 필터 첫 항목 또는 전체 첫 항목
+        const gId = goalId
+            || _filterByTeam(goalsCache)[0]?.id
+            || goalsCache[0]?.id;
+        if (!gId) { alert('먼저 목표를 등록해주세요.'); return; }
+        const a = _activityFor(gId, q);
+        document.getElementById('goalActivityGoalId').value = gId;
+        _fillReporterSelect(gId);
+        document.getElementById('goalActivityQuarter').value = String(q);
+        document.getElementById('goalActivityActual').value  = a ? a.actual : 1;
+        document.getElementById('goalActivitySummary').value = a ? (a.summary||'') : '';
+        document.getElementById('goalActivityIssue').value   = a ? (a.issue||'') : '';
+        document.getElementById('goalActivitySupport').value = a ? (a.support||'') : '';
+        document.getElementById('goalActivityNextPlan').value = a ? (a.next_plan||'') : '';
+        if (a && a.reporter) document.getElementById('goalActivityReporter').value = a.reporter;
+        modal.style.display = 'flex';
+    }
+    // 목표 선택 변경 시 담당자 select도 해당 팀 소속으로 갱신
+    document.getElementById('goalActivityGoalId')?.addEventListener('change', (e) => {
+        _fillReporterSelect(e.target.value);
+    });
+    document.getElementById('goalsActivityAdd')?.addEventListener('click', () => openActivityModal(null, currentGoalQuarter));
+    document.getElementById('closeGoalActivityModal')?.addEventListener('click', () => {
+        document.getElementById('goalActivityModal').style.display = 'none';
+    });
+    document.getElementById('goalActivityForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = {
+            goal_id:   document.getElementById('goalActivityGoalId').value,
+            quarter:   Number(document.getElementById('goalActivityQuarter').value),
+            actual:    Number(document.getElementById('goalActivityActual').value||0),
+            summary:   document.getElementById('goalActivitySummary').value.trim(),
+            issue:     document.getElementById('goalActivityIssue').value.trim(),
+            support:   document.getElementById('goalActivitySupport').value.trim(),
+            next_plan: document.getElementById('goalActivityNextPlan').value.trim(),
+            reporter:  document.getElementById('goalActivityReporter').value,
+        };
+        try {
+            const res = await fetch('/api/goal_activities', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            await loadGoalsData();
+            renderGoalsAll();
+            document.getElementById('goalActivityModal').style.display = 'none';
+        } catch(err) {
+            alert('저장 실패: ' + err.message);
+        }
+    });
+
+    // ---- Task Modal ----
+    function openTaskModal(taskId) {
+        const modal = document.getElementById('goalTaskModal');
+        const form  = document.getElementById('goalTaskForm');
+        form.reset();
+        document.getElementById('goalTaskId').value = taskId || '';
+        const delBtn = document.getElementById('goalTaskDelete');
+        if (taskId) {
+            const t = tasksCache.find(x=>x.id===taskId);
+            if (!t) return;
+            document.getElementById('goalTaskModalTitle').textContent = '✏️ 수명업무 수정';
+            document.getElementById('goalTaskName').value     = t.name || '';
+            document.getElementById('goalTaskTeam').value     = t.team || '경영관리팀';
+            _fillTaskOwnerSelect(t.team || '경영관리팀', t.owner);
+            document.getElementById('goalTaskDue').value      = t.due_date || '';
+            document.getElementById('goalTaskProgress').value = Number(t.progress||0);
+            document.getElementById('goalTaskStatus').value   = ['progress','done','hold'].includes(t.status) ? t.status : 'progress';
+            document.getElementById('goalTaskSummary').value  = t.summary || '';
+            document.getElementById('goalTaskIssue').value    = t.issue || '';
+            if (delBtn) delBtn.style.display = 'inline-block';
+        } else {
+            document.getElementById('goalTaskModalTitle').textContent = '✓ 수명업무 등록';
+            const team = currentGoalTeam === '전체' ? '경영관리팀' : currentGoalTeam;
+            document.getElementById('goalTaskTeam').value = team;
+            _fillTaskOwnerSelect(team, null);
+            document.getElementById('goalTaskProgress').value = 0;
+            document.getElementById('goalTaskStatus').value = 'progress';
+            if (delBtn) delBtn.style.display = 'none';
+        }
+        modal.style.display = 'flex';
+    }
+    document.getElementById('goalsTaskAdd')?.addEventListener('click', () => openTaskModal(null));
+    document.getElementById('closeGoalTaskModal')?.addEventListener('click', () => {
+        document.getElementById('goalTaskModal').style.display = 'none';
+    });
+    document.getElementById('goalTaskTeam')?.addEventListener('change', (e) => {
+        _fillTaskOwnerSelect(e.target.value, null);
+    });
+    document.getElementById('goalTaskDelete')?.addEventListener('click', async () => {
+        const id = document.getElementById('goalTaskId').value;
+        if (!id) return;
+        if (!confirm('이 수명업무를 삭제하시겠습니까?')) return;
+        try {
+            const res = await fetch(`/api/executive_tasks/${id}`, {method:'DELETE'});
+            if (!res.ok) throw new Error(await res.text());
+            await loadGoalsData();
+            renderGoalsTasks();
+            document.getElementById('goalTaskModal').style.display = 'none';
+        } catch(err) { alert('삭제 실패: ' + err.message); }
+    });
+    document.getElementById('goalTaskForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('goalTaskId').value;
+        const progress = Number(document.getElementById('goalTaskProgress').value||0);
+        // 상태는 사용자가 select에서 지정. 진척률 100%면 자동으로 done 승격
+        let status = document.getElementById('goalTaskStatus').value || 'progress';
+        if (progress >= 100) status = 'done';
+        const body = {
+            name:     document.getElementById('goalTaskName').value.trim(),
+            team:     document.getElementById('goalTaskTeam').value,
+            owner:    document.getElementById('goalTaskOwner').value,
+            due_date: document.getElementById('goalTaskDue').value || null,
+            progress: progress,
+            status:   status,
+            summary:  document.getElementById('goalTaskSummary').value.trim(),
+            issue:    document.getElementById('goalTaskIssue').value.trim(),
+        };
+        try {
+            const url = id ? `/api/executive_tasks/${id}` : '/api/executive_tasks';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method, headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            await loadGoalsData();
+            renderGoalsTasks();
+            document.getElementById('goalTaskModal').style.display = 'none';
+        } catch(err) { alert('저장 실패: ' + err.message); }
+    });
 
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
     const HARDCODED_WEEKS = {
