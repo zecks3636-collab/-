@@ -1364,20 +1364,20 @@ def list_activities(goal_id: Optional[str] = None, quarter: Optional[int] = None
     _ensure_goals_tables()
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            # DB는 UTC(timestamp)로 저장 → KST로 변환하여 반환
+            base_select = ("SELECT id::text, goal_id::text, quarter, actual, summary, issue, "
+                           "support, next_plan, reporter, "
+                           "to_char(reported_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul', "
+                           "'YYYY-MM-DD HH24:MI:SS') AS reported_at "
+                           "FROM goal_activities")
             if goal_id and quarter:
-                cur.execute("SELECT id::text, goal_id::text, quarter, actual, summary, issue, "
-                            "support, next_plan, reporter, reported_at::text "
-                            "FROM goal_activities WHERE goal_id=%s::uuid AND quarter=%s",
+                cur.execute(base_select + " WHERE goal_id=%s::uuid AND quarter=%s",
                             (goal_id, quarter))
             elif goal_id:
-                cur.execute("SELECT id::text, goal_id::text, quarter, actual, summary, issue, "
-                            "support, next_plan, reporter, reported_at::text "
-                            "FROM goal_activities WHERE goal_id=%s::uuid ORDER BY quarter",
+                cur.execute(base_select + " WHERE goal_id=%s::uuid ORDER BY quarter",
                             (goal_id,))
             else:
-                cur.execute("SELECT id::text, goal_id::text, quarter, actual, summary, issue, "
-                            "support, next_plan, reporter, reported_at::text "
-                            "FROM goal_activities ORDER BY goal_id, quarter")
+                cur.execute(base_select + " ORDER BY goal_id, quarter")
             return JSONResponse(cur.fetchall())
 
 @app.post("/api/goal_activities")
@@ -1416,7 +1416,10 @@ def delete_activity(activity_id: str):
 @app.get("/api/executive_tasks")
 def list_tasks(status: Optional[str] = None, team: Optional[str] = None):
     _ensure_goals_tables()
-    q = "SELECT id::text, name, team, owner, due_date::text, progress, status, summary, issue, updated_at::text FROM executive_tasks"
+    q = ("SELECT id::text, name, team, owner, due_date::text, progress, status, summary, issue, "
+         "to_char(updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul', "
+         "'YYYY-MM-DD HH24:MI:SS') AS updated_at "
+         "FROM executive_tasks")
     conds, params = [], []
     if status:
         conds.append("status=%s"); params.append(status)

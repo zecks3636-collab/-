@@ -914,6 +914,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }
+    // 서버 TIMESTAMP(UTC 가정)를 KST로 변환해 'YYYY-MM-DD HH:MM' 표시
+    function _formatKst(tsStr) {
+        if (!tsStr) return '-';
+        // PostgreSQL TIMESTAMP::text: 'YYYY-MM-DD HH:MM:SS[.ffffff]'
+        // 명시적 UTC로 파싱 후 로컬 시간대(브라우저 = KST 가정)로 표시
+        const iso = tsStr.replace(' ', 'T').split('.')[0] + 'Z';
+        const d = new Date(iso);
+        if (isNaN(d)) return tsStr.slice(0, 16);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
     function _esc(s) {
         return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
@@ -1007,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const recentTxt = recent ? `${recent.quarter}Q · ${_esc((recent.summary||'').slice(0,40))}` : '-';
                     return `
                       <tr>
-                        <td class="goals-td-team">${g.team}</td>
+                        <td><span class="goals-team-chip">${g.team}</span></td>
                         <td class="goals-td-name">${_esc(g.objective)}</td>
                         <td class="goals-td-detail">${_esc(g.name)}</td>
                         <td class="goals-td-cycle">${g.cycle||'-'}</td>
@@ -1078,10 +1088,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const act = _activityFor(g.id, q);
                     const summary = act ? _esc(act.summary||'') : '';
                     const issue   = act ? _esc(act.issue||'') : '';
-                    const upd     = act ? (act.reported_at||'').slice(0,16).replace('T',' ') : '-';
+                    const upd     = act ? _formatKst(act.reported_at) : '-';
                     return `
                       <tr data-goal-id="${g.id}">
-                        <td class="goals-td-team">${g.team}</td>
+                        <td><span class="goals-team-chip">${g.team}</span></td>
                         <td class="goals-td-detail">${_esc(g.name)}<div class="goals-td-sub">${_esc(g.objective||'')}</div></td>
                         <td class="goals-td-cycle">${g.cycle||'-'}</td>
                         <td class="goals-td-num">${t.toLocaleString()}</td>
@@ -1108,8 +1118,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             tList = tList.filter(t => t._statusEff === currentTaskFilter);
         }
         tList.sort((a,b) => {
-            const s1 = {progress:0, delayed:1, done:2}[a._statusEff] ?? 3;
-            const s2 = {progress:0, delayed:1, done:2}[b._statusEff] ?? 3;
+            const order = {progress:0, delayed:1, hold:2, done:3};
+            const s1 = order[a._statusEff] ?? 4;
+            const s2 = order[b._statusEff] ?? 4;
             if (s1 !== s2) return s1 - s2;
             return (a.due_date||'9999').localeCompare(b.due_date||'9999');
         });
@@ -1122,6 +1133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               <div class="goals-metric-card"><div class="goals-metric-label">전체</div><div class="goals-metric-big">${total}</div></div>
               <div class="goals-metric-card"><div class="goals-metric-label">진행 중</div><div class="goals-metric-big" style="color:#0ea5e9">${cnt('progress')}</div></div>
               <div class="goals-metric-card"><div class="goals-metric-label">지연</div><div class="goals-metric-big" style="color:#ef4444">${cnt('delayed')}</div></div>
+              <div class="goals-metric-card"><div class="goals-metric-label">보류</div><div class="goals-metric-big" style="color:#f59e0b">${cnt('hold')}</div></div>
               <div class="goals-metric-card"><div class="goals-metric-label">완료</div><div class="goals-metric-big" style="color:#16a34a">${cnt('done')}</div></div>
             `;
         }
@@ -1142,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                   <span class="goals-task-name">${_esc(t.name)}</span>
                   <span class="goals-task-status goals-status-${s}">${_statusLabel(s)}</span>
                 </div>
-                <div class="goals-task-meta">담당 ${t.owner||'-'} · 목표일 ${t.due_date||'-'} · 진척률 <b style="color:${_pctColor(p)}">${p}%</b></div>
+                <div class="goals-task-meta">담당 ${t.owner||'-'} · 목표일 ${t.due_date||'미정'} · 진척률 <b style="color:${_pctColor(p)}">${p}%</b></div>
                 <div class="goals-task-bar"><i style="width:${Math.min(100,p)}%;background:${_pctColor(p)}"></i></div>
                 ${t.summary ? `<div class="goals-task-summary">${_esc(t.summary)}</div>` : ''}
                 ${t.issue ? `<div class="goals-task-issue">⚠ ${_esc(t.issue)}</div>` : ''}
@@ -1211,7 +1223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 팀 필터와 무관하게 전체 목표를 항상 표시 (모달 안에서는 자유롭게 선택 가능)
         sel.innerHTML = goalsCache.map(g => `<option value="${g.id}">[${g.team}] ${g.name}</option>`).join('');
     }
-    function _fillReporterSelect(selectedGoalId) {
+    function _fillReporterSelect(selectedGoalId, keepReporter) {
         const sel = document.getElementById('goalActivityReporter');
         if (!sel) return;
         // 선택된 목표의 팀에 속한 담당자만 보여줌 (팀 필터 아님)
@@ -1220,13 +1232,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const members = team
             ? (GOAL_MEMBERS[team] || [])
             : [].concat(...GOAL_TEAMS.map(t => GOAL_MEMBERS[t]||[]));
-        sel.innerHTML = members.map(m => `<option value="${m}">${m}</option>`).join('');
+        // 이전 데이터의 보고자가 현재 팀에 없으면 임시 옵션으로 유지
+        const list = keepReporter && !members.includes(keepReporter) ? [keepReporter, ...members] : members;
+        sel.innerHTML = list.map(m => `<option value="${m}"${m===keepReporter?' selected':''}>${m}</option>`).join('');
     }
     function _fillTaskOwnerSelect(team, current) {
         const sel = document.getElementById('goalTaskOwner');
         if (!sel) return;
         const members = GOAL_MEMBERS[team] || [];
-        sel.innerHTML = members.map(m => `<option value="${m}"${m===current?' selected':''}>${m}</option>`).join('');
+        // 팀에 없는 담당자(전임자 등)라도 손실되지 않도록 임시 옵션으로 유지
+        const list = current && !members.includes(current) ? [current, ...members] : members;
+        sel.innerHTML = list.map(m => `<option value="${m}"${m===current?' selected':''}>${m}</option>`).join('');
     }
 
     function openActivityModal(goalId, quarter) {
@@ -1240,20 +1256,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!gId) { alert('먼저 목표를 등록해주세요.'); return; }
         const a = _activityFor(gId, q);
         document.getElementById('goalActivityGoalId').value = gId;
-        _fillReporterSelect(gId);
+        _fillReporterSelect(gId, a ? a.reporter : null);
         document.getElementById('goalActivityQuarter').value = String(q);
         document.getElementById('goalActivityActual').value  = a ? a.actual : 1;
         document.getElementById('goalActivitySummary').value = a ? (a.summary||'') : '';
         document.getElementById('goalActivityIssue').value   = a ? (a.issue||'') : '';
         document.getElementById('goalActivitySupport').value = a ? (a.support||'') : '';
         document.getElementById('goalActivityNextPlan').value = a ? (a.next_plan||'') : '';
-        if (a && a.reporter) document.getElementById('goalActivityReporter').value = a.reporter;
         modal.style.display = '';
         modal.classList.add('active');
     }
     // 목표 선택 변경 시 담당자 select도 해당 팀 소속으로 갱신
     document.getElementById('goalActivityGoalId')?.addEventListener('change', (e) => {
-        _fillReporterSelect(e.target.value);
+        const currentReporter = document.getElementById('goalActivityReporter').value;
+        _fillReporterSelect(e.target.value, currentReporter);
     });
     document.getElementById('goalsActivityAdd')?.addEventListener('click', () => openActivityModal(null, currentGoalQuarter));
     document.getElementById('closeGoalActivityModal')?.addEventListener('click', () => {
@@ -1292,12 +1308,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     function openTaskModal(taskId) {
         const modal = document.getElementById('goalTaskModal');
         const form  = document.getElementById('goalTaskForm');
+        const delBtn = document.getElementById('goalTaskDelete');
+        // taskId가 지정됐지만 캐시에 없는 경우(재로드 전 삭제된 항목) 조용히 무시하지 말고 알림
+        let t = null;
+        if (taskId) {
+            t = tasksCache.find(x => x.id === taskId);
+            if (!t) { alert('해당 수명업무 데이터를 찾을 수 없습니다. 새로고침 후 다시 시도해주세요.'); return; }
+        }
         form.reset();
         document.getElementById('goalTaskId').value = taskId || '';
-        const delBtn = document.getElementById('goalTaskDelete');
-        if (taskId) {
-            const t = tasksCache.find(x=>x.id===taskId);
-            if (!t) return;
+        if (t) {
             document.getElementById('goalTaskModalTitle').textContent = '✏️ 수명업무 수정';
             document.getElementById('goalTaskName').value     = t.name || '';
             document.getElementById('goalTaskTeam').value     = t.team || '경영관리팀';
@@ -1328,7 +1348,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target.id === 'goalTaskModal') e.currentTarget.classList.remove('active');
     });
     document.getElementById('goalTaskTeam')?.addEventListener('change', (e) => {
-        _fillTaskOwnerSelect(e.target.value, null);
+        // 팀 변경 시 기존 담당자가 새 팀에 있으면 유지, 없으면 첫 항목으로 자연스럽게 폴백
+        const currentOwner = document.getElementById('goalTaskOwner').value;
+        const newTeamMembers = GOAL_MEMBERS[e.target.value] || [];
+        _fillTaskOwnerSelect(e.target.value, newTeamMembers.includes(currentOwner) ? currentOwner : null);
     });
     document.getElementById('goalTaskDelete')?.addEventListener('click', async () => {
         const id = document.getElementById('goalTaskId').value;
