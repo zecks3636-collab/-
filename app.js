@@ -1007,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const objRows = document.getElementById('goalsObjectiveRows');
         if (objRows) {
             if (!list.length) {
-                objRows.innerHTML = '<tr><td colspan="8" class="goals-empty">등록된 목표가 없습니다.</td></tr>';
+                objRows.innerHTML = '<tr><td colspan="9" class="goals-empty">등록된 목표가 없습니다.</td></tr>';
             } else {
                 objRows.innerHTML = list.map(g => {
                     const actual = _totalActual(g.id);
@@ -1025,8 +1025,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <td class="goals-td-num">${actual.toLocaleString()}</td>
                         <td class="goals-td-num"><span class="goals-inline-bar"><i style="width:${Math.min(100,p)}%;background:${_pctColor(p)}"></i></span><b style="color:${_pctColor(p)}">${p}%</b></td>
                         <td class="goals-td-note">${recentTxt}</td>
+                        <td class="goals-td-action" style="white-space:nowrap;text-align:right;">
+                            <button class="goals-btn-edit-goal" data-id="${g.id}" title="목표 수정">✏️</button>
+                        </td>
                       </tr>`;
                 }).join('');
+                objRows.querySelectorAll('.goals-btn-edit-goal').forEach(b => {
+                    b.addEventListener('click', () => openGoalModal(b.dataset.id));
+                });
             }
         }
     }
@@ -1393,6 +1399,103 @@ document.addEventListener('DOMContentLoaded', async () => {
             await loadGoalsData();
             renderGoalsTasks();
             document.getElementById('goalTaskModal').classList.remove('active');
+        } catch(err) { alert('저장 실패: ' + err.message); }
+    });
+
+    // ---- Goal (활동목표) Modal ----
+    function _syncGoalTotal() {
+        const q1 = Number(document.getElementById('goalGoalQ1').value||0);
+        const q2 = Number(document.getElementById('goalGoalQ2').value||0);
+        const q3 = Number(document.getElementById('goalGoalQ3').value||0);
+        const q4 = Number(document.getElementById('goalGoalQ4').value||0);
+        document.getElementById('goalGoalTotal').value = q1+q2+q3+q4;
+    }
+    function openGoalModal(goalId) {
+        const modal = document.getElementById('goalGoalModal');
+        const form  = document.getElementById('goalGoalForm');
+        const delBtn = document.getElementById('goalGoalDelete');
+        let g = null;
+        if (goalId) {
+            g = goalsCache.find(x => x.id === goalId);
+            if (!g) { alert('해당 목표를 찾을 수 없습니다. 새로고침 후 다시 시도해주세요.'); return; }
+        }
+        form.reset();
+        document.getElementById('goalGoalId').value = goalId || '';
+        if (g) {
+            document.getElementById('goalGoalModalTitle').textContent = '✏️ 목표 수정';
+            document.getElementById('goalGoalTeam').value      = g.team || '경영관리팀';
+            document.getElementById('goalGoalCycle').value     = g.cycle || '';
+            document.getElementById('goalGoalObjective').value = g.objective || '';
+            document.getElementById('goalGoalKr').value        = g.kr || '';
+            document.getElementById('goalGoalName').value      = g.name || '';
+            document.getElementById('goalGoalQ1').value        = Number(g.q1_target||0);
+            document.getElementById('goalGoalQ2').value        = Number(g.q2_target||0);
+            document.getElementById('goalGoalQ3').value        = Number(g.q3_target||0);
+            document.getElementById('goalGoalQ4').value        = Number(g.q4_target||0);
+            if (delBtn) delBtn.style.display = 'inline-block';
+        } else {
+            document.getElementById('goalGoalModalTitle').textContent = '🎯 목표 등록';
+            const team = currentGoalTeam === '전체' ? '경영관리팀' : currentGoalTeam;
+            document.getElementById('goalGoalTeam').value = team;
+            document.getElementById('goalGoalQ1').value = 0;
+            document.getElementById('goalGoalQ2').value = 0;
+            document.getElementById('goalGoalQ3').value = 0;
+            document.getElementById('goalGoalQ4').value = 0;
+            if (delBtn) delBtn.style.display = 'none';
+        }
+        _syncGoalTotal();
+        modal.style.display = '';
+        modal.classList.add('active');
+    }
+    document.getElementById('goalsGoalAdd')?.addEventListener('click', () => openGoalModal(null));
+    document.getElementById('closeGoalGoalModal')?.addEventListener('click', () => {
+        document.getElementById('goalGoalModal').classList.remove('active');
+    });
+    document.getElementById('goalGoalModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'goalGoalModal') e.currentTarget.classList.remove('active');
+    });
+    ['goalGoalQ1','goalGoalQ2','goalGoalQ3','goalGoalQ4'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', _syncGoalTotal);
+    });
+    document.getElementById('goalGoalDelete')?.addEventListener('click', async () => {
+        const id = document.getElementById('goalGoalId').value;
+        if (!id) return;
+        if (!confirm('이 목표를 삭제하시겠습니까?\n※ 연결된 활동실적도 함께 삭제됩니다.')) return;
+        try {
+            const res = await fetch(`/api/goals/${id}`, {method:'DELETE'});
+            if (!res.ok) throw new Error(await res.text());
+            await loadGoalsData();
+            renderGoalsAll();
+            document.getElementById('goalGoalModal').classList.remove('active');
+        } catch(err) { alert('삭제 실패: ' + err.message); }
+    });
+    document.getElementById('goalGoalForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('goalGoalId').value;
+        const q1 = Number(document.getElementById('goalGoalQ1').value||0);
+        const q2 = Number(document.getElementById('goalGoalQ2').value||0);
+        const q3 = Number(document.getElementById('goalGoalQ3').value||0);
+        const q4 = Number(document.getElementById('goalGoalQ4').value||0);
+        const body = {
+            team:         document.getElementById('goalGoalTeam').value,
+            objective:    document.getElementById('goalGoalObjective').value.trim(),
+            kr:           document.getElementById('goalGoalKr').value.trim(),
+            name:         document.getElementById('goalGoalName').value.trim(),
+            cycle:        document.getElementById('goalGoalCycle').value.trim(),
+            target_total: q1+q2+q3+q4,
+            q1_target: q1, q2_target: q2, q3_target: q3, q4_target: q4,
+        };
+        try {
+            const url = id ? `/api/goals/${id}` : '/api/goals';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, {
+                method, headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            await loadGoalsData();
+            renderGoalsAll();
+            document.getElementById('goalGoalModal').classList.remove('active');
         } catch(err) { alert('저장 실패: ' + err.message); }
     });
 

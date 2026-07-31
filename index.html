@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월간일정표 대시보드</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/variable/pretendardvariable.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260628r">
+    <link rel="stylesheet" href="styles.css?v=20260628s">
     <meta name="description" content="Group, NBT, BIO 통합 월간 경영 일정 대시보드">
 </head>
 <body>
@@ -1694,13 +1694,16 @@
                                 <p class="goals-eyebrow">OBJECTIVES</p>
                                 <h2>연간 활동목표 현황</h2>
                             </div>
-                            <button class="goals-text-btn" data-goal-page-link="goalsActivity">분기별 상세 보기 →</button>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <button class="goals-primary" id="goalsGoalAdd">+ 목표 등록</button>
+                                <button class="goals-text-btn" data-goal-page-link="goalsActivity">분기별 상세 보기 →</button>
+                            </div>
                         </div>
                         <div class="goals-table-wrap">
                             <table>
                                 <thead><tr>
                                     <th>조직</th><th>활동목표</th><th>세부 활동목표</th><th>주기</th>
-                                    <th class="goals-th-num">연간</th><th class="goals-th-num">누적</th><th class="goals-th-num">진척률</th><th>최근 요약</th>
+                                    <th class="goals-th-num">연간</th><th class="goals-th-num">누적</th><th class="goals-th-num">진척률</th><th>최근 요약</th><th></th>
                                 </tr></thead>
                                 <tbody id="goalsObjectiveRows"></tbody>
                             </table>
@@ -1843,6 +1846,65 @@
                 <div><label class="leave-form-label">이슈·지원 요청 (선택)</label><textarea id="goalTaskIssue" class="form-input" rows="2"></textarea></div>
                 <div style="margin-top:8px;display:flex;justify-content:space-between;">
                     <button type="button" id="goalTaskDelete" class="menu-delete-btn" style="display:none;">🗑 삭제</button>
+                    <button type="submit" class="save-btn" style="font-size:13px;padding:9px 22px;margin-left:auto;">💾 저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 목표 등록/수정 모달 -->
+    <div class="modal-overlay" id="goalGoalModal">
+        <div class="modal-content glass-panel" style="width:620px; max-height:85vh; overflow-y:auto;">
+            <button class="close-btn" id="closeGoalGoalModal">&times;</button>
+            <div class="modal-header">
+                <h3 style="font-size:16px;font-weight:800;color:#0f172a;" id="goalGoalModalTitle">🎯 목표 등록</h3>
+                <p class="subtitle" style="margin-top:6px;font-size:12px;">활동목표 · Objective · 주기 · 분기별 목표 건수를 입력하세요.</p>
+            </div>
+            <form id="goalGoalForm" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;">
+                <input type="hidden" id="goalGoalId" value="">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div><label class="leave-form-label">팀</label>
+                        <select id="goalGoalTeam" class="form-input">
+                            <option value="경영관리팀">경영관리팀</option>
+                            <option value="사업관리팀">사업관리팀</option>
+                        </select>
+                    </div>
+                    <div><label class="leave-form-label">주기</label>
+                        <input list="goalGoalCycleList" id="goalGoalCycle" class="form-input" placeholder="예: 매월 · 분기 · 3월 · 비정기">
+                        <datalist id="goalGoalCycleList">
+                            <option value="매월"><option value="분기"><option value="반기">
+                            <option value="상반기"><option value="하반기"><option value="비정기">
+                            <option value="3월"><option value="4월"><option value="6월"><option value="8월"><option value="9월">
+                        </datalist>
+                    </div>
+                </div>
+                <div><label class="leave-form-label">Objective (상위 목표)</label>
+                    <input type="text" id="goalGoalObjective" class="form-input" placeholder="예: Objective 1" required>
+                </div>
+                <div><label class="leave-form-label">Key Result (KR · 상세 설명)</label>
+                    <textarea id="goalGoalKr" class="form-input" rows="2" placeholder="상위 목표의 세부 설명"></textarea>
+                </div>
+                <div><label class="leave-form-label">세부 활동목표명</label>
+                    <input type="text" id="goalGoalName" class="form-input" placeholder="예: 공통전략 지표 운영 보고" required>
+                </div>
+                <div>
+                    <label class="leave-form-label">분기별 목표 건수</label>
+                    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">
+                        <div><small style="font-size:11px;color:#64748b;">1분기</small>
+                            <input type="number" id="goalGoalQ1" class="form-input" min="0" value="0"></div>
+                        <div><small style="font-size:11px;color:#64748b;">2분기</small>
+                            <input type="number" id="goalGoalQ2" class="form-input" min="0" value="0"></div>
+                        <div><small style="font-size:11px;color:#64748b;">3분기</small>
+                            <input type="number" id="goalGoalQ3" class="form-input" min="0" value="0"></div>
+                        <div><small style="font-size:11px;color:#64748b;">4분기</small>
+                            <input type="number" id="goalGoalQ4" class="form-input" min="0" value="0"></div>
+                        <div><small style="font-size:11px;color:#64748b;font-weight:700;">연간 합계</small>
+                            <input type="number" id="goalGoalTotal" class="form-input" min="0" value="0" readonly style="background:#f1f5f9;font-weight:700;"></div>
+                    </div>
+                    <p style="font-size:11px;color:#94a3b8;margin-top:4px;">연간 합계는 분기값 합으로 자동 계산됩니다.</p>
+                </div>
+                <div style="margin-top:8px;display:flex;justify-content:space-between;">
+                    <button type="button" id="goalGoalDelete" class="menu-delete-btn" style="display:none;">🗑 삭제</button>
                     <button type="submit" class="save-btn" style="font-size:13px;padding:9px 22px;margin-left:auto;">💾 저장</button>
                 </div>
             </form>
@@ -2155,8 +2217,8 @@
     </script>
 
     <!-- Supabase JS Client -->
-    <script src="db.js?v=20260628r"></script>
-    <script src="data.js?v=20260628r"></script>
-    <script src="app.js?v=20260628r"></script>
+    <script src="db.js?v=20260628s"></script>
+    <script src="data.js?v=20260628s"></script>
+    <script src="app.js?v=20260628s"></script>
 </body>
 </html>
