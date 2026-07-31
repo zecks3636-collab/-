@@ -902,7 +902,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     function _pct(actual, target) {
         if (!target) return 0;
-        return Math.min(999, Math.round(actual*1000/target)/10);
+        // 정수 %로 반환 (소수점 없음)
+        return Math.min(999, Math.round(actual*100/target));
     }
     function _pctColor(p) {
         if (p >= 100) return '#16a34a';
