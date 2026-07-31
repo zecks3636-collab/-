@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월간일정표 대시보드</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/variable/pretendardvariable.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260628q">
+    <link rel="stylesheet" href="styles.css?v=20260628r">
     <meta name="description" content="Group, NBT, BIO 통합 월간 경영 일정 대시보드">
 </head>
 <body>
@@ -1700,7 +1700,7 @@
                             <table>
                                 <thead><tr>
                                     <th>조직</th><th>활동목표</th><th>세부 활동목표</th><th>주기</th>
-                                    <th>연간</th><th>누적</th><th>진척률</th><th>최근 요약</th>
+                                    <th class="goals-th-num">연간</th><th class="goals-th-num">누적</th><th class="goals-th-num">진척률</th><th>최근 요약</th>
                                 </tr></thead>
                                 <tbody id="goalsObjectiveRows"></tbody>
                             </table>
@@ -1754,7 +1754,7 @@
                             <table>
                                 <thead><tr>
                                     <th>조직</th><th>세부 활동목표</th><th>주기</th>
-                                    <th>분기목표</th><th>실적</th><th>진척률</th>
+                                    <th class="goals-th-num">분기목표</th><th class="goals-th-num">실적</th><th class="goals-th-num">진척률</th>
                                     <th>활동내용</th><th>애로사항</th><th>업데이트</th>
                                 </tr></thead>
                                 <tbody id="goalsQuarterActivityRows"></tbody>
@@ -1779,6 +1779,7 @@
                             <button class="selected" data-task-filter="all">전체</button>
                             <button data-task-filter="progress">진행 중</button>
                             <button data-task-filter="delayed">지연</button>
+                            <button data-task-filter="hold">보류</button>
                             <button data-task-filter="done">완료</button>
                         </div>
                         <div id="goalsTaskList" class="goals-task-list"></div>
@@ -1828,7 +1829,7 @@
                     <div><label class="leave-form-label">담당자</label><select id="goalTaskOwner" class="form-input"></select></div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div><label class="leave-form-label">목표일</label><input type="date" id="goalTaskDue" class="form-input" required></div>
+                    <div><label class="leave-form-label">목표일</label><input type="date" id="goalTaskDue" class="form-input"></div>
                     <div><label class="leave-form-label">진척률 (%)</label><input type="number" id="goalTaskProgress" class="form-input" min="0" max="100" value="0" required></div>
                 </div>
                 <div><label class="leave-form-label">상태</label>
@@ -2154,8 +2155,8 @@
     </script>
 
     <!-- Supabase JS Client -->
-    <script src="db.js?v=20260628q"></script>
-    <script src="data.js?v=20260628q"></script>
-    <script src="app.js?v=20260628q"></script>
+    <script src="db.js?v=20260628r"></script>
+    <script src="data.js?v=20260628r"></script>
+    <script src="app.js?v=20260628r"></script>
 </body>
 </html>
