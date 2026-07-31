@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>월간일정표 대시보드</title>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/variable/pretendardvariable.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260628m">
+    <link rel="stylesheet" href="styles.css?v=20260628p">
     <meta name="description" content="Group, NBT, BIO 통합 월간 경영 일정 대시보드">
 </head>
 <body>
@@ -39,7 +39,7 @@
                 </button>
             </div>
 
-            <div class="upcoming-events" style="flex: 1; min-height: 0;">
+            <div class="upcoming-events" style="display:none; flex: 1; min-height: 0;">
                 <h3>주요 하이라이트 일정</h3>
                 <ul id="upcomingList">
                     <!-- Events will be populated here -->
@@ -48,6 +48,7 @@
 
             <!-- 탭 버튼 그룹 -->
             <div style="display:flex; flex-direction:column; gap:6px;">
+                <button class="sidebar-menu-tab" id="tabGoals">🎯 목표관리</button>
                 <button class="sidebar-menu-tab" id="tabThanks">💌 COSMAX Thanks Board</button>
                 <button class="sidebar-menu-tab" id="tabMenu">🍽️ 주간식단표</button>
                 <button class="sidebar-menu-tab" id="tabLeave">📋 연차계획</button>
@@ -1648,7 +1649,203 @@
                 <div id="thanksCardGrid" class="thanks-card-grid"></div>
             </div>
 
+            <!-- ============== 목표관리 (Goals Management) ============== -->
+            <div id="panelGoals" class="calendar-wrapper glass-panel" style="display:none; flex-direction:column; overflow-y:auto;">
+                <!-- 상단 페이지 네비게이션 + 팀 필터 -->
+                <div class="goals-topbar">
+                    <div class="goals-crumb">
+                        <div class="goals-crumb-title">2026년 연간 활동업무목표</div>
+                        <span id="goalsPageLabel">대시보드</span>
+                    </div>
+                    <div class="goals-sync">● <span id="goalsUpdatedAt">-</span> 갱신</div>
+                </div>
+                <nav class="goals-nav">
+                    <button class="goals-nav-item active" data-goal-page="goalsDashboard">▦ 대시보드</button>
+                    <button class="goals-nav-item" data-goal-page="goalsActivity">◫ 분기 활동실적</button>
+                </nav>
+                <div class="goals-controls">
+                    <div class="goals-segmented" id="goalTeamFilter">
+                        <button class="selected" data-team="전체">전체</button>
+                        <button data-team="경영관리팀">경영관리팀</button>
+                        <button data-team="사업관리팀">사업관리팀</button>
+                    </div>
+                </div>
+
+                <!-- 페이지 1: 대시보드 -->
+                <section id="goalsDashboard" class="goals-page active-page">
+                    <div class="goals-hero">
+                        <div class="goals-hero-left">
+                            <p class="goals-eyebrow">2026 HEALTH FUNCTIONAL FOOD MANAGEMENT</p>
+                            <h1>목표를 숫자로 확인하고,<br><em>실행의 빈틈</em>을 함께 메웁니다.</h1>
+                            <p class="goals-hero-copy">격주 업무보고를 위한 최신 목표·실적 현황입니다.</p>
+                        </div>
+                        <div class="goals-hero-score">
+                            <span>연간 누적 진척률</span>
+                            <strong id="goalsHeroProgress">0%</strong>
+                            <div class="goals-progress-track"><i id="goalsHeroBar"></i></div>
+                            <small id="goalsHeroDetail">목표 0건 중 0건 실적 반영</small>
+                        </div>
+                        <div class="goals-hero-team-progress" id="goalsHeroTeamProgress"></div>
+                    </div>
+                    <div class="goals-metric-grid" id="goalsMetrics"></div>
+                    <section class="goals-panel goals-objectives-panel">
+                        <div class="goals-panel-head">
+                            <div>
+                                <p class="goals-eyebrow">OBJECTIVES</p>
+                                <h2>연간 활동목표 현황</h2>
+                            </div>
+                            <button class="goals-text-btn" data-goal-page-link="goalsActivity">분기별 상세 보기 →</button>
+                        </div>
+                        <div class="goals-table-wrap">
+                            <table>
+                                <thead><tr>
+                                    <th>조직</th><th>활동목표</th><th>세부 활동목표</th><th>주기</th>
+                                    <th>연간</th><th>누적</th><th>진척률</th><th>최근 요약</th>
+                                </tr></thead>
+                                <tbody id="goalsObjectiveRows"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </section>
+
+                <!-- 페이지 2: 분기 활동실적 + 수명업무실적 (통합) -->
+                <section id="goalsActivity" class="goals-page">
+                    <div class="goals-anchor-bar">
+                        <a href="#goalsActivitySection" class="goals-anchor-link">↓ 분기 활동실적</a>
+                        <a href="#goalsTasksSection"    class="goals-anchor-link">↓ 수명업무실적</a>
+                    </div>
+                    <div id="goalsActivitySection" class="goals-page-intro">
+                        <div>
+                            <p class="goals-eyebrow">QUARTERLY CHECK-IN</p>
+                            <h1 id="goalsActivityTitle">분기 활동실적</h1>
+                            <p id="goalsActivitySubtitle">현재 날짜 기준 분기 목표·실적입니다.</p>
+                        </div>
+                        <div class="goals-page-intro-actions">
+                            <select id="goalsQuarterSelect">
+                                <option value="1">1분기</option>
+                                <option value="2">2분기</option>
+                                <option value="3">3분기</option>
+                                <option value="4">4분기</option>
+                            </select>
+                            <button class="goals-primary" id="goalsActivityAdd">+ 활동실적 입력</button>
+                        </div>
+                    </div>
+                    <div class="goals-hero goals-quarter-hero">
+                        <div class="goals-hero-left">
+                            <p class="goals-eyebrow" id="goalsQuarterEyebrow">CURRENT QUARTER</p>
+                            <h1 id="goalsQuarterHeading">이번 분기의<br><em>실행 현황</em>을 확인합니다.</h1>
+                        </div>
+                        <div class="goals-hero-score">
+                            <span>분기 진척률</span>
+                            <strong id="goalsQuarterProgress">0%</strong>
+                            <div class="goals-progress-track"><i id="goalsQuarterBar"></i></div>
+                            <small id="goalsQuarterDetail">분기 목표 0건 중 0건 실적 반영</small>
+                        </div>
+                    </div>
+                    <div class="goals-metric-grid" id="goalsQuarterMetrics"></div>
+                    <section class="goals-panel goals-objectives-panel">
+                        <div class="goals-panel-head">
+                            <div>
+                                <p class="goals-eyebrow">ACTIVITY RESULTS</p>
+                                <h2 id="goalsQuarterTableTitle">분기별 활동목표 실적</h2>
+                            </div>
+                        </div>
+                        <div class="goals-table-wrap">
+                            <table>
+                                <thead><tr>
+                                    <th>조직</th><th>세부 활동목표</th><th>주기</th>
+                                    <th>분기목표</th><th>실적</th><th>진척률</th>
+                                    <th>활동내용</th><th>애로사항</th><th>업데이트</th>
+                                </tr></thead>
+                                <tbody id="goalsQuarterActivityRows"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <!-- ── 구분선 ── -->
+                    <div class="goals-section-divider"></div>
+
+                    <!-- 하단 섹션: 수명업무실적 -->
+                    <div id="goalsTasksSection" class="goals-page-intro">
+                        <div>
+                            <p class="goals-eyebrow">EXECUTIVE REQUESTS · ANNUAL</p>
+                            <h1>수명업무실적</h1>
+                            <p>연중 추가되는 경영진 수명업무를 누적 관리합니다.</p>
+                        </div>
+                        <button class="goals-primary" id="goalsTaskAdd">+ 수명업무 등록</button>
+                    </div>
+                    <div class="goals-metric-grid goals-mini" id="goalsTaskMetrics"></div>
+                    <div class="goals-panel">
+                        <div class="goals-tabs" id="goalsTaskTabs">
+                            <button class="selected" data-task-filter="all">전체</button>
+                            <button data-task-filter="progress">진행 중</button>
+                            <button data-task-filter="delayed">지연</button>
+                            <button data-task-filter="done">완료</button>
+                        </div>
+                        <div id="goalsTaskList" class="goals-task-list"></div>
+                    </div>
+                </section>
+            </div>
+
         </main>
+    </div>
+
+    <!-- 활동실적 입력 모달 -->
+    <div class="modal-overlay" id="goalActivityModal" style="display:none;">
+        <div class="modal-content glass-panel" style="width:600px; max-height:82vh; overflow-y:auto;">
+            <button class="close-btn" id="closeGoalActivityModal">&times;</button>
+            <div class="modal-header">
+                <h3 style="font-size:16px;font-weight:800;color:#0f172a;">📊 활동실적 입력</h3>
+                <p class="subtitle" style="margin-top:6px;font-size:13px;">담당 활동목표를 선택하고 분기 실적을 입력하세요.</p>
+            </div>
+            <form id="goalActivityForm" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;">
+                <div><label class="leave-form-label">활동목표</label><select id="goalActivityGoalId" class="form-input" required></select></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div><label class="leave-form-label">분기</label><select id="goalActivityQuarter" class="form-input"><option value="1">1분기</option><option value="2">2분기</option><option value="3">3분기</option><option value="4">4분기</option></select></div>
+                    <div><label class="leave-form-label">실적 (건)</label><input type="number" id="goalActivityActual" class="form-input" min="0" value="1" required></div>
+                </div>
+                <div><label class="leave-form-label">활동내용 요약</label><textarea id="goalActivitySummary" class="form-input" rows="3" placeholder="이번 기간 수행한 활동을 요약"></textarea></div>
+                <div><label class="leave-form-label">애로사항 (선택)</label><textarea id="goalActivityIssue" class="form-input" rows="2" placeholder="없으면 비워두세요"></textarea></div>
+                <div><label class="leave-form-label">지원 요청 (선택)</label><textarea id="goalActivitySupport" class="form-input" rows="2"></textarea></div>
+                <div><label class="leave-form-label">다음 계획 (선택)</label><textarea id="goalActivityNextPlan" class="form-input" rows="2"></textarea></div>
+                <div><label class="leave-form-label">보고자</label><select id="goalActivityReporter" class="form-input"></select></div>
+                <div style="margin-top:8px;text-align:right;"><button type="submit" class="save-btn" style="font-size:13px;padding:9px 22px;">💾 저장</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 수명업무 등록/편집 모달 -->
+    <div class="modal-overlay" id="goalTaskModal" style="display:none;">
+        <div class="modal-content glass-panel" style="width:560px; max-height:82vh; overflow-y:auto;">
+            <button class="close-btn" id="closeGoalTaskModal">&times;</button>
+            <div class="modal-header">
+                <h3 style="font-size:16px;font-weight:800;color:#0f172a;" id="goalTaskModalTitle">✓ 수명업무 등록</h3>
+            </div>
+            <form id="goalTaskForm" style="display:flex;flex-direction:column;gap:12px;margin-top:16px;">
+                <input type="hidden" id="goalTaskId" value="">
+                <div><label class="leave-form-label">업무명</label><input type="text" id="goalTaskName" class="form-input" required></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div><label class="leave-form-label">담당 조직</label><select id="goalTaskTeam" class="form-input"><option value="경영관리팀">경영관리팀</option><option value="사업관리팀">사업관리팀</option></select></div>
+                    <div><label class="leave-form-label">담당자</label><select id="goalTaskOwner" class="form-input"></select></div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div><label class="leave-form-label">목표일</label><input type="date" id="goalTaskDue" class="form-input" required></div>
+                    <div><label class="leave-form-label">진척률 (%)</label><input type="number" id="goalTaskProgress" class="form-input" min="0" max="100" value="0" required></div>
+                </div>
+                <div><label class="leave-form-label">상태</label>
+                    <select id="goalTaskStatus" class="form-input">
+                        <option value="progress">진행 중</option>
+                        <option value="done">완료</option>
+                        <option value="hold">보류</option>
+                    </select>
+                </div>
+                <div><label class="leave-form-label">실행 내용</label><textarea id="goalTaskSummary" class="form-input" rows="3"></textarea></div>
+                <div><label class="leave-form-label">이슈·지원 요청 (선택)</label><textarea id="goalTaskIssue" class="form-input" rows="2"></textarea></div>
+                <div style="margin-top:8px;display:flex;justify-content:space-between;">
+                    <button type="button" id="goalTaskDelete" class="menu-delete-btn" style="display:none;">🗑 삭제</button>
+                    <button type="submit" class="save-btn" style="font-size:13px;padding:9px 22px;margin-left:auto;">💾 저장</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <!-- Leave Input Modal -->
@@ -1957,8 +2154,8 @@
     </script>
 
     <!-- Supabase JS Client -->
-    <script src="db.js?v=20260628m"></script>
-    <script src="data.js?v=20260628m"></script>
-    <script src="app.js?v=20260628m"></script>
+    <script src="db.js?v=20260628p"></script>
+    <script src="data.js?v=20260628p"></script>
+    <script src="app.js?v=20260628p"></script>
 </body>
 </html>
