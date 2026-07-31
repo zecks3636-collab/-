@@ -1248,7 +1248,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('goalActivitySupport').value = a ? (a.support||'') : '';
         document.getElementById('goalActivityNextPlan').value = a ? (a.next_plan||'') : '';
         if (a && a.reporter) document.getElementById('goalActivityReporter').value = a.reporter;
-        modal.style.display = 'flex';
+        modal.style.display = '';
+        modal.classList.add('active');
     }
     // 목표 선택 변경 시 담당자 select도 해당 팀 소속으로 갱신
     document.getElementById('goalActivityGoalId')?.addEventListener('change', (e) => {
@@ -1256,7 +1257,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('goalsActivityAdd')?.addEventListener('click', () => openActivityModal(null, currentGoalQuarter));
     document.getElementById('closeGoalActivityModal')?.addEventListener('click', () => {
-        document.getElementById('goalActivityModal').style.display = 'none';
+        document.getElementById('goalActivityModal').classList.remove('active');
+    });
+    document.getElementById('goalActivityModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'goalActivityModal') e.currentTarget.classList.remove('active');
     });
     document.getElementById('goalActivityForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1278,7 +1282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!res.ok) throw new Error(await res.text());
             await loadGoalsData();
             renderGoalsAll();
-            document.getElementById('goalActivityModal').style.display = 'none';
+            document.getElementById('goalActivityModal').classList.remove('active');
         } catch(err) {
             alert('저장 실패: ' + err.message);
         }
@@ -1313,11 +1317,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('goalTaskStatus').value = 'progress';
             if (delBtn) delBtn.style.display = 'none';
         }
-        modal.style.display = 'flex';
+        modal.style.display = '';
+        modal.classList.add('active');
     }
     document.getElementById('goalsTaskAdd')?.addEventListener('click', () => openTaskModal(null));
     document.getElementById('closeGoalTaskModal')?.addEventListener('click', () => {
-        document.getElementById('goalTaskModal').style.display = 'none';
+        document.getElementById('goalTaskModal').classList.remove('active');
+    });
+    document.getElementById('goalTaskModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'goalTaskModal') e.currentTarget.classList.remove('active');
     });
     document.getElementById('goalTaskTeam')?.addEventListener('change', (e) => {
         _fillTaskOwnerSelect(e.target.value, null);
@@ -1331,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!res.ok) throw new Error(await res.text());
             await loadGoalsData();
             renderGoalsTasks();
-            document.getElementById('goalTaskModal').style.display = 'none';
+            document.getElementById('goalTaskModal').classList.remove('active');
         } catch(err) { alert('삭제 실패: ' + err.message); }
     });
     document.getElementById('goalTaskForm')?.addEventListener('submit', async (e) => {
@@ -1361,7 +1369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!res.ok) throw new Error(await res.text());
             await loadGoalsData();
             renderGoalsTasks();
-            document.getElementById('goalTaskModal').style.display = 'none';
+            document.getElementById('goalTaskModal').classList.remove('active');
         } catch(err) { alert('저장 실패: ' + err.message); }
     });
 
