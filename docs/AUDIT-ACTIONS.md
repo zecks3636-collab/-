@@ -93,8 +93,9 @@
 
 아래 57개 action은 `audit_registry.py`가 SSOT다. 자동 경계는 handler가 정상 반환한
 시점이며 write route는 그 전에 DB commit이 끝난다. `401/403=DENY`, 그 밖의
-`4xx/5xx=FAIL`, `2xx/3xx=SUCCESS`다. 단 `/api/schedule_imports/poll`이 HTTP 200으로
-상위 Sheet 실패를 반환하는 기존 계약은 endpoint marker가 2계층만 `FAIL`로 덮어쓴다.
+`4xx/5xx=FAIL`, `2xx/3xx=SUCCESS`다. 단 `/api/menu_auto_poll`과
+`/api/schedule_imports/poll`이 HTTP 200 응답 안에 전체·부분 처리 실패를 반환하는 기존
+계약은 endpoint marker가 2계층만 `FAIL`로 덮어쓴다.
 
 | action | business_action | log_type | method / route | terminal 경계 | actor | target.type / id | outcome / 정책 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -138,7 +139,7 @@
 | `UPDATE` | `MENU_IMAGE_AUTOMATION_UPLOAD` | `BATCH` | `POST /api/menu_auto` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `ANONYMOUS` | `menu_image / weekly` | status 기반 / fail-isolated |
 | `UPDATE` | `MENU_IMAGE_AUTOMATION_B64_UPLOAD` | `BATCH` | `POST /api/menu_auto_b64` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `ANONYMOUS` | `menu_image / weekly` | status 기반 / fail-isolated |
 | `UPDATE` | `MENU_IMAGE_AUTOMATION_DRIVE_UPLOAD` | `BATCH` | `POST /api/menu_auto_drive` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `ANONYMOUS` | `menu_image / weekly` | status 기반 / fail-isolated |
-| `EXECUTE` | `MENU_IMAGE_SYNC_RUN` | `BATCH` | `POST /api/menu_auto_poll` | polling terminal 응답 | `ANONYMOUS` | `menu_image_sync / current` | status 기반 / fail-isolated |
+| `EXECUTE` | `MENU_IMAGE_SYNC_RUN` | `BATCH` | `POST /api/menu_auto_poll` | polling terminal 응답 | `ANONYMOUS` | `menu_image_sync / current` | endpoint override 포함 / fail-isolated |
 | `UPDATE` | `MENU_WEEK_BATCH_UPSERT` | `BATCH` | `POST /api/menu_weeks/upsert` | batch upsert commit 후 | `ANONYMOUS` | `menu_week / batch` | status 기반 / fail-isolated |
 | `CREATE` | `PRAISE_CARD_CREATE` | `DOMAIN` | `POST /api/praise_cards` | insert commit 후 | `ANONYMOUS` | `praise_card / created` | status 기반 / fail-isolated |
 | `CREATE` | `PRAISE_STICKER_CREATE` | `DOMAIN` | `POST /api/praise_stickers` | insert commit 또는 duplicate terminal | `ANONYMOUS` | `praise_sticker / created` | status 기반 / fail-isolated |

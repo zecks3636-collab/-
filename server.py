@@ -662,6 +662,11 @@ def menu_auto_poll():
             processed.append({"file": filename, "error": str(e)})
     if not processed:
         return {"status": "no_new", "message": "처리할 항목 없음"}
+    if any("error" in item for item in processed):
+        mark_business_outcome(
+            "FAIL",
+            expected_route=("POST", "/api/menu_auto_poll"),
+        )
     return {"status": "ok", "processed": processed}
 
 # ── 일정표 자동 import (Google Drive 폴더 감시 + diff 미리보기) ──
@@ -930,6 +935,14 @@ def schedule_imports_poll():
             processed.append({"file": filename, "error": str(e)})
     if not processed:
         return {"status": "no_new"}
+    if any(
+        "error" in item or "auto_apply_error" in item
+        for item in processed
+    ):
+        mark_business_outcome(
+            "FAIL",
+            expected_route=("POST", "/api/schedule_imports/poll"),
+        )
     return {"status": "ok", "processed": processed}
 
 @app.post("/api/schedule_imports/{import_id}/reject")

@@ -425,6 +425,19 @@ class FastApiAuditIntegrationTests(unittest.TestCase):
 
 
 class ProductionAppSmokeTests(unittest.TestCase):
+    def _database_without_rows(self):
+        connection = mock.MagicMock()
+        connection.__enter__.return_value = connection
+        cursor = mock.MagicMock()
+        connection.cursor.return_value.__enter__.return_value = cursor
+        cursor.fetchone.return_value = None
+        return connection
+
+    def _csv_response(self, content):
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = content.encode()
+        return response
+
     @mock.patch.object(audit_integration, "record_audit")
     def test_static_ui_and_technical_routes_are_excluded_and_sources_are_blocked(
         self, record
@@ -443,6 +456,62 @@ class ProductionAppSmokeTests(unittest.TestCase):
                 with self.subTest(path=path):
                     self.assertEqual(client.get(path).status_code, 404)
         record.assert_not_called()
+
+    @mock.patch.object(audit_integration, "record_audit")
+    def test_menu_poll_partial_failure_marks_only_business_layer_failed(self, record):
+        import server
+
+        sheet = self._csv_response(
+            "url,filename,timestamp,done\n"
+            "https://example.invalid/menu.pdf,menu.pdf,2026-08-01,\n"
+        )
+        with (
+            mock.patch.object(server, "get_conn", return_value=self._database_without_rows()),
+            mock.patch.object(
+                audit_sdk.urllib.request,
+                "urlopen",
+                side_effect=[sheet, OSError("synthetic drive failure")],
+            ),
+            TestClient(server.app) as client,
+        ):
+            response = client.post("/api/menu_auto_poll")
+
+        self.assertEqual(response.status_code, 200)
+        by_action = {
+            event["business_action"]: event for event in _captured_events(record)
+        }
+        self.assertEqual(by_action["API_REQUEST"]["outcome"], "SUCCESS")
+        self.assertEqual(by_action["MENU_IMAGE_SYNC_RUN"]["outcome"], "FAIL")
+
+    @mock.patch.object(audit_integration, "record_audit")
+    def test_schedule_poll_partial_failure_marks_only_business_layer_failed(self, record):
+        import server
+
+        sheet = self._csv_response(
+            "company,url,filename,timestamp,done\n"
+            "Group,https://example.invalid/schedule.pdf,schedule.pdf,2026-08-01,\n"
+        )
+        with (
+            mock.patch.object(server, "get_conn", return_value=self._database_without_rows()),
+            mock.patch.object(audit_sdk.urllib.request, "urlopen", return_value=sheet),
+            mock.patch.object(
+                server,
+                "schedule_imports_submit",
+                side_effect=server.HTTPException(
+                    status_code=500,
+                    detail="synthetic import failure",
+                ),
+            ),
+            TestClient(server.app) as client,
+        ):
+            response = client.post("/api/schedule_imports/poll")
+
+        self.assertEqual(response.status_code, 200)
+        by_action = {
+            event["business_action"]: event for event in _captured_events(record)
+        }
+        self.assertEqual(by_action["API_REQUEST"]["outcome"], "SUCCESS")
+        self.assertEqual(by_action["SCHEDULE_IMPORT_SYNC_RUN"]["outcome"], "FAIL")
 
 
 if __name__ == "__main__":
