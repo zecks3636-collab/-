@@ -1937,6 +1937,64 @@ body {
     padding: 2px 7px;
     border-radius: 6px;
 }
+/* 카드 리액션 바 (좋아요·공감·축하) */
+.thanks-reactions {
+    display: flex;
+    gap: 6px;
+    padding-top: 8px;
+    margin-top: 6px;
+    border-top: 1px dashed #e2e8f0;
+    flex-wrap: wrap;
+}
+.thanks-reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 26px;
+    line-height: 1;
+    font-family: inherit;
+}
+.thanks-reaction:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+.thanks-reaction.is-mine {
+    background: #eef2ff;
+    border-color: #6366f1;
+    color: #4338ca;
+    font-weight: 700;
+}
+.thanks-reaction.is-mine:hover {
+    background: #e0e7ff;
+}
+.thanks-reaction.is-empty {
+    opacity: 0.55;
+}
+.thanks-reaction.is-empty:hover {
+    opacity: 1;
+}
+.thanks-reaction-emoji {
+    font-size: 15px;
+    line-height: 1;
+}
+.thanks-reaction-count {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    font-variant-numeric: tabular-nums;
+    min-width: 10px;
+    text-align: center;
+}
+.thanks-reaction.is-mine .thanks-reaction-count { color: #4338ca; }
+
 .thanks-card-del {
     background: transparent;
     border: none;

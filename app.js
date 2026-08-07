@@ -636,6 +636,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         '감사': { bg: '#ede9fe', text: '#4c1d95' },
     };
     let thanksCards = [];
+    let thanksReactions = [];  // 전체 리액션 캐시: [{id, card_id, from_name, to_name, sticker, created_at}, ...]
+    const REACTION_EMOJIS = ['👍', '❤️', '🎉'];  // 표준 3종: 좋아요·공감·축하
+    const REACTION_LABELS = { '👍': '좋아요', '❤️': '공감', '🎉': '축하' };
 
     function getThanksYM() {
         return `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}`;
@@ -697,6 +700,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             const canDelete = myName && myName === c.from_name;
+            // 이 카드의 리액션 집계
+            const cardReactions = thanksReactions.filter(r => r.card_id === c.id);
+            const reactionBar = REACTION_EMOJIS.map(emoji => {
+                const users = cardReactions.filter(r => r.sticker === emoji);
+                const count = users.length;
+                const myReacted = myName && users.some(r => r.from_name === myName);
+                const tooltip = users.length
+                    ? `${REACTION_LABELS[emoji]}: ${users.map(u => u.from_name).join(', ')}`
+                    : `${REACTION_LABELS[emoji]} 남기기`;
+                return `<button class="thanks-reaction${myReacted ? ' is-mine' : ''}${count === 0 ? ' is-empty' : ''}"
+                    data-card-id="${c.id}" data-emoji="${emoji}"
+                    title="${escapeHtml(tooltip)}">
+                    <span class="thanks-reaction-emoji">${emoji}</span>
+                    ${count > 0 ? `<span class="thanks-reaction-count">${count}</span>` : ''}
+                </button>`;
+            }).join('');
             return `
                 <div class="thanks-card">
                     <div class="thanks-card-top">
@@ -709,8 +728,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="thanks-card-date">${created}</span>
                         ${canDelete ? `<button class="thanks-card-del" data-id="${c.id}" title="내가 쓴 카드 삭제">🗑</button>` : ''}
                     </div>
+                    <div class="thanks-reactions">${reactionBar}</div>
                 </div>`;
         }).join('');
+
+        // 리액션 버튼 바인딩 (토글)
+        grid.querySelectorAll('.thanks-reaction').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const cardId = btn.getAttribute('data-card-id');
+                const emoji  = btn.getAttribute('data-emoji');
+                await toggleReaction(cardId, emoji);
+            });
+        });
 
         // 삭제 버튼 바인딩
         grid.querySelectorAll('.thanks-card-del').forEach(btn => {
@@ -782,6 +812,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch(e) {
             console.warn('praise_cards 로드 실패:', e.message);
             thanksCards = [];
+        }
+        // 리액션도 함께 로드 (LIMIT 200으로 최근 200건까지)
+        try {
+            const rr = await fetch('/api/praise_stickers');
+            if (rr.ok) thanksReactions = await rr.json();
+        } catch(e) {
+            console.warn('praise_stickers 로드 실패:', e.message);
+            thanksReactions = [];
+        }
+        renderThanksCards();
+    }
+
+    // 리액션 토글: 이미 눌렀으면 삭제, 아니면 추가
+    async function toggleReaction(cardId, emoji) {
+        const myName = (document.getElementById('thanksMeSelect') || {}).value || '';
+        if (!myName) { alert('내 이름을 먼저 선택해주세요 (상단 우측)'); return; }
+        const card = thanksCards.find(c => c.id === cardId);
+        if (!card) return;
+
+        // 이미 누른 리액션인가?
+        const existing = thanksReactions.find(r =>
+            r.card_id === cardId && r.from_name === myName && r.sticker === emoji);
+
+        if (existing) {
+            // 삭제
+            try {
+                const res = await fetch(`/api/praise_stickers/${existing.id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error(await res.text());
+                thanksReactions = thanksReactions.filter(r => r.id !== existing.id);
+            } catch(err) {
+                alert('리액션 취소 실패: ' + err.message); return;
+            }
+        } else {
+            // 추가
+            try {
+                const res = await fetch('/api/praise_stickers', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        card_id: cardId,
+                        from_name: myName,
+                        to_name: card.to_name,
+                        sticker: emoji,
+                    }),
+                });
+                if (!res.ok) throw new Error(await res.text());
+                const created = await res.json();
+                if (created && created.id) {
+                    thanksReactions.push(created);
+                }
+            } catch(err) {
+                alert('리액션 저장 실패: ' + err.message); return;
+            }
         }
         renderThanksCards();
     }
