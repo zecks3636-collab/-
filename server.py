@@ -6,9 +6,23 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 
+from audit_integration import (
+    init_fastapi_api_audit,
+    mark_business_outcome,
+    mark_verified_service,
+)
+from usage_tracker import init_fastapi_usage_tracking
+
 app = FastAPI()
+init_fastapi_usage_tracking(
+    app,
+    page_view_mode="none",
+    api_tracking="mutations",
+    api_prefix="/api/",
+)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
+init_fastapi_api_audit(app)
 
 # ── DB 접속 (Secrets Manager → 환경변수 폴백) ──
 def get_db_config():
@@ -504,6 +518,10 @@ async def menu_auto_upload(
 ):
     if x_menu_token != MENU_AUTO_TOKEN:
         raise HTTPException(status_code=403, detail="invalid token")
+    mark_verified_service(
+        "menu_automation",
+        expected_route=("POST", "/api/menu_auto"),
+    )
     data = await file.read()
     if not (file.content_type == "application/pdf" or
             file.filename.lower().endswith(".pdf")):
@@ -533,6 +551,10 @@ class MenuAutoB64(BaseModel):
 def menu_auto_b64(body: MenuAutoB64):
     if body.token != MENU_AUTO_TOKEN:
         raise HTTPException(status_code=403, detail="invalid token")
+    mark_verified_service(
+        "menu_automation",
+        expected_route=("POST", "/api/menu_auto_b64"),
+    )
     data = base64.b64decode(body.pdf_base64)
     jpeg = _pdf_to_jpeg(data)
     wk = body.week_key or _next_monday(datetime.date.today())
@@ -559,6 +581,10 @@ class MenuAutoDrive(BaseModel):
 def menu_auto_drive(body: MenuAutoDrive):
     if body.token != MENU_AUTO_TOKEN:
         raise HTTPException(status_code=403, detail="invalid token")
+    mark_verified_service(
+        "menu_automation",
+        expected_route=("POST", "/api/menu_auto_drive"),
+    )
     import urllib.request
     try:
         with urllib.request.urlopen(body.drive_url, timeout=30) as r:
@@ -636,6 +662,11 @@ def menu_auto_poll():
             processed.append({"file": filename, "error": str(e)})
     if not processed:
         return {"status": "no_new", "message": "처리할 항목 없음"}
+    if any("error" in item for item in processed):
+        mark_business_outcome(
+            "FAIL",
+            expected_route=("POST", "/api/menu_auto_poll"),
+        )
     return {"status": "ok", "processed": processed}
 
 # ── 일정표 자동 import (Google Drive 폴더 감시 + diff 미리보기) ──
@@ -673,6 +704,10 @@ def schedule_imports_submit(body: ScheduleImportSubmit):
     """Apps Script가 신규 파일 발견 시 호출 → 파싱 + diff 계산 + 저장"""
     if body.token != SCHEDULE_AUTO_TOKEN:
         raise HTTPException(status_code=403, detail="invalid token")
+    mark_verified_service(
+        "schedule_automation",
+        expected_route=("POST", "/api/schedule_imports/submit"),
+    )
     if body.company not in ("Group", "NBT", "BIO"):
         raise HTTPException(status_code=400, detail="invalid company")
     _ensure_schedule_imports_table()
@@ -845,6 +880,10 @@ def schedule_imports_poll():
         with urllib.request.urlopen(sheet_url, timeout=15) as r:
             text = r.read().decode("utf-8-sig")
     except Exception as e:
+        mark_business_outcome(
+            "FAIL",
+            expected_route=("POST", "/api/schedule_imports/poll"),
+        )
         return {"status": "error", "message": f"Sheet read failed: {e}"}
     rows = list(csvmod.reader(text.splitlines()))
     if len(rows) < 2:
@@ -896,6 +935,14 @@ def schedule_imports_poll():
             processed.append({"file": filename, "error": str(e)})
     if not processed:
         return {"status": "no_new"}
+    if any(
+        "error" in item or "auto_apply_error" in item
+        for item in processed
+    ):
+        mark_business_outcome(
+            "FAIL",
+            expected_route=("POST", "/api/schedule_imports/poll"),
+        )
     return {"status": "ok", "processed": processed}
 
 @app.post("/api/schedule_imports/{import_id}/reject")

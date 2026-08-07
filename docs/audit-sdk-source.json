@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/PI-INNOVATION-DIVISION-IT/COSMAX-CM-AUDIT-SDK",
+  "tag": "v0.1.0-alpha.1",
+  "commit": "09f0cd27eb6b04b66fb24fdf9c10f3772567bc64",
+  "files": [
+    {
+      "source": "distributions/incubation/audit_sdk.py",
+      "destination": "audit_sdk.py",
+      "sha256": "1b473dfba4e03811ab52bbd1d904b905573a93929d5449ab2f63952411c34a5e"
+    }
+  ]
+}

@@ -16,3 +16,11 @@ run:
       value: "postgres"
     - name: PYTHONPATH
       value: "/app/packages"
+
+    - name: USAGE_INGEST_URL
+      value: https://portal.cosmaxhub.com/api/usage/events
+    - name: USAGE_SERVICE_ID
+      value: btischeduleinfo
+  secrets:
+    - name: USAGE_INGEST_TOKEN
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_btischeduleinfo/usage-token-2Bo8qK"
