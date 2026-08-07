@@ -984,7 +984,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return activitiesCache.filter(a=>a.goal_id===goalId).reduce((s,a)=>s+Number(a.actual||0),0);
     }
     function _pct(actual, target) {
-        if (!target) return 0;
+        // 목표가 0이더라도 실적이 있으면 100%로 표시 (계획에 없던 초과 활동을 완료로 인정)
+        if (!target) return actual > 0 ? 100 : 0;
         // 정수 %로 반환 (소수점 없음)
         return Math.min(999, Math.round(actual*100/target));
     }
