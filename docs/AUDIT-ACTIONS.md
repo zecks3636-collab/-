@@ -9,8 +9,10 @@
 - 실패 정책: 전 경로 `strict=false` 기본 fail-isolated
 - 상관관계: 외부 header를 버리고 요청마다 서버가 만든 별도 UUID v4
   `request_id`와 `trace_id`를 같은 요청의 두 계층에 공유
-- actor: 검증 marker가 없는 호출은 `ANONYMOUS`. 식단·일정 자동화 credential을
-  endpoint가 실제 검증한 뒤에만 `SERVICE`; body/header의 값 자체는 actor가 아님
+- actor: 사람 요청은 서버가 검증한 SSO 세션의 불변 UUID만 `USER`로 사용한다.
+  식단·일정 동기화·배치 경로는 브라우저 쿠키와 무관하게 `SYSTEM`이며, endpoint가
+  별도 machine credential을 실제 검증한 경우에만 더 구체적인 `SERVICE`가 우선한다.
+  body/header가 주장하는 email·UPN은 actor의 근거로 사용하지 않는다.
 - target: 아래 registry의 비식별 상수만 사용. 이름·메일·사번·제목·파일명·route 실값 금지
 
 ## 1계층 API Coverage
@@ -99,63 +101,63 @@
 
 | action | business_action | log_type | method / route | terminal 경계 | actor | target.type / id | outcome / 정책 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `DELETE` | `BIRTHDAY_DELETE` | `DOMAIN` | `DELETE /api/birthdays/{birthday_id}` | delete commit 후 | `ANONYMOUS` | `birthday / selected` | status 기반 / fail-isolated |
-| `DELETE` | `EVENT_COLOR_DELETE` | `DOMAIN` | `DELETE /api/event_colors/{event_id}` | delete commit 후 | `ANONYMOUS` | `event_color / selected` | status 기반 / fail-isolated |
-| `DELETE` | `EXECUTIVE_TASK_DELETE` | `DOMAIN` | `DELETE /api/executive_tasks/{task_id}` | delete commit 후 | `ANONYMOUS` | `executive_task / selected` | status 기반 / fail-isolated |
-| `DELETE` | `SCHEDULE_FILE_DELETE` | `DOMAIN` | `DELETE /api/files/{folder}/{file_id}` | delete commit 후 | `ANONYMOUS` | `schedule_file / selected` | status 기반 / fail-isolated |
-| `DELETE` | `GOAL_ACTIVITY_DELETE` | `DOMAIN` | `DELETE /api/goal_activities/{activity_id}` | delete commit 후 | `ANONYMOUS` | `goal_activity / selected` | status 기반 / fail-isolated |
-| `DELETE` | `GOAL_DELETE` | `DOMAIN` | `DELETE /api/goals/{goal_id}` | delete commit 후 | `ANONYMOUS` | `goal / selected` | status 기반 / fail-isolated |
-| `DELETE` | `LEAVE_PLAN_DELETE` | `DOMAIN` | `DELETE /api/leave_plans/{leave_id}` | delete commit 후 | `ANONYMOUS` | `leave_plan / selected` | status 기반 / fail-isolated |
-| `DELETE` | `MENU_WEEK_DELETE` | `DOMAIN` | `DELETE /api/menu_weeks/{week_key}` | delete commit 후 | `ANONYMOUS` | `menu_week / selected` | status 기반 / fail-isolated |
-| `DELETE` | `PRAISE_CARD_DELETE` | `DOMAIN` | `DELETE /api/praise_cards/{card_id}` | delete commit 후 | `ANONYMOUS` | `praise_card / selected` | status 기반 / fail-isolated |
-| `DELETE` | `PRAISE_STICKER_DELETE` | `DOMAIN` | `DELETE /api/praise_stickers/{sticker_id}` | delete commit 후 | `ANONYMOUS` | `praise_sticker / selected` | status 기반 / fail-isolated |
-| `DELETE` | `REQUEST_MONTH_DELETE` | `DOMAIN` | `DELETE /api/request_months/{month_key}` | delete commit 후 | `ANONYMOUS` | `request_month / selected` | status 기반 / fail-isolated |
-| `DELETE` | `REQUEST_SCHEDULE_DELETE` | `DOMAIN` | `DELETE /api/request_schedules/{item_id}` | delete commit 후 | `ANONYMOUS` | `request_schedule / selected` | status 기반 / fail-isolated |
-| `DELETE` | `SCHEDULE_BATCH_DELETE` | `BATCH` | `DELETE /api/schedules` | batch delete commit 후 | `ANONYMOUS` | `schedule / batch` | status 기반 / fail-isolated |
-| `DELETE` | `SCHEDULE_DELETE` | `DOMAIN` | `DELETE /api/schedules/{schedule_id}` | delete commit 후 | `ANONYMOUS` | `schedule / selected` | status 기반 / fail-isolated |
-| `DELETE` | `MENU_IMAGE_DELETE` | `DOMAIN` | `DELETE /api/storage/menu-images/{week_key}` | image clear commit 후 | `ANONYMOUS` | `menu_image / selected` | status 기반 / fail-isolated |
-| `DELETE` | `REQUEST_IMAGE_DELETE` | `DOMAIN` | `DELETE /api/storage/request-images/{month_key}` | image clear commit 후 | `ANONYMOUS` | `request_image / selected` | status 기반 / fail-isolated |
-| `READ` | `BIRTHDAY_DIRECTORY_READ` | `DATA_ACCESS` | `GET /api/birthdays` | 민감 목록 응답 확정 | `ANONYMOUS` | `birthday / all` | status 기반 / fail-isolated |
-| `READ` | `EXECUTIVE_TASKS_READ` | `DATA_ACCESS` | `GET /api/executive_tasks` | 민감 목록 응답 확정 | `ANONYMOUS` | `executive_task / filtered` | status 기반 / fail-isolated |
-| `READ` | `SCHEDULE_FILE_LIST_READ` | `DATA_ACCESS` | `GET /api/files/{folder}` | 파일 목록 응답 확정 | `ANONYMOUS` | `schedule_file / folder` | status 기반 / fail-isolated |
-| `EXPORT` | `SCHEDULE_FILE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/files/{folder}/{file_id}` | 파일 응답 승인·생성 후 | `ANONYMOUS` | `schedule_file / selected` | status 기반 / fail-isolated |
-| `READ` | `GOAL_ACTIVITIES_READ` | `DATA_ACCESS` | `GET /api/goal_activities` | 민감 목록 응답 확정 | `ANONYMOUS` | `goal_activity / filtered` | status 기반 / fail-isolated |
-| `READ` | `GOALS_READ` | `DATA_ACCESS` | `GET /api/goals` | 민감 목록 응답 확정 | `ANONYMOUS` | `goal / all` | status 기반 / fail-isolated |
-| `READ` | `GROUP_CALENDAR_SYNC_READ` | `DATA_ACCESS` | `GET /api/group_ics_events` | 외부 캘린더 조회 완료 | `ANONYMOUS` | `group_calendar / current` | status 기반 / fail-isolated |
-| `READ` | `LEAVE_PLANS_READ` | `DATA_ACCESS` | `GET /api/leave_plans` | 민감 목록 응답 확정 | `ANONYMOUS` | `leave_plan / all` | status 기반 / fail-isolated |
-| `READ` | `PRAISE_CARDS_READ` | `DATA_ACCESS` | `GET /api/praise_cards` | 민감 목록 응답 확정 | `ANONYMOUS` | `praise_card / filtered` | status 기반 / fail-isolated |
-| `READ` | `PRAISE_STICKERS_READ` | `DATA_ACCESS` | `GET /api/praise_stickers` | 민감 목록 응답 확정 | `ANONYMOUS` | `praise_sticker / filtered` | status 기반 / fail-isolated |
-| `READ` | `SCHEDULE_IMPORTS_READ` | `DATA_ACCESS` | `GET /api/schedule_imports` | import 목록 응답 확정 | `ANONYMOUS` | `schedule_import / filtered` | status 기반 / fail-isolated |
-| `READ` | `SCHEDULE_IMPORT_DETAIL_READ` | `DATA_ACCESS` | `GET /api/schedule_imports/{import_id}` | import 상세 응답 확정 | `ANONYMOUS` | `schedule_import / selected` | status 기반 / fail-isolated |
-| `EXPORT` | `MENU_IMAGE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/storage/menu-images/{week_key}` | 이미지 응답 생성 후 | `ANONYMOUS` | `menu_image / selected` | status 기반 / fail-isolated |
-| `EXPORT` | `REQUEST_IMAGE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/storage/request-images/{month_key}` | 이미지 응답 생성 후 | `ANONYMOUS` | `request_image / selected` | status 기반 / fail-isolated |
-| `UPDATE` | `BIRTHDAY_UPSERT` | `DOMAIN` | `POST /api/birthdays` | upsert commit 후 | `ANONYMOUS` | `birthday / selected` | status 기반 / fail-isolated |
-| `UPDATE` | `EVENT_COLOR_UPSERT` | `DOMAIN` | `POST /api/event_colors` | upsert commit 후 | `ANONYMOUS` | `event_color / selected` | status 기반 / fail-isolated |
-| `CREATE` | `EXECUTIVE_TASK_CREATE` | `DOMAIN` | `POST /api/executive_tasks` | insert commit 후 | `ANONYMOUS` | `executive_task / created` | status 기반 / fail-isolated |
-| `CREATE` | `SCHEDULE_FILE_UPLOAD` | `DOMAIN` | `POST /api/files/{folder}` | 파일 insert commit 후 | `ANONYMOUS` | `schedule_file / uploaded` | status 기반 / fail-isolated |
-| `UPDATE` | `GOAL_ACTIVITY_UPSERT` | `DOMAIN` | `POST /api/goal_activities` | upsert commit 후 | `ANONYMOUS` | `goal_activity / selected` | status 기반 / fail-isolated |
-| `CREATE` | `GOAL_CREATE` | `DOMAIN` | `POST /api/goals` | insert commit 후 | `ANONYMOUS` | `goal / created` | status 기반 / fail-isolated |
-| `CREATE` | `LEAVE_PLAN_BATCH_CREATE` | `BATCH` | `POST /api/leave_plans` | batch insert commit 후 | `ANONYMOUS` | `leave_plan / batch` | status 기반 / fail-isolated |
-| `UPDATE` | `MENU_IMAGE_AUTOMATION_UPLOAD` | `BATCH` | `POST /api/menu_auto` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `ANONYMOUS` | `menu_image / weekly` | status 기반 / fail-isolated |
-| `UPDATE` | `MENU_IMAGE_AUTOMATION_B64_UPLOAD` | `BATCH` | `POST /api/menu_auto_b64` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `ANONYMOUS` | `menu_image / weekly` | status 기반 / fail-isolated |
-| `UPDATE` | `MENU_IMAGE_AUTOMATION_DRIVE_UPLOAD` | `BATCH` | `POST /api/menu_auto_drive` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `ANONYMOUS` | `menu_image / weekly` | status 기반 / fail-isolated |
-| `EXECUTE` | `MENU_IMAGE_SYNC_RUN` | `BATCH` | `POST /api/menu_auto_poll` | polling terminal 응답 | `ANONYMOUS` | `menu_image_sync / current` | endpoint override 포함 / fail-isolated |
-| `UPDATE` | `MENU_WEEK_BATCH_UPSERT` | `BATCH` | `POST /api/menu_weeks/upsert` | batch upsert commit 후 | `ANONYMOUS` | `menu_week / batch` | status 기반 / fail-isolated |
-| `CREATE` | `PRAISE_CARD_CREATE` | `DOMAIN` | `POST /api/praise_cards` | insert commit 후 | `ANONYMOUS` | `praise_card / created` | status 기반 / fail-isolated |
-| `CREATE` | `PRAISE_STICKER_CREATE` | `DOMAIN` | `POST /api/praise_stickers` | insert commit 또는 duplicate terminal | `ANONYMOUS` | `praise_sticker / created` | status 기반 / fail-isolated |
-| `UPDATE` | `REQUEST_MONTH_BATCH_UPSERT` | `BATCH` | `POST /api/request_months/upsert` | batch upsert commit 후 | `ANONYMOUS` | `request_month / batch` | status 기반 / fail-isolated |
-| `UPDATE` | `REQUEST_SCHEDULE_BATCH_UPSERT` | `BATCH` | `POST /api/request_schedules/upsert` | batch upsert commit 후 | `ANONYMOUS` | `request_schedule / batch` | status 기반 / fail-isolated |
-| `EXECUTE` | `SCHEDULE_IMPORT_SYNC_RUN` | `BATCH` | `POST /api/schedule_imports/poll` | polling/내부 적용 terminal 응답 | `ANONYMOUS` | `schedule_import / current` | endpoint override 포함 / fail-isolated |
-| `CREATE` | `SCHEDULE_IMPORT_SUBMIT` | `BATCH` | `POST /api/schedule_imports/submit` | credential 검증·preview insert commit 후 | 검증 후 `SERVICE`, 그 외 `ANONYMOUS` | `schedule_import / pending` | status 기반 / fail-isolated |
-| `APPROVE` | `SCHEDULE_IMPORT_APPLY` | `BATCH` | `POST /api/schedule_imports/{import_id}/apply` | 변경·상태 commit 후 | `ANONYMOUS` | `schedule_import / selected` | status 기반 / fail-isolated |
-| `APPROVE` | `SCHEDULE_IMPORT_REJECT` | `BATCH` | `POST /api/schedule_imports/{import_id}/reject` | 반려 상태 commit 후 | `ANONYMOUS` | `schedule_import / selected` | status 기반 / fail-isolated |
-| `DELETE` | `SCHEDULE_BATCH_DELETE_ALIAS` | `BATCH` | `POST /api/schedules/delete` | batch delete commit 후 | `ANONYMOUS` | `schedule / batch` | status 기반 / fail-isolated |
-| `UPDATE` | `SCHEDULE_BATCH_UPSERT` | `BATCH` | `POST /api/schedules/upsert` | batch upsert commit 후 | `ANONYMOUS` | `schedule / batch` | status 기반 / fail-isolated |
-| `UPDATE` | `MENU_IMAGE_UPSERT` | `DOMAIN` | `POST /api/storage/menu-images/{week_key}` | image upsert commit 후 | `ANONYMOUS` | `menu_image / selected` | status 기반 / fail-isolated |
-| `UPDATE` | `REQUEST_IMAGE_UPSERT` | `DOMAIN` | `POST /api/storage/request-images/{month_key}` | image upsert commit 후 | `ANONYMOUS` | `request_image / selected` | status 기반 / fail-isolated |
-| `UPDATE` | `EXECUTIVE_TASK_UPDATE` | `DOMAIN` | `PUT /api/executive_tasks/{task_id}` | update commit 후 | `ANONYMOUS` | `executive_task / selected` | status 기반 / fail-isolated |
-| `UPDATE` | `GOAL_UPDATE` | `DOMAIN` | `PUT /api/goals/{goal_id}` | update commit 후 | `ANONYMOUS` | `goal / selected` | status 기반 / fail-isolated |
-| `UPDATE` | `LEAVE_PLAN_UPDATE` | `DOMAIN` | `PUT /api/leave_plans/{leave_id}` | update commit 후 | `ANONYMOUS` | `leave_plan / selected` | status 기반 / fail-isolated |
+| `DELETE` | `BIRTHDAY_DELETE` | `DOMAIN` | `DELETE /api/birthdays/{birthday_id}` | delete commit 후 | `USER` | `birthday / selected` | status 기반 / fail-isolated |
+| `DELETE` | `EVENT_COLOR_DELETE` | `DOMAIN` | `DELETE /api/event_colors/{event_id}` | delete commit 후 | `USER` | `event_color / selected` | status 기반 / fail-isolated |
+| `DELETE` | `EXECUTIVE_TASK_DELETE` | `DOMAIN` | `DELETE /api/executive_tasks/{task_id}` | delete commit 후 | `USER` | `executive_task / selected` | status 기반 / fail-isolated |
+| `DELETE` | `SCHEDULE_FILE_DELETE` | `DOMAIN` | `DELETE /api/files/{folder}/{file_id}` | delete commit 후 | `USER` | `schedule_file / selected` | status 기반 / fail-isolated |
+| `DELETE` | `GOAL_ACTIVITY_DELETE` | `DOMAIN` | `DELETE /api/goal_activities/{activity_id}` | delete commit 후 | `USER` | `goal_activity / selected` | status 기반 / fail-isolated |
+| `DELETE` | `GOAL_DELETE` | `DOMAIN` | `DELETE /api/goals/{goal_id}` | delete commit 후 | `USER` | `goal / selected` | status 기반 / fail-isolated |
+| `DELETE` | `LEAVE_PLAN_DELETE` | `DOMAIN` | `DELETE /api/leave_plans/{leave_id}` | delete commit 후 | `USER` | `leave_plan / selected` | status 기반 / fail-isolated |
+| `DELETE` | `MENU_WEEK_DELETE` | `DOMAIN` | `DELETE /api/menu_weeks/{week_key}` | delete commit 후 | `USER` | `menu_week / selected` | status 기반 / fail-isolated |
+| `DELETE` | `PRAISE_CARD_DELETE` | `DOMAIN` | `DELETE /api/praise_cards/{card_id}` | delete commit 후 | `USER` | `praise_card / selected` | status 기반 / fail-isolated |
+| `DELETE` | `PRAISE_STICKER_DELETE` | `DOMAIN` | `DELETE /api/praise_stickers/{sticker_id}` | delete commit 후 | `USER` | `praise_sticker / selected` | status 기반 / fail-isolated |
+| `DELETE` | `REQUEST_MONTH_DELETE` | `DOMAIN` | `DELETE /api/request_months/{month_key}` | delete commit 후 | `USER` | `request_month / selected` | status 기반 / fail-isolated |
+| `DELETE` | `REQUEST_SCHEDULE_DELETE` | `DOMAIN` | `DELETE /api/request_schedules/{item_id}` | delete commit 후 | `USER` | `request_schedule / selected` | status 기반 / fail-isolated |
+| `DELETE` | `SCHEDULE_BATCH_DELETE` | `BATCH` | `DELETE /api/schedules` | batch delete commit 후 | `USER` | `schedule / batch` | status 기반 / fail-isolated |
+| `DELETE` | `SCHEDULE_DELETE` | `DOMAIN` | `DELETE /api/schedules/{schedule_id}` | delete commit 후 | `USER` | `schedule / selected` | status 기반 / fail-isolated |
+| `DELETE` | `MENU_IMAGE_DELETE` | `DOMAIN` | `DELETE /api/storage/menu-images/{week_key}` | image clear commit 후 | `USER` | `menu_image / selected` | status 기반 / fail-isolated |
+| `DELETE` | `REQUEST_IMAGE_DELETE` | `DOMAIN` | `DELETE /api/storage/request-images/{month_key}` | image clear commit 후 | `USER` | `request_image / selected` | status 기반 / fail-isolated |
+| `READ` | `BIRTHDAY_DIRECTORY_READ` | `DATA_ACCESS` | `GET /api/birthdays` | 민감 목록 응답 확정 | `USER` | `birthday / all` | status 기반 / fail-isolated |
+| `READ` | `EXECUTIVE_TASKS_READ` | `DATA_ACCESS` | `GET /api/executive_tasks` | 민감 목록 응답 확정 | `USER` | `executive_task / filtered` | status 기반 / fail-isolated |
+| `READ` | `SCHEDULE_FILE_LIST_READ` | `DATA_ACCESS` | `GET /api/files/{folder}` | 파일 목록 응답 확정 | `USER` | `schedule_file / folder` | status 기반 / fail-isolated |
+| `EXPORT` | `SCHEDULE_FILE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/files/{folder}/{file_id}` | 파일 응답 승인·생성 후 | `USER` | `schedule_file / selected` | status 기반 / fail-isolated |
+| `READ` | `GOAL_ACTIVITIES_READ` | `DATA_ACCESS` | `GET /api/goal_activities` | 민감 목록 응답 확정 | `USER` | `goal_activity / filtered` | status 기반 / fail-isolated |
+| `READ` | `GOALS_READ` | `DATA_ACCESS` | `GET /api/goals` | 민감 목록 응답 확정 | `USER` | `goal / all` | status 기반 / fail-isolated |
+| `READ` | `GROUP_CALENDAR_SYNC_READ` | `DATA_ACCESS` | `GET /api/group_ics_events` | 외부 캘린더 조회 완료 | `USER` | `group_calendar / current` | status 기반 / fail-isolated |
+| `READ` | `LEAVE_PLANS_READ` | `DATA_ACCESS` | `GET /api/leave_plans` | 민감 목록 응답 확정 | `USER` | `leave_plan / all` | status 기반 / fail-isolated |
+| `READ` | `PRAISE_CARDS_READ` | `DATA_ACCESS` | `GET /api/praise_cards` | 민감 목록 응답 확정 | `USER` | `praise_card / filtered` | status 기반 / fail-isolated |
+| `READ` | `PRAISE_STICKERS_READ` | `DATA_ACCESS` | `GET /api/praise_stickers` | 민감 목록 응답 확정 | `USER` | `praise_sticker / filtered` | status 기반 / fail-isolated |
+| `READ` | `SCHEDULE_IMPORTS_READ` | `DATA_ACCESS` | `GET /api/schedule_imports` | import 목록 응답 확정 | `USER` | `schedule_import / filtered` | status 기반 / fail-isolated |
+| `READ` | `SCHEDULE_IMPORT_DETAIL_READ` | `DATA_ACCESS` | `GET /api/schedule_imports/{import_id}` | import 상세 응답 확정 | `USER` | `schedule_import / selected` | status 기반 / fail-isolated |
+| `EXPORT` | `MENU_IMAGE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/storage/menu-images/{week_key}` | 이미지 응답 생성 후 | `USER` | `menu_image / selected` | status 기반 / fail-isolated |
+| `EXPORT` | `REQUEST_IMAGE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/storage/request-images/{month_key}` | 이미지 응답 생성 후 | `USER` | `request_image / selected` | status 기반 / fail-isolated |
+| `UPDATE` | `BIRTHDAY_UPSERT` | `DOMAIN` | `POST /api/birthdays` | upsert commit 후 | `USER` | `birthday / selected` | status 기반 / fail-isolated |
+| `UPDATE` | `EVENT_COLOR_UPSERT` | `DOMAIN` | `POST /api/event_colors` | upsert commit 후 | `USER` | `event_color / selected` | status 기반 / fail-isolated |
+| `CREATE` | `EXECUTIVE_TASK_CREATE` | `DOMAIN` | `POST /api/executive_tasks` | insert commit 후 | `USER` | `executive_task / created` | status 기반 / fail-isolated |
+| `CREATE` | `SCHEDULE_FILE_UPLOAD` | `DOMAIN` | `POST /api/files/{folder}` | 파일 insert commit 후 | `USER` | `schedule_file / uploaded` | status 기반 / fail-isolated |
+| `UPDATE` | `GOAL_ACTIVITY_UPSERT` | `DOMAIN` | `POST /api/goal_activities` | upsert commit 후 | `USER` | `goal_activity / selected` | status 기반 / fail-isolated |
+| `CREATE` | `GOAL_CREATE` | `DOMAIN` | `POST /api/goals` | insert commit 후 | `USER` | `goal / created` | status 기반 / fail-isolated |
+| `CREATE` | `LEAVE_PLAN_BATCH_CREATE` | `BATCH` | `POST /api/leave_plans` | batch insert commit 후 | `USER` | `leave_plan / batch` | status 기반 / fail-isolated |
+| `UPDATE` | `MENU_IMAGE_AUTOMATION_UPLOAD` | `BATCH` | `POST /api/menu_auto` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `SYSTEM` | `menu_image / weekly` | status 기반 / fail-isolated |
+| `UPDATE` | `MENU_IMAGE_AUTOMATION_B64_UPLOAD` | `BATCH` | `POST /api/menu_auto_b64` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `SYSTEM` | `menu_image / weekly` | status 기반 / fail-isolated |
+| `UPDATE` | `MENU_IMAGE_AUTOMATION_DRIVE_UPLOAD` | `BATCH` | `POST /api/menu_auto_drive` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `SYSTEM` | `menu_image / weekly` | status 기반 / fail-isolated |
+| `EXECUTE` | `MENU_IMAGE_SYNC_RUN` | `BATCH` | `POST /api/menu_auto_poll` | polling terminal 응답 | `SYSTEM` | `menu_image_sync / current` | endpoint override 포함 / fail-isolated |
+| `UPDATE` | `MENU_WEEK_BATCH_UPSERT` | `BATCH` | `POST /api/menu_weeks/upsert` | batch upsert commit 후 | `USER` | `menu_week / batch` | status 기반 / fail-isolated |
+| `CREATE` | `PRAISE_CARD_CREATE` | `DOMAIN` | `POST /api/praise_cards` | insert commit 후 | `USER` | `praise_card / created` | status 기반 / fail-isolated |
+| `CREATE` | `PRAISE_STICKER_CREATE` | `DOMAIN` | `POST /api/praise_stickers` | insert commit 또는 duplicate terminal | `USER` | `praise_sticker / created` | status 기반 / fail-isolated |
+| `UPDATE` | `REQUEST_MONTH_BATCH_UPSERT` | `BATCH` | `POST /api/request_months/upsert` | batch upsert commit 후 | `USER` | `request_month / batch` | status 기반 / fail-isolated |
+| `UPDATE` | `REQUEST_SCHEDULE_BATCH_UPSERT` | `BATCH` | `POST /api/request_schedules/upsert` | batch upsert commit 후 | `USER` | `request_schedule / batch` | status 기반 / fail-isolated |
+| `EXECUTE` | `SCHEDULE_IMPORT_SYNC_RUN` | `BATCH` | `POST /api/schedule_imports/poll` | polling/내부 적용 terminal 응답 | `SYSTEM` | `schedule_import / current` | endpoint override 포함 / fail-isolated |
+| `CREATE` | `SCHEDULE_IMPORT_SUBMIT` | `BATCH` | `POST /api/schedule_imports/submit` | credential 검증·preview insert commit 후 | 검증 후 `SERVICE`, 그 외 `SYSTEM` | `schedule_import / pending` | status 기반 / fail-isolated |
+| `APPROVE` | `SCHEDULE_IMPORT_APPLY` | `BATCH` | `POST /api/schedule_imports/{import_id}/apply` | 변경·상태 commit 후 | `USER` | `schedule_import / selected` | status 기반 / fail-isolated |
+| `APPROVE` | `SCHEDULE_IMPORT_REJECT` | `BATCH` | `POST /api/schedule_imports/{import_id}/reject` | 반려 상태 commit 후 | `USER` | `schedule_import / selected` | status 기반 / fail-isolated |
+| `DELETE` | `SCHEDULE_BATCH_DELETE_ALIAS` | `BATCH` | `POST /api/schedules/delete` | batch delete commit 후 | `USER` | `schedule / batch` | status 기반 / fail-isolated |
+| `UPDATE` | `SCHEDULE_BATCH_UPSERT` | `BATCH` | `POST /api/schedules/upsert` | batch upsert commit 후 | `USER` | `schedule / batch` | status 기반 / fail-isolated |
+| `UPDATE` | `MENU_IMAGE_UPSERT` | `DOMAIN` | `POST /api/storage/menu-images/{week_key}` | image upsert commit 후 | `USER` | `menu_image / selected` | status 기반 / fail-isolated |
+| `UPDATE` | `REQUEST_IMAGE_UPSERT` | `DOMAIN` | `POST /api/storage/request-images/{month_key}` | image upsert commit 후 | `USER` | `request_image / selected` | status 기반 / fail-isolated |
+| `UPDATE` | `EXECUTIVE_TASK_UPDATE` | `DOMAIN` | `PUT /api/executive_tasks/{task_id}` | update commit 후 | `USER` | `executive_task / selected` | status 기반 / fail-isolated |
+| `UPDATE` | `GOAL_UPDATE` | `DOMAIN` | `PUT /api/goals/{goal_id}` | update commit 후 | `USER` | `goal / selected` | status 기반 / fail-isolated |
+| `UPDATE` | `LEAVE_PLAN_UPDATE` | `DOMAIN` | `PUT /api/leave_plans/{leave_id}` | update commit 후 | `USER` | `leave_plan / selected` | status 기반 / fail-isolated |
 
 ## 금지 데이터와 서버 전용 경계
 

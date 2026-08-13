@@ -40,6 +40,7 @@ _OUTCOMES = {"SUCCESS", "FAIL", "DENY"}
 # 정적 응답에서 명시적으로 차단한다.
 _SERVER_ONLY_PATHS = frozenset({
     "/apprunner.yaml",
+    "/auth.py",
     "/audit_integration.py",
     "/audit_registry.py",
     "/audit_sdk.py",
@@ -90,6 +91,13 @@ def _actor_from_context() -> dict:
     context = _AUDIT_CONTEXT.get()
     if context and context.verified_actor:
         return context.verified_actor
+    if context:
+        if getattr(context.request.state, "audit_actor_type", None) == "SYSTEM":
+            return {"type": "SYSTEM"}
+        user = getattr(context.request.state, "user", None)
+        user_uuid = user.get("user_uuid") if isinstance(user, dict) else None
+        if user_uuid:
+            return {"type": "USER", "user_uuid": user_uuid}
     return {"type": "ANONYMOUS"}
 
 

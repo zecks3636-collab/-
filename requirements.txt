@@ -9,3 +9,4 @@ Pillow==11.2.1
 xlrd==2.0.1
 openpyxl==3.1.5
 korean-lunar-calendar==0.3.1
+msal==1.31.1

@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.testclient import TestClient
 
 import audit_integration
@@ -384,6 +384,34 @@ class FastApiAuditIntegrationTests(unittest.TestCase):
         self.assertTrue(all(event["actor"] == {"type": "ANONYMOUS"} for event in anonymous_events))
 
     @mock.patch.object(audit_integration, "record_audit")
+    def test_verified_server_session_is_user_and_automation_context_is_system(self, record):
+        verified_uuid = str(uuid.uuid4())
+
+        def configure(app):
+            @app.post("/api/schedules/upsert")
+            def human(request: Request):
+                request.state.user = {"user_uuid": verified_uuid}
+                return {"ok": True}
+
+            @app.post("/api/menu_auto_poll")
+            def automation(request: Request):
+                request.state.user = {"user_uuid": str(uuid.uuid4())}
+                request.state.audit_actor_type = "SYSTEM"
+                return {"ok": True}
+
+        client = self._client(configure)
+        self.assertEqual(client.post("/api/schedules/upsert").status_code, 200)
+        human_events = _captured_events(record)
+        self.assertTrue(all(event["actor"] == {
+            "type": "USER", "user_uuid": verified_uuid
+        } for event in human_events))
+
+        record.reset_mock()
+        self.assertEqual(client.post("/api/menu_auto_poll").status_code, 200)
+        system_events = _captured_events(record)
+        self.assertTrue(all(event["actor"] == {"type": "SYSTEM"} for event in system_events))
+
+    @mock.patch.object(audit_integration, "record_audit")
     def test_business_failure_can_override_only_layer2(self, record):
         def configure(app):
             @app.post("/api/schedule_imports/poll")
@@ -439,22 +467,26 @@ class ProductionAppSmokeTests(unittest.TestCase):
         return response
 
     @mock.patch.object(audit_integration, "record_audit")
-    def test_static_ui_and_technical_routes_are_excluded_and_sources_are_blocked(
+    def test_static_ui_and_technical_routes_require_login_and_sources_are_not_exposed(
         self, record
     ):
         import server
 
         with TestClient(server.app) as client:
-            self.assertEqual(client.get("/").status_code, 200)
-            self.assertEqual(client.get("/openapi.json").status_code, 200)
+            root = client.get("/", follow_redirects=False)
+            schema = client.get("/openapi.json", follow_redirects=False)
+            self.assertEqual(root.status_code, 303)
+            self.assertTrue(root.headers["location"].startswith("/login"))
+            self.assertEqual(schema.status_code, 303)
             for path in (
                 "/audit_sdk.py",
+                "/auth.py",
                 "/requirements-dev.txt",
                 "/docs/AUDIT-ACTIONS.md",
                 "/tests/test_audit.py",
             ):
                 with self.subTest(path=path):
-                    self.assertEqual(client.get(path).status_code, 404)
+                    self.assertEqual(client.get(path, follow_redirects=False).status_code, 303)
         record.assert_not_called()
 
     @mock.patch.object(audit_integration, "record_audit")
