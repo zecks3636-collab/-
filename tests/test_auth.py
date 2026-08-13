@@ -3,7 +3,7 @@ import urllib.parse
 import unittest
 from unittest import mock
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 import auth
@@ -53,6 +53,15 @@ class AuthTests(unittest.TestCase):
         def write():
             return {"ok": True}
 
+        @app.post("/api/menu_auto_poll")
+        @app.post("/api/schedule_imports/poll")
+        def public_poll(request: Request):
+            user = request.state.user
+            return {
+                "status": "ok",
+                "user_uuid": user.get("user_uuid") if user else None,
+            }
+
         auth.install_auth(app, lambda: None, store=self.store)
         self.client = TestClient(app)
         self.addCleanup(self.client.close)
@@ -81,6 +90,22 @@ class AuthTests(unittest.TestCase):
         self.assertEqual(web.status_code, 303)
         self.assertTrue(web.headers["location"].startswith("/login?return_url="))
         self.assertEqual(api.status_code, 401)
+
+    def test_public_polls_preserve_access_and_read_valid_session(self):
+        for path in ("/api/menu_auto_poll", "/api/schedule_imports/poll"):
+            with self.subTest(path=path, actor="anonymous"):
+                response = self.client.post(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertIsNone(response.json()["user_uuid"])
+
+        verified_uuid = "bf98374f-b5d7-4884-9515-217756aa2853"
+        self.store.sessions["verified-session"] = {"user_uuid": verified_uuid}
+        self.client.cookies.set(auth.SESSION_COOKIE, "verified-session")
+        for path in ("/api/menu_auto_poll", "/api/schedule_imports/poll"):
+            with self.subTest(path=path, actor="user"):
+                response = self.client.post(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["user_uuid"], verified_uuid)
 
     def test_default_login_has_no_prompt_and_switch_has_select_account(self):
         default, default_query = self._start()

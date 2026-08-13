@@ -9,10 +9,11 @@
 - 실패 정책: 전 경로 `strict=false` 기본 fail-isolated
 - 상관관계: 외부 header를 버리고 요청마다 서버가 만든 별도 UUID v4
   `request_id`와 `trace_id`를 같은 요청의 두 계층에 공유
-- actor: 사람 요청은 서버가 검증한 SSO 세션의 불변 UUID만 `USER`로 사용한다.
-  식단·일정 동기화·배치 경로는 브라우저 쿠키와 무관하게 `SYSTEM`이며, endpoint가
-  별도 machine credential을 실제 검증한 경우에만 더 구체적인 `SERVICE`가 우선한다.
-  body/header가 주장하는 email·UPN은 actor의 근거로 사용하지 않는다.
+- actor: 모든 경로에서 서버가 검증한 SSO 세션의 불변 UUID를 `USER`로 사용한다.
+  인증 없는 공개 poll은 가용성을 유지하면서 `ANONYMOUS`로 기록한다. endpoint가 별도
+  machine credential을 실제 검증하고 명시 marker를 남긴 경우에만 `SERVICE`가 우선하며,
+  경로 이름이나 token 없는 요청만으로 `SYSTEM`을 주장하지 않는다. body/header가
+  주장하는 email·UPN은 actor의 근거로 사용하지 않는다.
 - target: 아래 registry의 비식별 상수만 사용. 이름·메일·사번·제목·파일명·route 실값 금지
 
 ## 1계층 API Coverage
@@ -138,17 +139,17 @@
 | `UPDATE` | `GOAL_ACTIVITY_UPSERT` | `DOMAIN` | `POST /api/goal_activities` | upsert commit 후 | `USER` | `goal_activity / selected` | status 기반 / fail-isolated |
 | `CREATE` | `GOAL_CREATE` | `DOMAIN` | `POST /api/goals` | insert commit 후 | `USER` | `goal / created` | status 기반 / fail-isolated |
 | `CREATE` | `LEAVE_PLAN_BATCH_CREATE` | `BATCH` | `POST /api/leave_plans` | batch insert commit 후 | `USER` | `leave_plan / batch` | status 기반 / fail-isolated |
-| `UPDATE` | `MENU_IMAGE_AUTOMATION_UPLOAD` | `BATCH` | `POST /api/menu_auto` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `SYSTEM` | `menu_image / weekly` | status 기반 / fail-isolated |
-| `UPDATE` | `MENU_IMAGE_AUTOMATION_B64_UPLOAD` | `BATCH` | `POST /api/menu_auto_b64` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `SYSTEM` | `menu_image / weekly` | status 기반 / fail-isolated |
-| `UPDATE` | `MENU_IMAGE_AUTOMATION_DRIVE_UPLOAD` | `BATCH` | `POST /api/menu_auto_drive` | credential 검증·upsert commit 후 | 검증 후 `SERVICE`, 그 외 `SYSTEM` | `menu_image / weekly` | status 기반 / fail-isolated |
-| `EXECUTE` | `MENU_IMAGE_SYNC_RUN` | `BATCH` | `POST /api/menu_auto_poll` | polling terminal 응답 | `SYSTEM` | `menu_image_sync / current` | endpoint override 포함 / fail-isolated |
+| `UPDATE` | `MENU_IMAGE_AUTOMATION_UPLOAD` | `BATCH` | `POST /api/menu_auto` | credential 검증·upsert commit 후 | 검증 후 `SERVICE` | `menu_image / weekly` | status 기반 / fail-isolated |
+| `UPDATE` | `MENU_IMAGE_AUTOMATION_B64_UPLOAD` | `BATCH` | `POST /api/menu_auto_b64` | credential 검증·upsert commit 후 | 검증 후 `SERVICE` | `menu_image / weekly` | status 기반 / fail-isolated |
+| `UPDATE` | `MENU_IMAGE_AUTOMATION_DRIVE_UPLOAD` | `BATCH` | `POST /api/menu_auto_drive` | credential 검증·upsert commit 후 | 검증 후 `SERVICE` | `menu_image / weekly` | status 기반 / fail-isolated |
+| `EXECUTE` | `MENU_IMAGE_SYNC_RUN` | `BATCH` | `POST /api/menu_auto_poll` | polling terminal 응답 | 세션 `USER`, 그 외 `ANONYMOUS` | `menu_image_sync / current` | endpoint override 포함 / fail-isolated |
 | `UPDATE` | `MENU_WEEK_BATCH_UPSERT` | `BATCH` | `POST /api/menu_weeks/upsert` | batch upsert commit 후 | `USER` | `menu_week / batch` | status 기반 / fail-isolated |
 | `CREATE` | `PRAISE_CARD_CREATE` | `DOMAIN` | `POST /api/praise_cards` | insert commit 후 | `USER` | `praise_card / created` | status 기반 / fail-isolated |
 | `CREATE` | `PRAISE_STICKER_CREATE` | `DOMAIN` | `POST /api/praise_stickers` | insert commit 또는 duplicate terminal | `USER` | `praise_sticker / created` | status 기반 / fail-isolated |
 | `UPDATE` | `REQUEST_MONTH_BATCH_UPSERT` | `BATCH` | `POST /api/request_months/upsert` | batch upsert commit 후 | `USER` | `request_month / batch` | status 기반 / fail-isolated |
 | `UPDATE` | `REQUEST_SCHEDULE_BATCH_UPSERT` | `BATCH` | `POST /api/request_schedules/upsert` | batch upsert commit 후 | `USER` | `request_schedule / batch` | status 기반 / fail-isolated |
-| `EXECUTE` | `SCHEDULE_IMPORT_SYNC_RUN` | `BATCH` | `POST /api/schedule_imports/poll` | polling/내부 적용 terminal 응답 | `SYSTEM` | `schedule_import / current` | endpoint override 포함 / fail-isolated |
-| `CREATE` | `SCHEDULE_IMPORT_SUBMIT` | `BATCH` | `POST /api/schedule_imports/submit` | credential 검증·preview insert commit 후 | 검증 후 `SERVICE`, 그 외 `SYSTEM` | `schedule_import / pending` | status 기반 / fail-isolated |
+| `EXECUTE` | `SCHEDULE_IMPORT_SYNC_RUN` | `BATCH` | `POST /api/schedule_imports/poll` | polling/내부 적용 terminal 응답 | 세션 `USER`, 그 외 `ANONYMOUS` | `schedule_import / current` | endpoint override 포함 / fail-isolated |
+| `CREATE` | `SCHEDULE_IMPORT_SUBMIT` | `BATCH` | `POST /api/schedule_imports/submit` | credential 검증·preview insert commit 후 | 검증 후 `SERVICE` | `schedule_import / pending` | status 기반 / fail-isolated |
 | `APPROVE` | `SCHEDULE_IMPORT_APPLY` | `BATCH` | `POST /api/schedule_imports/{import_id}/apply` | 변경·상태 commit 후 | `USER` | `schedule_import / selected` | status 기반 / fail-isolated |
 | `APPROVE` | `SCHEDULE_IMPORT_REJECT` | `BATCH` | `POST /api/schedule_imports/{import_id}/reject` | 반려 상태 commit 후 | `USER` | `schedule_import / selected` | status 기반 / fail-isolated |
 | `DELETE` | `SCHEDULE_BATCH_DELETE_ALIAS` | `BATCH` | `POST /api/schedules/delete` | batch delete commit 후 | `USER` | `schedule / batch` | status 기반 / fail-isolated |

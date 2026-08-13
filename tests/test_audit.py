@@ -10,9 +10,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.testclient import TestClient
 
+import auth
 import audit_integration
 import audit_sdk
 from audit_integration import (
@@ -384,32 +385,75 @@ class FastApiAuditIntegrationTests(unittest.TestCase):
         self.assertTrue(all(event["actor"] == {"type": "ANONYMOUS"} for event in anonymous_events))
 
     @mock.patch.object(audit_integration, "record_audit")
-    def test_verified_server_session_is_user_and_automation_context_is_system(self, record):
+    def test_public_automation_actor_uses_session_or_verified_credential(self, record):
         verified_uuid = str(uuid.uuid4())
+        sessions = {
+            "verified-session": {"user_uuid": verified_uuid},
+        }
+        store = mock.Mock()
+        store.get_session.side_effect = sessions.get
 
         def configure(app):
-            @app.post("/api/schedules/upsert")
-            def human(request: Request):
-                request.state.user = {"user_uuid": verified_uuid}
+            @app.post("/api/menu_auto_poll")
+            def poll():
                 return {"ok": True}
 
-            @app.post("/api/menu_auto_poll")
-            def automation(request: Request):
-                request.state.user = {"user_uuid": str(uuid.uuid4())}
-                request.state.audit_actor_type = "SYSTEM"
+            @app.post("/api/menu_auto")
+            def token_route(request: Request):
+                if request.headers.get("x-menu-token") != "verified-token":
+                    raise HTTPException(status_code=403, detail="invalid token")
+                mark_verified_service(
+                    "menu_automation",
+                    expected_route=("POST", "/api/menu_auto"),
+                )
                 return {"ok": True}
+
+            auth.install_auth(app, lambda: None, store=store)
 
         client = self._client(configure)
-        self.assertEqual(client.post("/api/schedules/upsert").status_code, 200)
-        human_events = _captured_events(record)
+        client.cookies.set(auth.SESSION_COOKIE, "verified-session")
+        self.assertEqual(client.post("/api/menu_auto_poll").status_code, 200)
+        signed_in_events = _captured_events(record)
+        self.assertEqual(len(signed_in_events), 2)
         self.assertTrue(all(event["actor"] == {
             "type": "USER", "user_uuid": verified_uuid
-        } for event in human_events))
+        } for event in signed_in_events))
 
         record.reset_mock()
+        client.cookies.clear()
         self.assertEqual(client.post("/api/menu_auto_poll").status_code, 200)
-        system_events = _captured_events(record)
-        self.assertTrue(all(event["actor"] == {"type": "SYSTEM"} for event in system_events))
+        anonymous_events = _captured_events(record)
+        self.assertEqual(len(anonymous_events), 2)
+        self.assertTrue(all(
+            event["actor"] == {"type": "ANONYMOUS"}
+            for event in anonymous_events
+        ))
+
+        record.reset_mock()
+        denied = client.post("/api/menu_auto")
+        self.assertEqual(denied.status_code, 403)
+        denied_events = _captured_events(record)
+        self.assertEqual(len(denied_events), 2)
+        self.assertTrue(all(
+            event["actor"] == {"type": "ANONYMOUS"}
+            for event in denied_events
+        ))
+
+        record.reset_mock()
+        verified = client.post(
+            "/api/menu_auto",
+            headers={"X-Menu-Token": "verified-token"},
+        )
+        self.assertEqual(verified.status_code, 200)
+        service_events = _captured_events(record)
+        self.assertEqual(len(service_events), 2)
+        self.assertTrue(all(
+            event["actor"] == {
+                "type": "SERVICE",
+                "service_id": "menu_automation",
+            }
+            for event in service_events
+        ))
 
     @mock.patch.object(audit_integration, "record_audit")
     def test_business_failure_can_override_only_layer2(self, record):

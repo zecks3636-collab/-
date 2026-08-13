@@ -23,6 +23,7 @@ STATE_MAX_AGE = 10 * 60
 PUBLIC_PATHS = frozenset({
     "/health", "/favicon.ico", "/login", "/auth/callback", "/logout",
 })
+# Compatibility allowlist only; path membership never proves an audit actor.
 AUTOMATION_PATHS = frozenset({
     "/api/menu_auto", "/api/menu_auto_b64", "/api/menu_auto_drive",
     "/api/menu_auto_poll", "/api/schedule_imports/submit",
@@ -246,12 +247,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        is_automation = path in AUTOMATION_PATHS
-        request.state.audit_actor_type = "SYSTEM" if is_automation else None
-        request.state.user = None if is_automation else self.store.get_session(
-            request.cookies.get(SESSION_COOKIE)
+        is_public_automation = path in AUTOMATION_PATHS
+        request.state.user = self.store.get_session(request.cookies.get(SESSION_COOKIE))
+        is_public = (
+            path in PUBLIC_PATHS
+            or is_public_automation
+            or path.endswith(STATIC_SUFFIXES)
         )
-        is_public = path in PUBLIC_PATHS or is_automation or path.endswith(STATIC_SUFFIXES)
         if not is_public and request.state.user is None:
             if path.startswith("/api/"):
                 return JSONResponse({"detail": "authentication required"}, status_code=401)
@@ -259,6 +261,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             return RedirectResponse(f"/login?return_url={target}", status_code=303)
         if (
             request.state.user
+            and not is_public_automation
             and request.method in {"POST", "PUT", "PATCH", "DELETE"}
             and not _same_origin(request)
         ):

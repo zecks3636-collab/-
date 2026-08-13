@@ -1,7 +1,8 @@
 """FastAPI용 COSMAX Audit SDK 1·2계층 연결부.
 
 요청마다 서버가 새 request/trace UUID를 만들고, route template registry에 있는
-업무 API만 기록한다. 검증 marker가 없는 호출은 항상 ANONYMOUS다.
+업무 API만 기록한다. actor는 검증된 service marker, SSO 세션, 익명 순으로 판정하며
+경로 이름만으로 SYSTEM 또는 SERVICE를 주장하지 않는다.
 """
 
 import contextvars
@@ -92,8 +93,6 @@ def _actor_from_context() -> dict:
     if context and context.verified_actor:
         return context.verified_actor
     if context:
-        if getattr(context.request.state, "audit_actor_type", None) == "SYSTEM":
-            return {"type": "SYSTEM"}
         user = getattr(context.request.state, "user", None)
         user_uuid = user.get("user_uuid") if isinstance(user, dict) else None
         if user_uuid:
