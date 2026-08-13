@@ -25,5 +25,7 @@ run:
     - name: USAGE_SERVICE_ID
       value: btischeduleinfo
   secrets:
+    - name: AZURE_SSO_SECRET
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_btischeduleinfo/AzureSSO-P3tGQY"
     - name: USAGE_INGEST_TOKEN
       value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_btischeduleinfo/usage-token-2Bo8qK"
