@@ -3,9 +3,10 @@ runtime: python311
 build:
   commands:
     build:
-      - python3 -m pip install --upgrade pip
-      - python3 -m pip install --target /app/packages -r requirements.txt
+      - python3 -m compileall -q .
 run:
+  pre-run:
+    - pip3 install -r requirements.txt
   command: "python3 -m uvicorn server:app --host 0.0.0.0 --port 8080"
   network:
     port: 8080
@@ -14,13 +15,17 @@ run:
       value: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_bti_schedule_prd-lJAp1t"
     - name: DB_NAME
       value: "postgres"
-    - name: PYTHONPATH
-      value: "/app/packages"
+    - name: APP_ENV
+      value: "production"
+    - name: SSO_REDIRECT_URI
+      value: "https://jhlee01.cosmaxhub.com/auth/callback"
 
     - name: USAGE_INGEST_URL
       value: https://portal.cosmaxhub.com/api/usage/events
     - name: USAGE_SERVICE_ID
       value: btischeduleinfo
   secrets:
+    - name: AZURE_SSO_SECRET
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_btischeduleinfo/AzureSSO-P3tGQY"
     - name: USAGE_INGEST_TOKEN
       value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:app_btischeduleinfo/usage-token-2Bo8qK"

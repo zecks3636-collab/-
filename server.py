@@ -12,6 +12,7 @@ from audit_integration import (
     mark_verified_service,
 )
 from usage_tracker import init_fastapi_usage_tracking
+from auth import install_auth
 
 app = FastAPI()
 init_fastapi_usage_tracking(
@@ -20,7 +21,9 @@ init_fastapi_usage_tracking(
     api_tracking="mutations",
     api_prefix="/api/",
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
+app.add_middleware(CORSMiddleware, allow_origins=[
+    "https://jhlee01.cosmaxhub.com", "http://localhost:8080",
+], allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
 init_fastapi_api_audit(app)
 
@@ -1523,4 +1526,5 @@ def delete_task(task_id: str):
     return {"status": "ok"}
 
 # ── 정적 파일 서빙 ──
+install_auth(app, get_conn)
 app.mount("/", StaticFiles(directory=".", html=True), name="static")

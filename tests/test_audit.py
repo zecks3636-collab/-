@@ -10,9 +10,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.testclient import TestClient
 
+import auth
 import audit_integration
 import audit_sdk
 from audit_integration import (
@@ -384,6 +385,77 @@ class FastApiAuditIntegrationTests(unittest.TestCase):
         self.assertTrue(all(event["actor"] == {"type": "ANONYMOUS"} for event in anonymous_events))
 
     @mock.patch.object(audit_integration, "record_audit")
+    def test_public_automation_actor_uses_session_or_verified_credential(self, record):
+        verified_uuid = str(uuid.uuid4())
+        sessions = {
+            "verified-session": {"user_uuid": verified_uuid},
+        }
+        store = mock.Mock()
+        store.get_session.side_effect = sessions.get
+
+        def configure(app):
+            @app.post("/api/menu_auto_poll")
+            def poll():
+                return {"ok": True}
+
+            @app.post("/api/menu_auto")
+            def token_route(request: Request):
+                if request.headers.get("x-menu-token") != "verified-token":
+                    raise HTTPException(status_code=403, detail="invalid token")
+                mark_verified_service(
+                    "menu_automation",
+                    expected_route=("POST", "/api/menu_auto"),
+                )
+                return {"ok": True}
+
+            auth.install_auth(app, lambda: None, store=store)
+
+        client = self._client(configure)
+        client.cookies.set(auth.SESSION_COOKIE, "verified-session")
+        self.assertEqual(client.post("/api/menu_auto_poll").status_code, 200)
+        signed_in_events = _captured_events(record)
+        self.assertEqual(len(signed_in_events), 2)
+        self.assertTrue(all(event["actor"] == {
+            "type": "USER", "user_uuid": verified_uuid
+        } for event in signed_in_events))
+
+        record.reset_mock()
+        client.cookies.clear()
+        self.assertEqual(client.post("/api/menu_auto_poll").status_code, 200)
+        anonymous_events = _captured_events(record)
+        self.assertEqual(len(anonymous_events), 2)
+        self.assertTrue(all(
+            event["actor"] == {"type": "ANONYMOUS"}
+            for event in anonymous_events
+        ))
+
+        record.reset_mock()
+        denied = client.post("/api/menu_auto")
+        self.assertEqual(denied.status_code, 403)
+        denied_events = _captured_events(record)
+        self.assertEqual(len(denied_events), 2)
+        self.assertTrue(all(
+            event["actor"] == {"type": "ANONYMOUS"}
+            for event in denied_events
+        ))
+
+        record.reset_mock()
+        verified = client.post(
+            "/api/menu_auto",
+            headers={"X-Menu-Token": "verified-token"},
+        )
+        self.assertEqual(verified.status_code, 200)
+        service_events = _captured_events(record)
+        self.assertEqual(len(service_events), 2)
+        self.assertTrue(all(
+            event["actor"] == {
+                "type": "SERVICE",
+                "service_id": "menu_automation",
+            }
+            for event in service_events
+        ))
+
+    @mock.patch.object(audit_integration, "record_audit")
     def test_business_failure_can_override_only_layer2(self, record):
         def configure(app):
             @app.post("/api/schedule_imports/poll")
@@ -439,22 +511,26 @@ class ProductionAppSmokeTests(unittest.TestCase):
         return response
 
     @mock.patch.object(audit_integration, "record_audit")
-    def test_static_ui_and_technical_routes_are_excluded_and_sources_are_blocked(
+    def test_static_ui_and_technical_routes_require_login_and_sources_are_not_exposed(
         self, record
     ):
         import server
 
         with TestClient(server.app) as client:
-            self.assertEqual(client.get("/").status_code, 200)
-            self.assertEqual(client.get("/openapi.json").status_code, 200)
+            root = client.get("/", follow_redirects=False)
+            schema = client.get("/openapi.json", follow_redirects=False)
+            self.assertEqual(root.status_code, 303)
+            self.assertTrue(root.headers["location"].startswith("/login"))
+            self.assertEqual(schema.status_code, 303)
             for path in (
                 "/audit_sdk.py",
+                "/auth.py",
                 "/requirements-dev.txt",
                 "/docs/AUDIT-ACTIONS.md",
                 "/tests/test_audit.py",
             ):
                 with self.subTest(path=path):
-                    self.assertEqual(client.get(path).status_code, 404)
+                    self.assertEqual(client.get(path, follow_redirects=False).status_code, 303)
         record.assert_not_called()
 
     @mock.patch.object(audit_integration, "record_audit")
