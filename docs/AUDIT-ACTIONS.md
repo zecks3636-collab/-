@@ -2,7 +2,7 @@
 
 ## 적용 기준
 
-- SDK: `v0.1.0-alpha.1`, commit `09f0cd27eb6b04b66fb24fdf9c10f3772567bc64`
+- SDK: `v0.1.0-rc.2`, commit `83fe04bcfa0cbd9a8508ffa1ab15d7bfaea2df76`
 - 런타임: FastAPI `server.py`, App Runner source directory `/`, repository config
 - 1계층: HTTP method 기반 canonical action + `business_action=API_REQUEST`
 - 2계층: commit·파일 반출·민감 조회·승인/반려·batch terminal 경계만 추가
@@ -121,7 +121,7 @@
 | `READ` | `BIRTHDAY_DIRECTORY_READ` | `DATA_ACCESS` | `GET /api/birthdays` | 민감 목록 응답 확정 | `USER` | `birthday / all` | status 기반 / fail-isolated |
 | `READ` | `EXECUTIVE_TASKS_READ` | `DATA_ACCESS` | `GET /api/executive_tasks` | 민감 목록 응답 확정 | `USER` | `executive_task / filtered` | status 기반 / fail-isolated |
 | `READ` | `SCHEDULE_FILE_LIST_READ` | `DATA_ACCESS` | `GET /api/files/{folder}` | 파일 목록 응답 확정 | `USER` | `schedule_file / folder` | status 기반 / fail-isolated |
-| `EXPORT` | `SCHEDULE_FILE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/files/{folder}/{file_id}` | 파일 응답 승인·생성 후 | `USER` | `schedule_file / selected` | status 기반 / fail-isolated |
+| `DOWNLOAD` | `SCHEDULE_FILE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/files/{folder}/{file_id}` | 저장 파일 응답 승인 후 | `USER` | `schedule_file / selected` | status 기반 / fail-isolated |
 | `READ` | `GOAL_ACTIVITIES_READ` | `DATA_ACCESS` | `GET /api/goal_activities` | 민감 목록 응답 확정 | `USER` | `goal_activity / filtered` | status 기반 / fail-isolated |
 | `READ` | `GOALS_READ` | `DATA_ACCESS` | `GET /api/goals` | 민감 목록 응답 확정 | `USER` | `goal / all` | status 기반 / fail-isolated |
 | `READ` | `GROUP_CALENDAR_SYNC_READ` | `DATA_ACCESS` | `GET /api/group_ics_events` | 외부 캘린더 조회 완료 | `USER` | `group_calendar / current` | status 기반 / fail-isolated |
@@ -130,8 +130,8 @@
 | `READ` | `PRAISE_STICKERS_READ` | `DATA_ACCESS` | `GET /api/praise_stickers` | 민감 목록 응답 확정 | `USER` | `praise_sticker / filtered` | status 기반 / fail-isolated |
 | `READ` | `SCHEDULE_IMPORTS_READ` | `DATA_ACCESS` | `GET /api/schedule_imports` | import 목록 응답 확정 | `USER` | `schedule_import / filtered` | status 기반 / fail-isolated |
 | `READ` | `SCHEDULE_IMPORT_DETAIL_READ` | `DATA_ACCESS` | `GET /api/schedule_imports/{import_id}` | import 상세 응답 확정 | `USER` | `schedule_import / selected` | status 기반 / fail-isolated |
-| `EXPORT` | `MENU_IMAGE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/storage/menu-images/{week_key}` | 이미지 응답 생성 후 | `USER` | `menu_image / selected` | status 기반 / fail-isolated |
-| `EXPORT` | `REQUEST_IMAGE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/storage/request-images/{month_key}` | 이미지 응답 생성 후 | `USER` | `request_image / selected` | status 기반 / fail-isolated |
+| `DOWNLOAD` | `MENU_IMAGE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/storage/menu-images/{week_key}` | 저장 이미지 응답 후 | `USER` | `menu_image / selected` | status 기반 / fail-isolated |
+| `DOWNLOAD` | `REQUEST_IMAGE_DOWNLOAD` | `DATA_ACCESS` | `GET /api/storage/request-images/{month_key}` | 저장 이미지 응답 후 | `USER` | `request_image / selected` | status 기반 / fail-isolated |
 | `UPDATE` | `BIRTHDAY_UPSERT` | `DOMAIN` | `POST /api/birthdays` | upsert commit 후 | `USER` | `birthday / selected` | status 기반 / fail-isolated |
 | `UPDATE` | `EVENT_COLOR_UPSERT` | `DOMAIN` | `POST /api/event_colors` | upsert commit 후 | `USER` | `event_color / selected` | status 기반 / fail-isolated |
 | `CREATE` | `EXECUTIVE_TASK_CREATE` | `DOMAIN` | `POST /api/executive_tasks` | insert commit 후 | `USER` | `executive_task / created` | status 기반 / fail-isolated |

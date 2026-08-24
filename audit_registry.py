@@ -152,7 +152,7 @@ AUTO_LAYER2_ROUTE_ACTIONS = {
         "READ", "SCHEDULE_FILE_LIST_READ", "DATA_ACCESS", "schedule_file", "folder"
     ),
     ("GET", "/api/files/{folder}/{file_id}"): _event(
-        "EXPORT", "SCHEDULE_FILE_DOWNLOAD", "DATA_ACCESS", "schedule_file", "selected"
+        "DOWNLOAD", "SCHEDULE_FILE_DOWNLOAD", "DATA_ACCESS", "schedule_file", "selected"
     ),
     ("GET", "/api/goal_activities"): _event(
         "READ", "GOAL_ACTIVITIES_READ", "DATA_ACCESS", "goal_activity", "filtered"
@@ -179,10 +179,10 @@ AUTO_LAYER2_ROUTE_ACTIONS = {
         "READ", "SCHEDULE_IMPORT_DETAIL_READ", "DATA_ACCESS", "schedule_import", "selected"
     ),
     ("GET", "/api/storage/menu-images/{week_key}"): _event(
-        "EXPORT", "MENU_IMAGE_DOWNLOAD", "DATA_ACCESS", "menu_image", "selected"
+        "DOWNLOAD", "MENU_IMAGE_DOWNLOAD", "DATA_ACCESS", "menu_image", "selected"
     ),
     ("GET", "/api/storage/request-images/{month_key}"): _event(
-        "EXPORT", "REQUEST_IMAGE_DOWNLOAD", "DATA_ACCESS", "request_image", "selected"
+        "DOWNLOAD", "REQUEST_IMAGE_DOWNLOAD", "DATA_ACCESS", "request_image", "selected"
     ),
     ("POST", "/api/birthdays"): _event(
         "UPDATE", "BIRTHDAY_UPSERT", "DOMAIN", "birthday", "selected"

@@ -224,6 +224,16 @@ class AuditSchemaTests(unittest.TestCase):
             self.assertLessEqual(len(config["target_id"]), 200)
             business_actions.append(config["business_action"])
         self.assertEqual(len(business_actions), len(set(business_actions)))
+        by_name = {
+            config["business_action"]: config
+            for config in AUTO_LAYER2_ROUTE_ACTIONS.values()
+        }
+        for name in (
+            "SCHEDULE_FILE_DOWNLOAD",
+            "MENU_IMAGE_DOWNLOAD",
+            "REQUEST_IMAGE_DOWNLOAD",
+        ):
+            self.assertEqual(by_name[name]["action"], "DOWNLOAD")
 
 
 class RetryTests(unittest.TestCase):
