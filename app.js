@@ -1,4 +1,20 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // ── 세션 인증 사전 확인 (SSO 만료·미로그인 시 자동 로그인 페이지로 리다이렉트) ──
+    // 이 앱은 사내 M365 SSO 인증 뒤로 배치되어 있으며, 세션 만료(8h) 후 API가 401을 반환하면
+    // 화면은 캐시로 뜨지만 데이터가 로드되지 않아 "빈 캘린더"로 보이는 문제가 있었음.
+    // 진입 즉시 auth 상태를 확인하여 401이면 로그인 페이지로 우회시킨다.
+    try {
+        const authRes = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (authRes.status === 401) {
+            const returnUrl = encodeURIComponent(location.pathname + location.search);
+            location.replace('/login?return_url=' + returnUrl);
+            return;  // 이후 초기화 중단
+        }
+    } catch (e) {
+        // 네트워크 오류 등은 계속 진행 (오프라인 편의성 위해)
+        console.warn('[auth] 세션 확인 실패, 계속 진행:', e && e.message);
+    }
+
     const calendarGrid = document.getElementById('calendarGrid');
     const upcomingList = document.getElementById('upcomingList');
     const searchInput = document.getElementById('searchInput');
