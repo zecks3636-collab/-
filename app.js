@@ -2116,13 +2116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 category: '정기요청자료',
                 note:     null,
             });
-            records.push({
-                id:       `req-auto-${ym}-teams`,
-                date:     fmtDateLocal(day4),
-                title:    `팀즈[공통지표관리채널] Upload`,
-                category: '정기요청자료',
-                note:     null,
-            });
+            // 팀즈[공통지표관리채널] Upload — 자동 생성 중단 (2026-08-24 결정)
         }
 
         // 운전자본 — 해당 월 9번째 영업일 (확대회의일과 무관)
