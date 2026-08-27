@@ -2,6 +2,7 @@ import os, json, io, re, datetime, base64, boto3, psycopg2, psycopg2.extras
 from fastapi import FastAPI, File, UploadFile, HTTPException, Header
 from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
@@ -87,11 +88,26 @@ class ColorPayload(BaseModel):
     text_color: str
 
 # ── schedules ──
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
 @app.get("/api/schedules")
-def get_schedules():
+def get_schedules(date_from: Optional[str] = None, date_to: Optional[str] = None):
+    """date_from / date_to 는 선택 인자다. 둘 다 없으면 기존과 동일하게 전체를 반환한다."""
+    conds, params = [], []
+    for name, value, op in (("date_from", date_from, ">="), ("date_to", date_to, "<=")):
+        if value is None:
+            continue
+        if not _DATE_RE.match(value):
+            raise HTTPException(status_code=400, detail=f"{name} 형식 오류 (YYYY-MM-DD)")
+        conds.append(f"date {op} %s")
+        params.append(value)
+    sql = "SELECT id, company, date, title FROM schedules"
+    if conds:
+        sql += " WHERE " + " AND ".join(conds)
+    sql += " ORDER BY date"
     with get_conn() as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT id, company, date, title FROM schedules ORDER BY date")
+            cur.execute(sql, params)
             return JSONResponse(cur.fetchall())
 
 @app.post("/api/schedules/upsert")
@@ -1527,4 +1543,8 @@ def delete_task(task_id: str):
 
 # ── 정적 파일 서빙 ──
 install_auth(app, get_conn)
+# gzip 압축. add_middleware 는 바깥쪽에 쌓이므로 install_auth 뒤에 등록해야
+# 인증 미들웨어를 포함한 모든 응답이 압축된다. app.js/styles.css 가 무압축으로
+# 나가던 문제(249KB)를 해소한다.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.mount("/", StaticFiles(directory=".", html=True), name="static")

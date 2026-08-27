@@ -3,17 +3,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 이 앱은 사내 M365 SSO 인증 뒤로 배치되어 있으며, 세션 만료(8h) 후 API가 401을 반환하면
     // 화면은 캐시로 뜨지만 데이터가 로드되지 않아 "빈 캘린더"로 보이는 문제가 있었음.
     // 진입 즉시 auth 상태를 확인하여 401이면 로그인 페이지로 우회시킨다.
-    try {
-        const authRes = await fetch('/api/auth/me', { credentials: 'same-origin' });
-        if (authRes.status === 401) {
-            const returnUrl = encodeURIComponent(location.pathname + location.search);
-            location.replace('/login?return_url=' + returnUrl);
-            return;  // 이후 초기화 중단
-        }
-    } catch (e) {
-        // 네트워크 오류 등은 계속 진행 (오프라인 편의성 위해)
-        console.warn('[auth] 세션 확인 실패, 계속 진행:', e && e.message);
-    }
+    // 인증 확인을 기다리지 않고 출발만 시킨다. 초기 데이터 3종과 함께 병렬로 처리해
+    // 순차 4회 왕복을 1회로 줄인다. 401 판정은 아래에서 즉시 수행한다.
+    const _bootAuth = fetch('/api/auth/me', { credentials: 'same-origin' })
+        .then(r => ({ ok: true, status: r.status }))
+        .catch(e => ({ ok: false, err: e }));
 
     const calendarGrid = document.getElementById('calendarGrid');
     const upcomingList = document.getElementById('upcomingList');
@@ -44,6 +38,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ========== DB API CLIENT (사내 PostgreSQL via FastAPI) ==========
     const sb = window.__dbClient || null;
+
+    // ── 초기 데이터 3종 동시 출발 ──
+    // 각 Promise 에 즉시 catch 를 붙여 실패가 서로에게 전파되지 않게 한다(allSettled 와 동일한 의미).
+    // 소비 지점의 기존 폴백 분기는 그대로 유지된다.
+    const _bootSchedules = sb
+        ? sb.from('schedules').select('id, company, date, title').order('date', { ascending: true })
+             .catch(e => ({ data: null, error: e }))
+        : null;
+    const _bootColors    = fetch('/api/event_colors').catch(e => ({ ok: false, __err: e }));
+    const _bootBirthdays = fetch('/api/birthdays').catch(e => ({ ok: false, __err: e }));
+
+    // ── 세션 인증 판정 (SSO 만료·미로그인 시 로그인 페이지로 우회) ──
+    // 세션 만료(8h) 후 API가 401을 반환하면 화면은 캐시로 뜨지만 데이터가 로드되지 않아
+    // "빈 캘린더"로 보이는 문제가 있었음.
+    {
+        const _a = await _bootAuth;
+        if (_a.ok && _a.status === 401) {
+            const returnUrl = encodeURIComponent(location.pathname + location.search);
+            location.replace('/login?return_url=' + returnUrl);
+            return;  // 이후 초기화 중단
+        }
+        if (!_a.ok) {
+            // 네트워크 오류 등은 계속 진행 (오프라인 편의성 위해)
+            console.warn('[auth] 세션 확인 실패, 계속 진행:', _a.err && _a.err.message);
+        }
+    }
 
     // ── 이벤트 배경색 저장소 (Supabase 로드 전 초기화) ──
     let eventColorMap = {};
@@ -78,16 +98,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allEvents = [];
     if (sb) {
         try {
-            const { data, error } = await sb
-                .from('schedules')
-                .select('id, company, date, title')
-                .order('date', { ascending: true });
+            const { data, error } = await _bootSchedules;
             if (error) throw error;
             allEvents = data || [];
 
             // 이벤트 색상: 서버(event_colors 테이블)가 정답 → localStorage 덮어씀
             try {
-                const colorRes = await fetch('/api/event_colors');
+                const colorRes = await _bootColors;
                 if (colorRes.ok) {
                     const serverColors = await colorRes.json();
                     eventColorMap = serverColors || {};
@@ -114,7 +131,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── 생일자 데이터 로드 + 캘린더에 합성 (전체보기·Group 필터에서 표시) ──
     let birthdays = [];
     try {
-        const bRes = await fetch('/api/birthdays');
+        const bRes = await _bootBirthdays;
         if (bRes.ok) birthdays = await bRes.json();
     } catch(_) {}
     function injectBirthdayEvents(yearStart, yearEnd) {
@@ -541,6 +558,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         panelCalendar.style.removeProperty('display');
     }
 
+    // ── 패널 데이터 로딩 표시 ──
+    // 각 render 함수가 컨테이너 innerHTML 을 통째로 다시 쓰므로 별도 해제가 필요 없다.
+    function showPanelLoading(elId, message) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.innerHTML = '<div class="panel-loading">'
+            + '<span class="pl-dots"><i></i><i></i><i></i></span>'
+            + '<span class="pl-text">' + message + '</span></div>';
+    }
+
     async function switchToMenu() {
         _hidePanels();
         tabMenu.classList.add('active');
@@ -562,6 +589,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (_menuSub) _menuSub.textContent = menuWeekSubLabel();
         // menuStore 미로드 상태면 대기 후 렌더 (깜빡임 방지)
         if (!menuStore || Object.keys(menuStore).length === 0) {
+            // 로드 중에 '데이터 없음' 을 띄우면 사실과 다르므로 빈 상태를 감추고 로딩을 표시
+            const _mEmpty = document.getElementById('menuContentEmpty');
+            if (_mEmpty) _mEmpty.style.display = 'none';
+            const _mLoad = document.getElementById('menuContentLoading');
+            if (_mLoad) _mLoad.style.display = 'block';
+            showPanelLoading('menuContentLoading', '식단표를 불러오는 중');
             await loadMenuStore();
         }
         renderMenuWeek();
@@ -574,6 +607,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         panelLeave.style.flexDirection = 'column';
         // 첫 클릭 시 데이터 미로드 상태면 대기 후 렌더
         if (!allLeaves || !allLeaves.length) {
+            showPanelLoading('leaveGrid', '연차 데이터를 불러오는 중');
             await loadLeaves();
             allLeaves = allLeaves.filter(l => l && l.date && l.employee_name);
         }
@@ -587,6 +621,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         panelRequest.style.flexDirection = 'column';
         // 첫 클릭 시 데이터 미로드 상태면 대기 후 렌더
         if (!allRequests || allRequests.length === 0) {
+            showPanelLoading('requestGrid', '요청자료를 불러오는 중');
             await loadRequests();
         }
         renderRequestCalendar();
@@ -617,6 +652,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 데이터 로드 전에 월 제목부터 확정 — 로드 지연 중 과거 월이 노출되지 않도록
         const _thanksTitle = document.getElementById('thanksMonthTitle');
         if (_thanksTitle) _thanksTitle.textContent = thanksMonthLabel();
+        if (!thanksCards.length) showPanelLoading('thanksCardGrid', '칭찬 카드를 불러오는 중');
         const rect = panelThanks.getBoundingClientRect();
         console.log('[Thanks] panelThanks size:', rect.width, 'x', rect.height);
         await loadThanksCards();
@@ -1827,6 +1863,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${i.title} (${i.range}) · (주)멜리에프에스`;
     }
 
+    // 주 이동 연타 시 늦게 도착한 이전 주 이미지를 무시하기 위한 세대 번호
+    let _menuImgGen = 0;
+
     function renderMenuWeek() {
         const key = menuWeekKey(currentMenuMonday);
         const info = getMenuWeekInfo(currentMenuMonday);
@@ -1837,6 +1876,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const imageEl  = document.getElementById('menuContentImage');
         const emptyEl  = document.getElementById('menuContentEmpty');
         const noticeEl = document.getElementById('menuNotice');
+        const loadEl   = document.getElementById('menuContentLoading');
 
         // 모든 하드코딩 테이블 숨기기
         Object.values(HARDCODED_WEEKS).forEach(id => {
@@ -1844,12 +1884,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         imageEl.style.display = 'none';
         emptyEl.style.display = 'none';
+        if (loadEl) loadEl.style.display = 'none';
 
         if (menuStore[key]) {
             // 업로드된 이미지 표시 (Supabase Storage URL 또는 dataUrl 폴백)
-            document.getElementById('menuUploadedImg').src = menuStore[key].imageUrl || menuStore[key].dataUrl || '';
-            imageEl.style.display = 'block';
-            noticeEl.style.display = '';
+            // 이미지 도착 전에 컨테이너를 열면 삭제 버튼만 먼저 보이므로 onload 이후에 노출한다.
+            const src   = menuStore[key].imageUrl || menuStore[key].dataUrl || '';
+            const imgEl = document.getElementById('menuUploadedImg');
+            const gen   = ++_menuImgGen;
+            const showEmpty = () => {
+                if (loadEl) loadEl.style.display = 'none';
+                imageEl.style.display = 'none';
+                emptyEl.style.display = 'flex';
+                noticeEl.style.display = 'none';
+            };
+            if (!src) { showEmpty(); return; }
+            const reveal = () => {
+                if (gen !== _menuImgGen) return;   // 이미 다른 주로 이동했으면 무시
+                if (loadEl) loadEl.style.display = 'none';
+                imageEl.style.display = 'block';
+                noticeEl.style.display = '';
+            };
+            // 이미 받아둔 이미지는 onload 가 다시 발생하지 않으므로 즉시 표시
+            if (imgEl.getAttribute('src') === src && imgEl.complete && imgEl.naturalWidth > 0) {
+                reveal();
+                return;
+            }
+            imgEl.onload  = reveal;
+            imgEl.onerror = () => { if (gen === _menuImgGen) showEmpty(); };
+            if (loadEl) {
+                loadEl.style.display = 'block';
+                showPanelLoading('menuContentLoading', '식단표를 불러오는 중');
+            }
+            imgEl.src = src;
         } else if (HARDCODED_WEEKS[key]) {
             // 하드코딩 테이블 표시
             document.getElementById(HARDCODED_WEEKS[key]).style.display = '';
@@ -1890,6 +1957,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             // PDF → Canvas 렌더링
+            await ensurePdfJs();
             const ab = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
             const page = await pdf.getPage(1);
@@ -2607,7 +2675,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         fileInput.value = '';
     });
 
-    function handleFile(file) {
+    // ── 파싱 라이브러리 지연 로딩 ──
+    // 초기 진입에서 xlsx(861KB) + pdf.js(312KB) 를 받지 않도록 업로드 시점에만 주입한다.
+    // 부수 효과: CDN 장애 시 페이지 전체가 아니라 업로드 기능만 실패한다.
+    const _libPromises = {};
+    function loadScriptOnce(src) {
+        if (_libPromises[src]) return _libPromises[src];
+        _libPromises[src] = new Promise((resolve, reject) => {
+            const el = document.createElement('script');
+            el.src = src;
+            el.async = true;
+            el.onload = () => resolve();
+            el.onerror = () => { delete _libPromises[src]; reject(new Error('스크립트 로드 실패: ' + src)); };
+            document.head.appendChild(el);
+        });
+        return _libPromises[src];
+    }
+    async function ensureXLSX() {
+        if (window.XLSX) return;
+        await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    }
+    async function ensurePdfJs() {
+        if (window.pdfjsLib) return;
+        await loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    async function handleFile(file) {
         if (!uploadDestination) {
             alert('먼저 업로드 대상을 선택해주세요.');
             return;
@@ -2618,10 +2713,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         settingsModal.classList.remove('active');
-        if (name.endsWith('.xls') || name.endsWith('.xlsx')) {
-            parseExcelFile(file, uploadDestination);
-        } else {
-            parsePdfFile(file, uploadDestination);
+        try {
+            if (name.endsWith('.xls') || name.endsWith('.xlsx')) {
+                await ensureXLSX();
+                parseExcelFile(file, uploadDestination);
+            } else {
+                await ensurePdfJs();
+                parsePdfFile(file, uploadDestination);
+            }
+        } catch (err) {
+            alert('파일 처리 라이브러리를 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요. (' + err.message + ')');
         }
     }
 
@@ -2753,6 +2854,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ========== PDF PARSING (PDF.js, client-side) ==========
     async function parsePdfFile(file, company) {
+        await ensurePdfJs();
         try {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
