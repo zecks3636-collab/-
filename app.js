@@ -564,11 +564,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderMenuWeek();
     }
 
-    function switchToLeave() {
+    async function switchToLeave() {
         _hidePanels();
         tabLeave.classList.add('active');
         _showPanel(panelLeave, 'flex');
         panelLeave.style.flexDirection = 'column';
+        // 첫 클릭 시 데이터 미로드 상태면 대기 후 렌더
+        if (!allLeaves || !allLeaves.length) {
+            await loadLeaves();
+            allLeaves = allLeaves.filter(l => l && l.date && l.employee_name);
+        }
         renderLeaveCalendar();
     }
 
