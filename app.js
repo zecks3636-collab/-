@@ -2545,6 +2545,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ========== INITIAL RENDER ==========
     update();
+    // 최초 렌더 완료 → 로딩 오버레이 해제
+    if (typeof window.__hideBootLoader === 'function') window.__hideBootLoader();
 
     // ========== FILE UPLOAD (Browser-only, no server!) ==========
     let uploadDestination = null; // 'Group' | 'NBT' | 'BIO' | 'Request'
