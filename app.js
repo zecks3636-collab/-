@@ -557,6 +557,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         _showPanel(panelMenuView, 'flex');
         panelMenuView.style.flexDirection = 'column';
+        // 데이터 로드 전에 주차 라벨부터 확정 — 로드 지연 중 과거 주차가 노출되지 않도록
+        const _menuSub = document.getElementById('menuWeekSub');
+        if (_menuSub) _menuSub.textContent = menuWeekSubLabel();
         // menuStore 미로드 상태면 대기 후 렌더 (깜빡임 방지)
         if (!menuStore || Object.keys(menuStore).length === 0) {
             await loadMenuStore();
@@ -611,6 +614,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         tabThanks.classList.add('active');
         _showPanel(panelThanks, 'flex');
         panelThanks.style.flexDirection = 'column';
+        // 데이터 로드 전에 월 제목부터 확정 — 로드 지연 중 과거 월이 노출되지 않도록
+        const _thanksTitle = document.getElementById('thanksMonthTitle');
+        if (_thanksTitle) _thanksTitle.textContent = thanksMonthLabel();
         const rect = panelThanks.getBoundingClientRect();
         console.log('[Thanks] panelThanks size:', rect.width, 'x', rect.height);
         await loadThanksCards();
@@ -665,6 +671,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}`;
     }
 
+    function thanksMonthLabel() {
+        return `${currentYear}년 ${currentMonth + 1}월 Thanks Board`;
+    }
+
     function populateThanksDropdowns() {
         const toSel  = document.getElementById('thanksToSelect');
         const meSel  = document.getElementById('thanksMeSelect');
@@ -687,7 +697,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const title = document.getElementById('thanksMonthTitle');
         if (!grid || !title) return;
 
-        title.textContent = `${currentYear}년 ${currentMonth + 1}월 Thanks Board`;
+        title.textContent = thanksMonthLabel();
         const ym = getThanksYM();
         const monthCards = thanksCards.filter(c => c.ym === ym);
         const myName = (document.getElementById('thanksMeSelect') || {}).value || '';
@@ -1812,12 +1822,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    function menuWeekSubLabel() {
+        const i = getMenuWeekInfo(currentMenuMonday);
+        return `${i.title} (${i.range}) · (주)멜리에프에스`;
+    }
+
     function renderMenuWeek() {
         const key = menuWeekKey(currentMenuMonday);
         const info = getMenuWeekInfo(currentMenuMonday);
 
         document.getElementById('menuWeekLabel').textContent = '창조경제혁신센터 주간 메뉴';
-        document.getElementById('menuWeekSub').textContent = `${info.title} (${info.range}) · (주)멜리에프에스`;
+        document.getElementById('menuWeekSub').textContent = menuWeekSubLabel();
 
         const imageEl  = document.getElementById('menuContentImage');
         const emptyEl  = document.getElementById('menuContentEmpty');
