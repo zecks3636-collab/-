@@ -1577,6 +1577,9 @@
                     </table>
                 </div>
 
+                <!-- 컨텐츠 1.5: 로딩 표시 -->
+                <div id="menuContentLoading" style="display:none;"></div>
+
                 <!-- 컨텐츠 2: 업로드된 PDF 이미지 표시 -->
                 <div id="menuContentImage" style="display:none; text-align:center; padding: 8px 0;">
                     <img id="menuUploadedImg" style="width:100%;max-width:960px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);" alt="주간식단표">
@@ -2259,12 +2262,7 @@
         </div>
     </div>
 
-    <!-- Client-side parsing libs (no server needed!) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
+    <!-- Client-side parsing libs — 업로드 시점에 app.js 가 동적 로드 (초기 1.17MB 차단 제거) -->
 
     <!-- Supabase JS Client -->
     <script src="db.js?v=20260824a"></script>
