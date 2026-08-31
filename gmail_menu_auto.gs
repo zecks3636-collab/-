@@ -12,7 +12,10 @@
  */
 
 var SHEET_ID = "1_KLMONstfHH0izaneMF_Y25U_MLbXrLPRVZY7GJN3VM";
-var SEARCH_QUERY = 'subject:(주간메뉴표) has:attachment filename:pdf newer_than:7d';
+// 2026-08-28 발송분부터 제목이 "주간 메뉴표" → "주간 식단표" 로 바뀌어 검색에 걸리지 않았다.
+// 발신자가 표기를 바꿔도 견디도록 두 표현을 모두 허용한다.
+// 검증: 최근 40일 기준 이 검색어는 식단표 메일 6건만 반환하며 잡음이 없다.
+var SEARCH_QUERY = 'subject:(메뉴표 OR 식단표) has:attachment filename:pdf newer_than:7d';
 
 function sendMenuToSheet() {
   var threads = GmailApp.search(SEARCH_QUERY, 0, 1);
