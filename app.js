@@ -1860,7 +1860,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function menuWeekSubLabel() {
         const i = getMenuWeekInfo(currentMenuMonday);
-        return `${i.title} (${i.range}) · (주)멜리에프에스`;
+        return `${i.title} (${i.range})`;
     }
 
     // 주 이동 연타 시 늦게 도착한 이전 주 이미지를 무시하기 위한 세대 번호
