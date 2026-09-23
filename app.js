@@ -4031,7 +4031,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (zoom < 1) {
             grid.style.setProperty('zoom', String(zoom), 'important');
             grid.style.setProperty('width', `calc((277mm - 4px) / ${zoom})`, 'important');
-            grid.style.setProperty('min-height', `calc(155mm / ${zoom})`, 'important');
+            grid.style.setProperty('height', `calc(155mm / ${zoom})`, 'important');
         }
         grid.dataset.printFit = (chosen || 'normal') + (zoom < 1 ? ` zoom:${zoom.toFixed(3)}` : '');
     }
@@ -4042,7 +4042,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         REQ_FIT_LEVELS.forEach(c => c && grid.classList.remove(c));
         grid.style.removeProperty('zoom');
         grid.style.removeProperty('width');
-        grid.style.removeProperty('min-height');
+        grid.style.removeProperty('height');
         delete grid.dataset.printFit;
     }
     window.addEventListener('beforeprint', fitRequestGridForPrint);

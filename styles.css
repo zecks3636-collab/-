@@ -1666,17 +1666,19 @@ body {
     .calendar-grid.request-grid {
         /* A4 landscape 인쇄가능높이 180mm − 인쇄헤더(~16mm) − 요일라벨(~6mm) − 여백(~3mm) ≈ 155mm */
         display: grid !important;
-        /* 최소 155mm 를 채우되, 일정이 매우 많은 달은 잘라내지 않고 늘어나 다음 페이지로 이어진다.
-           인쇄물에서 일정이 조용히 사라지는 것보다 2페이지가 되는 편이 낫다. */
-        height: auto !important;
-        min-height: 155mm !important;
+        /* 높이는 155mm 고정. 넘칠 일은 app.js 의 인쇄 맞춤(글자 단계 축소, 비율 축소)이 막는다.
+           그래도 측정이 어긋나 넘치면 잘라내지 않고 보이도록 overflow 는 visible 로 둔다. */
+        height: 155mm !important;
+        min-height: 0 !important;
         max-height: none !important;
         grid-template-columns: repeat(7, 1fr) !important;
-        /* 주차별 높이를 내용에 맞춘다. 1fr 로 균등 분할하면 일정이 많은 날이 잘리고
-           일정이 없는 주차에는 여백만 남는다. auto 트랙은 남는 공간을 균등하게 나눠
-           갖도록 늘어나므로(stretch) 페이지는 그대로 채우면서 바쁜 주차가 더 커진다. */
-        grid-auto-rows: auto !important;
-        align-content: stretch !important;
+        /* 주차 높이 배분 — 모든 주를 같은 높이로 나누되, 내용이 그보다 많은 주만 내용에 딱 맞게 늘린다.
+           minmax(max-content, 1fr): 각 주는 최소한 자기 내용 높이를 갖고, 남는 공간은 fr 로 나눈다.
+           CSS Grid 는 fr 을 계산할 때 내용이 균등 몫보다 큰 주를 빼고 나머지 주끼리 다시 나누므로,
+           늘어난 주에는 여유 공간이 얹히지 않고 그만큼은 일정이 적은 주들이 고르게 양보한다.
+           (auto + stretch 는 남는 공간을 모든 주에 똑같이 얹어 바쁜 칸 아래 빈 공간이 컸다.
+            1fr 만 쓰면 셀이 overflow:hidden 일 때 최소 높이가 0 으로 잡혀 내용이 잘렸다.) */
+        grid-auto-rows: minmax(max-content, 1fr) !important;
         gap: 3px !important;
         overflow: visible !important;
         flex: none !important;          /* flex 영향 차단 */
