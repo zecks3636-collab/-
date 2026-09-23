@@ -3994,6 +3994,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter') { e.preventDefault(); submitRequestAdd(); }
     });
 
+    // ── 요청자료 인쇄 한 페이지 맞춤 ──
+    // 인쇄 직전에 셀과 칩을 인쇄 치수로 재현해(.req-print-sim) 자연 높이를 재고,
+    // 한 페이지(155mm)를 넘으면 칩 글자를 단계적으로 줄인다(.req-fit-1 ~ 4).
+    // 일정 없는 주차는 CSS 가 이미 최소 높이로 줄이므로, 글자 축소는 그래도 넘칠 때만 일어난다.
+    // 측정은 클래스 추가, 높이 읽기, 제거를 한 번에 동기적으로 처리해 화면에 그려지지 않는다.
+    // 인쇄 버튼과 Ctrl+P 모두 beforeprint 를 거치므로 두 경로 모두 적용된다.
+    const REQ_FIT_LEVELS = ['', 'req-fit-1', 'req-fit-2', 'req-fit-3', 'req-fit-4'];
+    const REQ_PRINT_LIMIT_PX = 155 * 96 / 25.4 * 0.98;   // 155mm, 2% 여유
+    function fitRequestGridForPrint() {
+        const grid = document.getElementById('requestGrid');
+        if (!grid || !panelRequest || panelRequest.style.display !== 'flex') return;
+        // 인쇄 제목 월 — 인쇄 버튼뿐 아니라 Ctrl+P 로 인쇄해도 현재 보고 있는 월이 찍히도록 여기서 설정
+        const monthEl = document.getElementById('requestPrintMonth');
+        if (monthEl) monthEl.textContent = `${currentYear}년 ${currentMonth + 1}월`;
+        resetRequestGridPrintFit();                      // 연속 인쇄 시에도 항상 같은 결과가 나오도록 초기화
+        grid.classList.add('req-print-sim', 'req-print-measure');
+        const measure = () => grid.getBoundingClientRect().height;
+        let chosen = null;
+        for (const lv of REQ_FIT_LEVELS) {
+            REQ_FIT_LEVELS.forEach(c => c && grid.classList.remove(c));
+            if (lv) grid.classList.add(lv);
+            if (measure() <= REQ_PRINT_LIMIT_PX) { chosen = lv; break; }
+        }
+        // 최후 수단: 가장 작은 단계로도 넘치는 극단적인 달은 달력 전체를 비율 축소한다.
+        // zoom 은 레이아웃까지 줄이므로 폭을 1/zoom 로 넓혀 두면 인쇄 폭을 그대로 채운다.
+        // 폭이 넓어지면 줄바꿈이 줄어 높이가 더 낮아지므로 이 비율은 항상 안전한 쪽이다.
+        let zoom = 1;
+        if (chosen === null) {
+            chosen = REQ_FIT_LEVELS[REQ_FIT_LEVELS.length - 1];
+            zoom = Math.max(0.3, REQ_PRINT_LIMIT_PX / measure());
+        }
+        REQ_FIT_LEVELS.forEach(c => c && grid.classList.remove(c));
+        if (chosen) grid.classList.add(chosen);
+        grid.classList.remove('req-print-measure');
+        if (zoom < 1) {
+            grid.style.setProperty('zoom', String(zoom), 'important');
+            grid.style.setProperty('width', `calc((277mm - 4px) / ${zoom})`, 'important');
+            grid.style.setProperty('min-height', `calc(155mm / ${zoom})`, 'important');
+        }
+        grid.dataset.printFit = (chosen || 'normal') + (zoom < 1 ? ` zoom:${zoom.toFixed(3)}` : '');
+    }
+    function resetRequestGridPrintFit() {
+        const grid = document.getElementById('requestGrid');
+        if (!grid) return;
+        grid.classList.remove('req-print-sim', 'req-print-measure');
+        REQ_FIT_LEVELS.forEach(c => c && grid.classList.remove(c));
+        grid.style.removeProperty('zoom');
+        grid.style.removeProperty('width');
+        grid.style.removeProperty('min-height');
+        delete grid.dataset.printFit;
+    }
+    window.addEventListener('beforeprint', fitRequestGridForPrint);
+    window.addEventListener('afterprint', resetRequestGridPrintFit);
+
     // PDF 인쇄
     document.getElementById('requestPrintBtn').addEventListener('click', () => {
         const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];

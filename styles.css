@@ -1584,13 +1584,13 @@ body {
         display: flex !important;
         flex-direction: column !important;
         width: 100% !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
+        height: auto !important;
+        max-height: none !important;
         box-shadow: none !important;
         border: none !important;
         padding: 0 2px !important;
         margin: 0 !important;
-        overflow: hidden !important;
+        overflow: visible !important;
         page-break-after: avoid !important;
         break-after: avoid !important;
         backdrop-filter: none !important;
@@ -1603,9 +1603,7 @@ body {
         flex: none !important;
         margin: 0 !important;
         padding: 0 !important;
-        overflow: hidden !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+        overflow: visible !important;
     }
 
     /* 인쇄 전용 헤더 — 좌측: 월·부제(좌측 세로 바), 우측: 부서명 */
@@ -1668,20 +1666,26 @@ body {
     .calendar-grid.request-grid {
         /* A4 landscape 인쇄가능높이 180mm − 인쇄헤더(~16mm) − 요일라벨(~6mm) − 여백(~3mm) ≈ 155mm */
         display: grid !important;
-        height: 155mm !important;
-        max-height: 155mm !important;
-        min-height: 0 !important;
+        /* 최소 155mm 를 채우되, 일정이 매우 많은 달은 잘라내지 않고 늘어나 다음 페이지로 이어진다.
+           인쇄물에서 일정이 조용히 사라지는 것보다 2페이지가 되는 편이 낫다. */
+        height: auto !important;
+        min-height: 155mm !important;
+        max-height: none !important;
         grid-template-columns: repeat(7, 1fr) !important;
-        grid-auto-rows: 1fr !important;
+        /* 주차별 높이를 내용에 맞춘다. 1fr 로 균등 분할하면 일정이 많은 날이 잘리고
+           일정이 없는 주차에는 여백만 남는다. auto 트랙은 남는 공간을 균등하게 나눠
+           갖도록 늘어나므로(stretch) 페이지는 그대로 채우면서 바쁜 주차가 더 커진다. */
+        grid-auto-rows: auto !important;
+        align-content: stretch !important;
         gap: 3px !important;
-        overflow: hidden !important;
+        overflow: visible !important;
         flex: none !important;          /* flex 영향 차단 */
     }
     /* 요청자료 셀: 화면용 height:105px·overflow:hidden 보다 specificity 동등하게 강제 해제 */
     .calendar-grid.request-grid .cal-day {
         height: auto !important;
         max-height: none !important;
-        overflow: hidden !important;
+        overflow: visible !important;
         min-height: 0 !important;
     }
     .cal-day {
@@ -1730,6 +1734,66 @@ body {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
+}
+
+/* ── 요청자료 인쇄: 한 페이지 맞춤 ──
+   인쇄 직전(beforeprint)에 app.js 가 .req-print-sim 을 붙여 셀과 칩을 인쇄 치수로 재현하고,
+   .req-print-measure 상태에서 인쇄 폭(277mm) 기준 자연 높이를 잰다. 155mm 를 넘으면
+   .req-fit-1 ~ 4 로 칩 글자를 단계적으로 줄여 한 페이지에 맞춘다.
+   아래 .req-print-sim 치수는 @media print 의 셀/칩 규칙과 반드시 같게 유지할 것. */
+.calendar-grid.request-grid.req-print-sim .cal-day {
+    padding: 4px 4px !important;
+    border: 1px solid #cbd5e1 !important;
+    min-height: 0 !important;
+}
+.calendar-grid.request-grid.req-print-sim .date-num { font-size: 13px !important; }
+.calendar-grid.request-grid.req-print-sim .request-chip {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+    padding: 3px 7px !important;
+    margin-top: 2px !important;
+    margin-bottom: 0 !important;
+    white-space: normal !important;
+    word-break: keep-all !important;
+    overflow-wrap: anywhere !important;
+}
+/* 측정 전용 — 화면용 셀 고정 높이(105px)와 스크롤을 풀고 인쇄 폭으로 자연 높이를 잰다.
+   측정 직후 바로 제거되므로 화면에 그려지지 않는다. */
+.calendar-grid.request-grid.req-print-measure {
+    flex: none !important;          /* 부모 flex column 이 높이를 늘리지 않도록 — 내용 높이만 잰다 */
+    width: calc(277mm - 4px) !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    grid-template-columns: repeat(7, 1fr) !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: auto !important;
+    gap: 3px !important;
+    align-content: start !important;
+    overflow: visible !important;
+}
+.calendar-grid.request-grid.req-print-measure .cal-day {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+.calendar-grid.request-grid.req-print-measure .req-chips-scroll {
+    flex: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+/* 단계별 축소 — 인쇄 규칙(!important)보다 우선하도록 선택자를 한 단계 더 구체화 */
+.calendar-grid.request-grid.req-fit-1 .cal-day .request-chip {
+    font-size: 12px !important; line-height: 1.3 !important;  padding: 2px 6px !important; margin-top: 2px !important;
+}
+.calendar-grid.request-grid.req-fit-2 .cal-day .request-chip {
+    font-size: 11px !important; line-height: 1.25 !important; padding: 2px 5px !important; margin-top: 1px !important;
+}
+.calendar-grid.request-grid.req-fit-3 .cal-day .request-chip {
+    font-size: 10px !important; line-height: 1.2 !important;  padding: 1px 4px !important; margin-top: 1px !important;
+}
+.calendar-grid.request-grid.req-fit-4 .cal-day .request-chip {
+    font-size: 9px !important;  line-height: 1.15 !important; padding: 1px 3px !important; margin-top: 1px !important;
 }
 
 /* ── 파일 관리 패널 ── */
