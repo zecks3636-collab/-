@@ -1748,6 +1748,15 @@ body {
     border: 1px solid #cbd5e1 !important;
     min-height: 0 !important;
 }
+/* 주말·공휴일 칸: 인쇄에서도 화면과 같은 틴트 유지 (위 회색 테두리 규칙보다 뒤에 둘 것).
+   테두리는 화면 rgba 값을 흰 바탕에 합성한 불투명색 — PDF에서 반투명 테두리가 흐리게 그려짐 */
+.calendar-grid.request-grid .cal-day.holiday-day,
+.calendar-grid.request-grid .cal-day.saturday-day {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+.calendar-grid.request-grid .cal-day.holiday-day { border-color: #fad6de !important; }
+.calendar-grid.request-grid .cal-day.saturday-day { border-color: #e0eafc !important; }
 .calendar-grid.request-grid.req-print-sim .date-num { font-size: 13px !important; }
 .calendar-grid.request-grid.req-print-sim .request-chip {
     font-size: 13px !important;
