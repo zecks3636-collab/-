@@ -1084,8 +1084,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     function _pct(actual, target) {
         // 목표가 0이더라도 실적이 있으면 100%로 표시 (계획에 없던 초과 활동을 완료로 인정)
         if (!target) return actual > 0 ? 100 : 0;
-        // 정수 %로 반환 (소수점 없음)
-        return Math.min(999, Math.round(actual*100/target));
+        // 목표를 초과한 실적도 100%로 표시, 정수 %로 반환 (소수점 없음)
+        return Math.min(100, Math.round(actual*100/target));
+    }
+    // 여러 목표의 합산 진척률: 목표별 실적을 목표치까지만 반영해 초과 실적이 다른 목표의 미달분을 상쇄하지 않도록 함
+    function _sumPct(goals, actualOf, targetOf) {
+        let t = 0, raw = 0, capped = 0;
+        goals.forEach(g => {
+            const gt = targetOf(g), ga = actualOf(g);
+            t += gt; raw += ga; capped += Math.min(ga, gt);
+        });
+        return t ? _pct(capped, t) : _pct(raw, 0);
     }
     function _pctColor(p) {
         if (p >= 100) return '#16a34a';
@@ -1139,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const list = _filterByTeam(goalsCache);
         const totalTarget = list.reduce((s,g)=>s+Number(g.target_total||0),0);
         const totalActual = list.reduce((s,g)=>s+_totalActual(g.id),0);
-        const pct = _pct(totalActual, totalTarget);
+        const pct = _sumPct(list, g=>_totalActual(g.id), g=>Number(g.target_total||0));
         const prog = document.getElementById('goalsHeroProgress');
         const bar  = document.getElementById('goalsHeroBar');
         const det  = document.getElementById('goalsHeroDetail');
@@ -1153,7 +1162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const tg = goalsCache.filter(g=>g.team===team);
                 const tT = tg.reduce((s,g)=>s+Number(g.target_total||0),0);
                 const tA = tg.reduce((s,g)=>s+_totalActual(g.id),0);
-                const p = _pct(tA, tT);
+                const p = _sumPct(tg, g=>_totalActual(g.id), g=>Number(g.target_total||0));
                 return `
                   <div class="goals-team-chip">
                     <span class="goals-team-chip-name">${team}</span>
@@ -1171,10 +1180,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const nGoals = tg.length;
                 const tT = tg.reduce((s,g)=>s+Number(g.target_total||0),0);
                 const tA = tg.reduce((s,g)=>s+_totalActual(g.id),0);
-                const tPct = _pct(tA, tT);
+                const tPct = _sumPct(tg, g=>_totalActual(g.id), g=>Number(g.target_total||0));
                 const qT = tg.reduce((s,g)=>s+_quarterTarget(g, currentGoalQuarter),0);
                 const qA = tg.reduce((s,g)=>s+_quarterActual(g.id, currentGoalQuarter),0);
-                const qPct = _pct(qA, qT);
+                const qPct = _sumPct(tg, g=>_quarterActual(g.id, currentGoalQuarter), g=>_quarterTarget(g, currentGoalQuarter));
                 return `
                   <div class="goals-metric-card">
                     <div class="goals-metric-team">${team}</div>
@@ -1235,7 +1244,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const qT = list.reduce((s,g)=>s+_quarterTarget(g, q),0);
         const qA = list.reduce((s,g)=>s+_quarterActual(g.id, q),0);
-        const qPct = _pct(qA, qT);
+        const qPct = _sumPct(list, g=>_quarterActual(g.id, q), g=>_quarterTarget(g, q));
         const prog = document.getElementById('goalsQuarterProgress');
         const bar  = document.getElementById('goalsQuarterBar');
         const det  = document.getElementById('goalsQuarterDetail');
@@ -1250,10 +1259,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const tg = goalsCache.filter(g=>g.team===team);
                 const tT = tg.reduce((s,g)=>s+_quarterTarget(g, q),0);
                 const tA = tg.reduce((s,g)=>s+_quarterActual(g.id, q),0);
-                const p = _pct(tA, tT);
+                const p = _sumPct(tg, g=>_quarterActual(g.id, q), g=>_quarterTarget(g, q));
                 const cT = tg.reduce((s,g)=>s+_cumulTarget(g, q),0);
                 const cA = tg.reduce((s,g)=>s+_cumulActual(g.id, q),0);
-                const cP = _pct(cA, cT);
+                const cP = _sumPct(tg, g=>_cumulActual(g.id, q), g=>_cumulTarget(g, q));
                 return `
                   <div class="goals-metric-card">
                     <div class="goals-metric-team">${team}</div>
