@@ -60,14 +60,9 @@
     const dayMode = document.createElement('button');
     dayMode.textContent = '메뉴 보기';
     modes.append(weekMode, dayMode);
-    const source = document.createElement('a');
-    source.className = 'local-menu-btn local-menu-source';
-    source.textContent = '원본 보기';
-    source.target = '_blank';
-    source.rel = 'noopener';
     upload.textContent = 'PDF 업로드';
     upload.classList.add('local-menu-btn', 'local-menu-upload');
-    actions.append(modes, source, upload);
+    actions.append(modes, upload);
     if (remove) {
       remove.textContent = '식단 삭제';
       remove.classList.add('local-menu-btn', 'local-menu-remove');
@@ -222,16 +217,6 @@
       if (monday) picker.value = dateKey(monday);
       const key = monday ? dateKey(monday) : '';
       if (metadata.has(key)) archive.value = key; else archive.value = '';
-      if (hasImage) {
-        source.href = image.src;
-        source.hidden = false;
-        source.onclick = event => { event.preventDefault(); openImage(); };
-      } else {
-        // 과거 원본 PDF(schedules/menu)는 운영에 배포되지 않으므로 실제 이미지가 있을 때만 원본 보기를 노출한다.
-        source.hidden = true;
-        source.removeAttribute('href');
-        source.onclick = null;
-      }
       archive.title = '로컬에 보관되거나 등록된 식단표 선택';
     }
     const zoom = document.createElement('dialog');
