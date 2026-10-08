@@ -19,7 +19,7 @@
     font-family: 'Pretendard Variable', Pretendard, sans-serif;
   }
   :is(#dashboardToolbar, #panelLeave .rl-toolbar, #panelGoals .bti-gx-toolbar, #panelMenuView .local-menu-toolbar)
-  :where(button, select, input:not([type="date"]):not([type="month"]), .local-menu-date-picker) {
+  :where(button, select, input:not([type="date"]):not([type="month"]), .local-menu-date-picker, a.local-menu-btn) {
     box-sizing: border-box;
     height: var(--toolbar-control-height) !important;
     min-height: var(--toolbar-control-height) !important;
@@ -151,9 +151,9 @@
 @media screen and (max-width: 600px) {
   .dashboard-brand .brand-symbol { width: 25px; }
 }
-/* 페이지 안 스크롤 영역은 끝에 닿으면 페이지 스크롤로 이어지게 함 (달력 위에서 휠이 멈추는 현상 해소, 모달은 제외) */
+/* 페이지 안 스크롤 영역은 끝에 닿으면 페이지 스크롤로 이어지게 함 (달력 위에서 휠이 멈추는 현상 해소, 식단 확대 대화상자 등 모달은 제외) */
 #calendarGrid .cal-day, .cal-day, .leave-cal-day, #panelLeave .calendar-grid .cal-day,
-#panelLeave .leave-chips-scroll, .req-chips-scroll, .local-menu-image-scroll, .bti-thanks-people-scroll {
+#panelLeave .leave-chips-scroll, .req-chips-scroll, .bti-thanks-people-scroll {
   overscroll-behavior: auto !important;
 }
 /* 상단 머리글과 월 선택 영역 사이 간격 축소 (PC) */

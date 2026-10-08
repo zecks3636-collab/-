@@ -70,8 +70,6 @@
   #calendarGrid .event.event-modern .event-meta { display:flex; align-items:center; justify-content:flex-start; gap:6px; min-height:13px; line-height:1.2; }
   #calendarGrid .event.event-modern .e-time { display:block; font-size:11px; line-height:13px; font-weight:720; letter-spacing:.05px; color:inherit; opacity:1; font-variant-numeric:tabular-nums; }
   #calendarGrid .event.event-modern .event-company { display:inline-flex; align-items:center; gap:4px; margin-left:auto; padding:0; border-radius:0; background:transparent; font-size:9.5px; font-weight:600; line-height:13px; color:inherit; opacity:1; white-space:nowrap; }
-  .event-priority-label { display:inline-flex; flex:none; align-items:center; gap:3px; padding:0 4px; border:1px solid color-mix(in srgb,currentColor 20%,transparent); border-radius:4px; color:inherit; font-size:9px; font-weight:700; line-height:13px; white-space:nowrap; }
-  .event-priority-label svg { display:block; width:9px; height:9px; fill:currentColor; }
   #calendarGrid .event.event-modern .event-company::before { content:""; width:4px; height:4px; border-radius:50%; background:currentColor; opacity:.75; flex-shrink:0; }
   #calendarGrid .event.event-modern .e-title { display:block; flex:0 0 auto; width:100%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:590; line-height:1.45; letter-spacing:-.25px; color:inherit; }
   #calendarGrid .cal-day:focus-visible { outline:2px solid #7b9bc1; outline-offset:-2px; }
@@ -85,7 +83,6 @@
   .calendar-list td:first-child { color:#466078; font-weight:650; width:125px; }
   .calendar-list .list-event { color:#263e54; font-weight:540; font-size:13px; }
   .calendar-list .list-event.event-important { display:inline-flex; align-items:center; gap:8px; max-width:100%; padding:8px 10px; border-radius:7px; background:var(--event-bg); color:var(--event-ink); font-weight:700; text-align:left; }
-  .calendar-list .list-event .event-priority-label { font-size:10px; }
   .calendar-list .red-date { color:var(--ui-danger) !important; }
   .rl-toolbar { border-color:var(--ui-border); border-radius:11px; box-shadow:none; }
   .rl-button,.rl-select,.rl-search input,#requestPrintBtn.rl-button { border-color:#e2e9f0; border-radius:7px; font-size:12px; color:#557188; }
@@ -197,9 +194,6 @@
   #calendarGrid .event.event-modern .e-time { font-size:8.5px; line-height:11px; }
   #calendarGrid .event.event-modern .event-company { display:none; }
   #calendarGrid .event.event-modern .event-meta { gap:3px; }
-  #calendarGrid .event.event-modern .event-priority-label { padding:0; border:0; line-height:11px; }
-  #calendarGrid .event.event-modern .event-priority-label>span { display:none; }
-  #calendarGrid .event.event-modern .event-priority-label svg { width:8px; height:8px; }
   #calendarGrid .event.event-modern .e-title { font-size:10px; line-height:1.35; font-weight:580; }
   .calendar-list th { padding:11px 8px; }
   .calendar-list td { padding:14px 8px; font-size:12px; }
@@ -224,7 +218,6 @@
   .dashboard-nav-btn,.dashboard-button,.event-modern { transition:none !important; }
 }
 @media print {
-  .event-priority-label { display:none !important; }
   .event-modern .event-meta { display:inline-flex; gap:4px; }
   .event-modern .event-company { font-size:9px; }
 }

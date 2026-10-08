@@ -2205,9 +2205,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('식단을 삭제하지 못했습니다. 기존 식단은 그대로 유지됩니다. 잠시 후 다시 시도해주세요.\n' + (rowError.message || ''));
                 return;
             }
-            // 이미지 삭제가 실패해도 정식 행이 없어 화면에는 다시 나타나지 않으므로 기록만 남긴다.
-            const { error: imageError } = await sb.storage.from('menu-images').remove([storagePath]);
-            if (imageError) console.warn('식단 이미지 정리 실패(화면 영향 없음):', imageError.message);
+            // 자동 반영 식단은 이미지가 정식 행(storage_path = 주차 키)에 함께 저장되어 정식 행 삭제로 이미 제거된다.
+            // 이 경우 이미지 정리 요청을 보내지 않아, 그사이 자동 반영이 다시 만든 새 이미지를 비우지 않게 한다.
+            if (storagePath !== key) {
+                // 별도 이미지 행 정리가 실패해도 정식 행이 없어 화면에는 다시 나타나지 않으므로 기록만 남긴다.
+                const { error: imageError } = await sb.storage.from('menu-images').remove([storagePath]);
+                if (imageError) console.warn('식단 이미지 정리 실패(화면 영향 없음):', imageError.message);
+            }
         } else {
             try { localStorage.setItem('menuWeekStore', JSON.stringify(menuStore)); } catch(_) {}
         }
