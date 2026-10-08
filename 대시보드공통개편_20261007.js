@@ -65,7 +65,6 @@
       return m.year + '-' + String(m.month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
     }
     byId('calendarAddBtn').addEventListener('click', () => window.BTIScheduleUI?.addEvent(defaultDate()));
-    byId('calendarImportBtn').addEventListener('click', () => { byId('tabUpload').click(); byId('openSettingsBtn').click(); });
     function closeDay() { dialog.classList.remove('active'); }
     dialog.querySelector('.close-btn').addEventListener('click', closeDay);
     dialog.addEventListener('click', e => { if (e.target === dialog) closeDay(); });
