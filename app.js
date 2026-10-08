@@ -69,7 +69,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     let eventColorMap = {};
     try { eventColorMap = JSON.parse(localStorage.getItem('eventCustomColors')) || {}; } catch { eventColorMap = {}; }
 
-    // 그룹 주요 회의 — 화면에서 자동 검은 배경 (인쇄에는 미적용)
+    // 주요 회의의 화면 강조. 저장된 사용자 색과 인쇄용 원본 값은 유지한다.
+    const PRIORITY_EVENT_BG = '#dce6f4';
+    const DEFAULT_EVENT_BG = { Group: '#edf2f8', NBT: '#e8f1f3', BIO: '#eaf2ed' };
+    const LEGACY_EVENT_COLORS = {
+        '#f0f4fb': '#e4eaf5', '#edf6f2': '#dfeee5', '#faf3e8': '#f3e7cf',
+        '#f1f5f8': '#e6eaf0', '#f2eef8': '#e8e1f1', '#faeef2': '#f2e2e9',
+        '#eaf5f5': '#dfeef0', '#f7efea': '#efe4dc', '#f9ecec': '#f3e1e1',
+        '#cbdcfa': '#e4eaf5', '#c6e6d7': '#dfeee5', '#f4ddb4': '#f3e7cf',
+        '#d2dde8': '#e6eaf0', '#dbd0f2': '#e8e1f1', '#f0cddd': '#f2e2e9',
+        '#c4e5e7': '#dfeef0', '#ebd4c7': '#efe4dc', '#ecc5c8': '#f3e1e1',
+        '#e6eefb': PRIORITY_EVENT_BG, '#2457b8': PRIORITY_EVENT_BG
+    };
+    const LEGACY_DARK_EVENT_COLORS = new Set(['#000000', '#111111', '#111827', '#1a1a1a', '#1e293b', '#222222', '#333333']);
     // 확대경영회의는 순수한 '확대경영회의(판교)' 만 대상.
     // '중국·동남아 법인 확대경영회의', '코스맥스USA 확대경영회의' 등은 제외.
     const BLACK_GROUP_KEYWORDS = [
@@ -85,13 +97,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     const BLACK_GROUP_EXPAND_EXCLUDES = ['중국', '동남아', '법인', 'USA', 'usa', '해외', '글로벌', '네오', '믹스앤매치'];
     function isBlackGroupEvent(title) {
         if (!title) return false;
+        title = title.replace(/\s+/g, '').toUpperCase();
         // 1. 명시적 키워드 매칭
-        if (BLACK_GROUP_KEYWORDS.some(kw => title.includes(kw))) return true;
+        if (BLACK_GROUP_KEYWORDS.some(kw => title.includes(kw.replace(/\s+/g, '').toUpperCase()))) return true;
         // 2. '확대경영회의' — 접두어에 예외 회사/지역 없어야 함
         if (title.includes('확대경영회의')) {
             if (BLACK_GROUP_EXPAND_EXCLUDES.every(k => !title.includes(k))) return true;
         }
         return false;
+    }
+
+    function isPriorityEvent(evt) {
+        if (!evt) return false;
+        const title = String(evt.title || '').replace(/\s+/g, '').toUpperCase();
+        if (evt.company === 'Group' && isBlackGroupEvent(title)) return true;
+        // 회사별 조회에는 같은 확대회의가 회사명 없이 등록된 경우가 있다.
+        return ['NBT', 'BIO'].includes(evt.company)
+            && /확대(?:경영)?회의/.test(title)
+            && BLACK_GROUP_EXPAND_EXCLUDES.every(word => !title.includes(word.toUpperCase()));
+    }
+
+    function getEventPresentation(evt, colorInfo) {
+        const originalBg = String(colorInfo?.bg || '').toLowerCase();
+        const legacyHighlight = LEGACY_DARK_EVENT_COLORS.has(originalBg)
+            || ['#e6eefb', '#2457b8', PRIORITY_EVENT_BG].includes(originalBg);
+        const priority = isPriorityEvent(evt) || legacyHighlight;
+        const bg = colorInfo?.bg
+            ? calendarDisplayColor(colorInfo.bg)
+            : (priority ? PRIORITY_EVENT_BG : DEFAULT_EVENT_BG[evt?.company] || '#e6eaf0');
+        return { priority, bg, text: contrastColor(bg) };
     }
 
     // ========== DATA LAYER (사내 DB + fallback) ==========
@@ -191,8 +225,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ========== CALENDAR STATE ==========
     let today = new Date();
-    let currentYear = today.getFullYear();
-    let currentMonth = today.getMonth();
+    const localPreviewMonth = window.__BTI_LOCAL_INITIAL_MONTH;
+    const validPreviewMonth = localPreviewMonth && Number.isInteger(localPreviewMonth.year) &&
+        Number.isInteger(localPreviewMonth.month) && localPreviewMonth.month >= 1 && localPreviewMonth.month <= 12;
+    let currentYear = validPreviewMonth ? localPreviewMonth.year : today.getFullYear();
+    let currentMonth = validPreviewMonth ? localPreviewMonth.month - 1 : today.getMonth();
 
     // ========== HOLIDAYS ==========
     const holidays = {
@@ -266,7 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
         const firstDayIndex = new Date(currentYear, currentMonth, 1).getDay();
 
-        document.getElementById('monthTitle').textContent = `${currentYear}. ${String(currentMonth + 1).padStart(2, '0')}`;
+        document.getElementById('monthTitle').textContent = `${currentYear}년 ${currentMonth + 1}월`;
 
         for (let i = 0; i < firstDayIndex; i++) {
             const emptyDiv = document.createElement('div');
@@ -373,18 +410,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 생일자는 셀 우측 라벨로만 표시 (이벤트 칩에서는 제외 — 중복 방지)
                 if (evt.company === 'Birthday') return;
                 if (currentFilter !== 'all' && evt.company !== currentFilter) return;
-                if (currentSearch && !evt.title.toLowerCase().includes(currentSearch)) return;
+                if (currentSearch && !`${evt.title} ${evt.company} ${{ Group: '그룹', NBT: '엔비티', BIO: '바이오' }[evt.company] || ''}`.toLowerCase().includes(currentSearch)) return;
 
                 const eventDiv = document.createElement('div');
                 eventDiv.className = `event ${evt.company}`;
+                eventDiv.dataset.company = evt.company;
+                eventDiv.dataset.date = dayString;
                 // 커스텀 색상 적용
                 const customColor = eventColorMap[evt.id];
+                const presentation = getEventPresentation(evt, customColor);
+                eventDiv.dataset.priority = String(presentation.priority);
+                eventDiv.classList.toggle('event-important', presentation.priority);
+                eventDiv.style.setProperty('--event-bg', presentation.bg);
+                eventDiv.style.setProperty('--event-ink', presentation.text);
                 if (customColor) {
                     eventDiv.style.background = customColor.bg;
                     eventDiv.style.color = customColor.text;
-                } else if (evt.company === 'Group' && isBlackGroupEvent(evt.title)) {
-                    // 그룹 주요 회의 자동 검은 배경 (화면 전용, 인쇄엔 미적용)
-                    eventDiv.classList.add('event-black-screen');
                 }
 
                 let timeStr = "";
@@ -401,9 +442,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 항상 한 줄: 배지 + 시간(있으면) + 제목
                 if (timeStr) {
-                    eventDiv.innerHTML = `${compBadge}<span class="e-time">${timeStr}</span><span class="e-title">${contentStr}</span>`;
+                    eventDiv.innerHTML = `${compBadge}<span class="e-time">${timeStr}</span><span class="e-title">${_esc(contentStr)}</span>`;
                 } else {
-                    eventDiv.innerHTML = `${compBadge}<span class="e-title">${contentStr}</span>`;
+                    eventDiv.innerHTML = `${compBadge}<span class="e-title">${_esc(contentStr)}</span>`;
                 }
                 eventDiv.title = `[${evt.company}] ${timeStr ? timeStr + ' ' : ''}${contentStr}`;
 
@@ -417,6 +458,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (e.target.closest('.event')) return;
                 openDirectInputForDate(dayString);
             });
+            dayDiv.dataset.date = dayString;
             dayDiv.style.cursor = 'pointer';
 
             calendarGrid.appendChild(dayDiv);
@@ -532,6 +574,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderUpcoming();
         if (panelLeave && panelLeave.style.display === 'flex') renderLeaveCalendar();
         if (panelRequest && panelRequest.style.display === 'flex') renderRequestCalendar();
+        if (panelThanks && panelThanks.style.display === 'flex') renderThanksCards();
     }
 
     // ========== EVENT LISTENERS ==========
@@ -594,9 +637,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showPanelLoading(elId, message) {
         const el = document.getElementById(elId);
         if (!el) return;
-        el.innerHTML = '<div class="panel-loading">'
-            + '<span class="pl-dots"><i></i><i></i><i></i></span>'
-            + '<span class="pl-text">' + message + '</span></div>';
+        el.innerHTML = '<div class="panel-loading" role="status" aria-live="polite" aria-atomic="true">'
+            + '<span class="pl-preview" aria-hidden="true"><i></i></span>'
+            + '<span class="pl-text">' + escapeHtml(message) + '</span></div>';
     }
 
     async function switchToMenu() {
@@ -636,6 +679,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         tabLeave.classList.add('active');
         _showPanel(panelLeave, 'flex');
         panelLeave.style.flexDirection = 'column';
+        const leaveLabel = document.getElementById('leaveMonthLabel');
+        if (leaveLabel) leaveLabel.textContent = `${leaveYear}. ${String(leaveMonth + 1).padStart(2, '0')}`;
         // 첫 클릭 시 데이터 미로드 상태면 대기 후 렌더
         if (!allLeaves || !allLeaves.length) {
             showPanelLoading('leaveGrid', '연차 데이터를 불러오는 중');
@@ -728,6 +773,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         '성과': { bg: '#dcfce7', text: '#14532d' },
         '응원': { bg: '#fce7f3', text: '#831843' },
         '감사': { bg: '#ede9fe', text: '#4c1d95' },
+        '축하': { bg: '#f5e7df', text: '#89543e' },
     };
     let thanksCards = [];
     let thanksReactions = [];  // 전체 리액션 캐시: [{id, card_id, from_name, to_name, sticker, created_at}, ...]
@@ -739,7 +785,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function thanksMonthLabel() {
-        return `${currentYear}년 ${currentMonth + 1}월 Thanks Board`;
+        return `${currentYear}년 ${currentMonth + 1}월 칭찬보드`;
     }
 
     function populateThanksDropdowns() {
@@ -1013,9 +1059,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!res.ok) throw new Error(await res.text());
             const created = await res.json();
             thanksCards.unshift(created);
+            const createdMonth = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(String(created.ym || ''));
+            if (createdMonth && (currentYear !== Number(createdMonth[1]) || currentMonth !== Number(createdMonth[2]) - 1)) {
+                currentYear = Number(createdMonth[1]);
+                currentMonth = Number(createdMonth[2]) - 1;
+                renderCalendar();
+            }
             document.getElementById('thanksMessageInput').value = '';
             document.getElementById('thanksToSelect').value = '';
             renderThanksCards();
+            panelThanks?.dispatchEvent(new CustomEvent('bti:praise-saved'));
         } catch(err) {
             alert('전송 오류: ' + err.message);
         } finally {
@@ -1203,20 +1256,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 objRows.innerHTML = list.map(g => {
                     const actual = _totalActual(g.id);
-                    const p = _pct(actual, g.target_total);
+                    const targetKnown = g.target_total != null;
+                    const p = targetKnown ? _pct(actual, g.target_total) : null;
                     const acts = activitiesCache.filter(a=>a.goal_id===g.id).sort((a,b)=>Number(b.quarter)-Number(a.quarter));
                     const recent = acts[0];
-                    const recentTxt = recent ? `${recent.quarter}Q · ${_esc((recent.summary||'').slice(0,40))}` : '-';
+                    const recentSummary = recent?.summary || '';
+                    const recentTxt = recent ? `${recent.quarter}Q ${_esc(recentSummary.slice(0,40))}${recentSummary.length > 40 ? '…' : ''}` : '-';
                     return `
                       <tr>
                         <td><span class="goals-team-chip">${g.team}</span></td>
-                        <td class="goals-td-name">${_esc(g.objective)}</td>
+                        <td class="goals-td-name">${_esc(g.objective)}${g.kr ? `<div class="goals-td-kr">${_esc(g.kr)}</div>` : ''}</td>
                         <td class="goals-td-detail">${_esc(g.name)}</td>
-                        <td class="goals-td-cycle">${g.cycle||'-'}</td>
-                        <td class="goals-td-num">${Number(g.target_total||0).toLocaleString()}</td>
+                        <td class="goals-td-cycle">${_esc(g.cycle||'-')}</td>
+                        <td class="goals-td-num">${targetKnown ? Number(g.target_total||0).toLocaleString() : '미확인'}</td>
                         <td class="goals-td-num">${actual.toLocaleString()}</td>
-                        <td class="goals-td-num"><span class="goals-inline-bar"><i style="width:${Math.min(100,p)}%;background:${_pctColor(p)}"></i></span><b style="color:${_pctColor(p)}">${p}%</b></td>
-                        <td class="goals-td-note">${recentTxt}</td>
+                        <td class="goals-td-num"><span class="goals-inline-bar"><i style="width:${Math.min(100,p || 0)}%;background:${p === null ? '#64748b' : _pctColor(p)}"></i></span><b style="color:${p === null ? '#64748b' : _pctColor(p)}">${p === null ? '-' : p + '%'}</b></td>
+                        <td class="goals-td-note" title="${_esc(recentSummary).replace(/"/g, '&quot;')}">${recentTxt}</td>
                         <td class="goals-td-action" style="white-space:nowrap;text-align:right;">
                             <button class="goals-btn-edit-goal" data-id="${g.id}" title="목표 수정">✏️</button>
                         </td>
@@ -1282,7 +1337,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 rows.innerHTML = list.map(g => {
                     const t = _quarterTarget(g, q);
                     const a = _quarterActual(g.id, q);
-                    const p = _pct(a, t);
+                    const targetKnown = g['q'+q+'_target'] != null;
+                    const p = targetKnown ? _pct(a, t) : null;
                     const act = _activityFor(g.id, q);
                     const summary = act ? _esc(act.summary||'') : '';
                     const issue   = act ? _esc(act.issue||'') : '';
@@ -1291,10 +1347,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                       <tr data-goal-id="${g.id}">
                         <td><span class="goals-team-chip">${g.team}</span></td>
                         <td class="goals-td-detail">${_esc(g.name)}<div class="goals-td-sub">${_esc(g.objective||'')}</div></td>
-                        <td class="goals-td-cycle">${g.cycle||'-'}</td>
-                        <td class="goals-td-num">${t.toLocaleString()}</td>
+                        <td class="goals-td-cycle">${_esc(g.cycle||'-')}</td>
+                        <td class="goals-td-num">${targetKnown ? t.toLocaleString() : '미확인'}</td>
                         <td class="goals-td-num">${a.toLocaleString()}</td>
-                        <td class="goals-td-num"><span class="goals-inline-bar"><i style="width:${Math.min(100,p)}%;background:${_pctColor(p)}"></i></span><b style="color:${_pctColor(p)}">${p}%</b></td>
+                        <td class="goals-td-num"><span class="goals-inline-bar"><i style="width:${Math.min(100,p || 0)}%;background:${p === null ? '#64748b' : _pctColor(p)}"></i></span><b style="color:${p === null ? '#64748b' : _pctColor(p)}">${p === null ? '-' : p + '%'}</b></td>
                         <td class="goals-td-note">${summary || '-'}</td>
                         <td class="goals-td-note">${issue || '-'}</td>
                         <td class="goals-td-note">${upd}<br><button class="goals-btn-input" data-goal-id="${g.id}">${act?'수정':'입력'}</button></td>
@@ -1452,6 +1508,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             || _filterByTeam(goalsCache)[0]?.id
             || goalsCache[0]?.id;
         if (!gId) { alert('먼저 목표를 등록해주세요.'); return; }
+        fillActivityFields(gId, q);
+        modal.style.display = '';
+        modal.classList.add('active');
+    }
+    function fillActivityFields(gId, q) {
         const a = _activityFor(gId, q);
         document.getElementById('goalActivityGoalId').value = gId;
         _fillReporterSelect(gId, a ? a.reporter : null);
@@ -1461,13 +1522,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('goalActivityIssue').value   = a ? (a.issue||'') : '';
         document.getElementById('goalActivitySupport').value = a ? (a.support||'') : '';
         document.getElementById('goalActivityNextPlan').value = a ? (a.next_plan||'') : '';
-        modal.style.display = '';
-        modal.classList.add('active');
     }
-    // 목표 선택 변경 시 담당자 select도 해당 팀 소속으로 갱신
+    // 목표나 분기가 바뀌면 해당 조합의 저장값을 다시 읽어 다른 실적의 덮어쓰기를 방지합니다.
     document.getElementById('goalActivityGoalId')?.addEventListener('change', (e) => {
-        const currentReporter = document.getElementById('goalActivityReporter').value;
-        _fillReporterSelect(e.target.value, currentReporter);
+        fillActivityFields(e.target.value, Number(document.getElementById('goalActivityQuarter').value));
+    });
+    document.getElementById('goalActivityQuarter')?.addEventListener('change', (e) => {
+        fillActivityFields(document.getElementById('goalActivityGoalId').value, Number(e.target.value));
     });
     document.getElementById('goalsActivityAdd')?.addEventListener('click', () => openActivityModal(null, currentGoalQuarter));
     document.getElementById('closeGoalActivityModal')?.addEventListener('click', () => {
@@ -1478,6 +1539,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('goalActivityForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const form = e.currentTarget;
+        if (form.dataset.saving === 'true') return;
         const body = {
             goal_id:   document.getElementById('goalActivityGoalId').value,
             quarter:   Number(document.getElementById('goalActivityQuarter').value),
@@ -1488,6 +1551,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             next_plan: document.getElementById('goalActivityNextPlan').value.trim(),
             reporter:  document.getElementById('goalActivityReporter').value,
         };
+        const submitButton = form.querySelector('button[type=submit]');
+        form.dataset.saving = 'true';
+        if (submitButton) submitButton.disabled = true;
         try {
             const res = await fetch('/api/goal_activities', {
                 method:'POST', headers:{'Content-Type':'application/json'},
@@ -1499,6 +1565,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('goalActivityModal').classList.remove('active');
         } catch(err) {
             alert('저장 실패: ' + err.message);
+        } finally {
+            delete form.dataset.saving;
+            if (submitButton) submitButton.disabled = false;
         }
     });
 
@@ -1565,6 +1634,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('goalTaskForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const form = e.currentTarget;
+        if (form.dataset.saving === 'true') return;
         const id = document.getElementById('goalTaskId').value;
         const progress = Number(document.getElementById('goalTaskProgress').value||0);
         // 상태는 사용자가 select에서 지정. 진척률 100%면 자동으로 done 승격
@@ -1580,6 +1651,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             summary:  document.getElementById('goalTaskSummary').value.trim(),
             issue:    document.getElementById('goalTaskIssue').value.trim(),
         };
+        if (!body.name) {
+            alert('업무명을 입력해 주세요.');
+            document.getElementById('goalTaskName').focus();
+            return;
+        }
+        const submitButton = form.querySelector('button[type=submit]');
+        form.dataset.saving = 'true';
+        if (submitButton) submitButton.disabled = true;
         try {
             const url = id ? `/api/executive_tasks/${id}` : '/api/executive_tasks';
             const method = id ? 'PUT' : 'POST';
@@ -1592,15 +1671,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderGoalsTasks();
             document.getElementById('goalTaskModal').classList.remove('active');
         } catch(err) { alert('저장 실패: ' + err.message); }
+        finally {
+            delete form.dataset.saving;
+            if (submitButton) submitButton.disabled = false;
+        }
     });
 
     // ---- Goal (활동목표) Modal ----
-    function _syncGoalTotal() {
-        const q1 = Number(document.getElementById('goalGoalQ1').value||0);
-        const q2 = Number(document.getElementById('goalGoalQ2').value||0);
-        const q3 = Number(document.getElementById('goalGoalQ3').value||0);
-        const q4 = Number(document.getElementById('goalGoalQ4').value||0);
-        document.getElementById('goalGoalTotal').value = q1+q2+q3+q4;
+    // 미확인 목표는 빈칸으로 유지하고, 분기 수정 전에는 연간 원본 값을 보존합니다.
+    let goalQuarterTargetsEdited = false;
+    let goalIsNewEntry = false;
+    function _goalInputTarget(id) {
+        const raw = document.getElementById(id).value.trim();
+        return raw === '' ? null : Number(raw);
+    }
+    function _syncGoalTotal(fromQuarterEdit = false) {
+        if (fromQuarterEdit) goalQuarterTargetsEdited = true;
+        const values = ['goalGoalQ1','goalGoalQ2','goalGoalQ3','goalGoalQ4'].map(_goalInputTarget);
+        const allKnown = values.every(value => value !== null);
+        const total = document.getElementById('goalGoalTotal');
+        total.readOnly = allKnown && (goalQuarterTargetsEdited || goalIsNewEntry);
+        if (allKnown && (goalQuarterTargetsEdited || goalIsNewEntry)) {
+            total.value = values.reduce((sum, value) => sum + value, 0);
+        }
+        total.style.background = total.readOnly ? '#f1f5f9' : '#fff';
+        const note = total.parentElement.parentElement.nextElementSibling;
+        if (note && note.tagName === 'P') {
+            note.textContent = !allKnown
+                ? '미확인 분기는 빈칸으로 유지하고, 연간 목표는 직접 입력할 수 있습니다.'
+                : goalQuarterTargetsEdited || goalIsNewEntry
+                    ? '연간 합계는 분기 목표의 합으로 자동 계산됩니다.'
+                    : '기존 연간 목표를 유지합니다. 분기 목표를 수정하면 자동 계산됩니다.';
+        }
     }
     function openGoalModal(goalId) {
         const modal = document.getElementById('goalGoalModal');
@@ -1612,6 +1714,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!g) { alert('해당 목표를 찾을 수 없습니다. 새로고침 후 다시 시도해주세요.'); return; }
         }
         form.reset();
+        goalQuarterTargetsEdited = false;
+        goalIsNewEntry = !g;
         document.getElementById('goalGoalId').value = goalId || '';
         if (g) {
             document.getElementById('goalGoalModalTitle').textContent = '✏️ 목표 수정';
@@ -1620,10 +1724,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('goalGoalObjective').value = g.objective || '';
             document.getElementById('goalGoalKr').value        = g.kr || '';
             document.getElementById('goalGoalName').value      = g.name || '';
-            document.getElementById('goalGoalQ1').value        = Number(g.q1_target||0);
-            document.getElementById('goalGoalQ2').value        = Number(g.q2_target||0);
-            document.getElementById('goalGoalQ3').value        = Number(g.q3_target||0);
-            document.getElementById('goalGoalQ4').value        = Number(g.q4_target||0);
+            document.getElementById('goalGoalQ1').value        = g.q1_target == null ? '' : Number(g.q1_target);
+            document.getElementById('goalGoalQ2').value        = g.q2_target == null ? '' : Number(g.q2_target);
+            document.getElementById('goalGoalQ3').value        = g.q3_target == null ? '' : Number(g.q3_target);
+            document.getElementById('goalGoalQ4').value        = g.q4_target == null ? '' : Number(g.q4_target);
+            document.getElementById('goalGoalTotal').value     = g.target_total == null ? '' : Number(g.target_total);
             if (delBtn) delBtn.style.display = 'inline-block';
         } else {
             document.getElementById('goalGoalModalTitle').textContent = '🎯 목표 등록';
@@ -1647,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target.id === 'goalGoalModal') e.currentTarget.classList.remove('active');
     });
     ['goalGoalQ1','goalGoalQ2','goalGoalQ3','goalGoalQ4'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', _syncGoalTotal);
+        document.getElementById(id)?.addEventListener('input', () => _syncGoalTotal(true));
     });
     document.getElementById('goalGoalDelete')?.addEventListener('click', async () => {
         const id = document.getElementById('goalGoalId').value;
@@ -1663,20 +1768,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('goalGoalForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const form = e.currentTarget;
+        if (form.dataset.saving === 'true') return;
         const id = document.getElementById('goalGoalId').value;
-        const q1 = Number(document.getElementById('goalGoalQ1').value||0);
-        const q2 = Number(document.getElementById('goalGoalQ2').value||0);
-        const q3 = Number(document.getElementById('goalGoalQ3').value||0);
-        const q4 = Number(document.getElementById('goalGoalQ4').value||0);
+        const q1 = _goalInputTarget('goalGoalQ1');
+        const q2 = _goalInputTarget('goalGoalQ2');
+        const q3 = _goalInputTarget('goalGoalQ3');
+        const q4 = _goalInputTarget('goalGoalQ4');
         const body = {
             team:         document.getElementById('goalGoalTeam').value,
             objective:    document.getElementById('goalGoalObjective').value.trim(),
             kr:           document.getElementById('goalGoalKr').value.trim(),
             name:         document.getElementById('goalGoalName').value.trim(),
             cycle:        document.getElementById('goalGoalCycle').value.trim(),
-            target_total: q1+q2+q3+q4,
+            target_total: _goalInputTarget('goalGoalTotal'),
             q1_target: q1, q2_target: q2, q3_target: q3, q4_target: q4,
         };
+        if (!body.objective || !body.name) {
+            alert('상위 목표와 세부 활동목표명을 입력해 주세요.');
+            document.getElementById(!body.objective ? 'goalGoalObjective' : 'goalGoalName').focus();
+            return;
+        }
+        // 기존 PUT 계약은 null을 갱신하지 않으므로 확정값의 빈칸 저장은 막습니다.
+        const existingGoal = id ? goalsCache.find(goal => goal.id === id) : null;
+        const targetFields = ['target_total','q1_target','q2_target','q3_target','q4_target'];
+        if (existingGoal && targetFields.some(key => existingGoal[key] != null && body[key] == null)) {
+            alert('기존 수치 목표를 빈칸으로 저장할 수 없습니다. 목표 건수를 입력해 주세요.');
+            return;
+        }
+        const submitButton = form.querySelector('button[type=submit]');
+        form.dataset.saving = 'true';
+        if (submitButton) submitButton.disabled = true;
         try {
             const url = id ? `/api/goals/${id}` : '/api/goals';
             const method = id ? 'PUT' : 'POST';
@@ -1689,6 +1811,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderGoalsAll();
             document.getElementById('goalGoalModal').classList.remove('active');
         } catch(err) { alert('저장 실패: ' + err.message); }
+        finally {
+            delete form.dataset.saving;
+            if (submitButton) submitButton.disabled = false;
+        }
     });
 
     // ========== MENU WEEK NAVIGATION & PDF UPLOAD ==========
@@ -1705,6 +1831,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Supabase에서 menu_weeks 로드 (fallback: localStorage)
     let menuStore = {};
+    const isMenuWeekKey = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
     async function loadMenuStore() {
         if (sb) {
@@ -1712,10 +1839,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const { data, error } = await sb.from('menu_weeks').select('*');
                 if (error) throw error;
                 menuStore = {};
-                (data || []).forEach(row => {
-                    const key = typeof row.week_key === 'string'
-                        ? row.week_key.slice(0, 10)
-                        : row.week_key;
+                // 운영 목록에는 날짜 키(YYYY-MM-DD)의 정식 행과 이미지 저장 경로를 키로 쓰는 행이 함께 온다.
+                // 정식 행의 storage_path만 사용해야 재업로드나 저장 실패 후에도 최신 확정 이미지가 표시된다.
+                (data || []).filter(row => isMenuWeekKey(row.week_key)).forEach(row => {
+                    const key = row.week_key;
                     const { data: urlData } = sb.storage
                         .from('menu-images')
                         .getPublicUrl(row.storage_path);
@@ -1907,6 +2034,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let _menuImgGen = 0;
 
     function renderMenuWeek() {
+        const gen = ++_menuImgGen;
         const key = menuWeekKey(currentMenuMonday);
         const info = getMenuWeekInfo(currentMenuMonday);
 
@@ -1931,7 +2059,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 이미지 도착 전에 컨테이너를 열면 삭제 버튼만 먼저 보이므로 onload 이후에 노출한다.
             const src   = menuStore[key].imageUrl || menuStore[key].dataUrl || '';
             const imgEl = document.getElementById('menuUploadedImg');
-            const gen   = ++_menuImgGen;
             const showEmpty = () => {
                 if (loadEl) loadEl.style.display = 'none';
                 imageEl.style.display = 'none';
@@ -1988,7 +2115,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     menuPdfInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        const uploadWeekKey = menuWeekKey(currentMenuMonday);
         menuPdfInput.value = '';
+        if (!/\.pdf$/i.test(file.name)) {
+            alert('PDF 파일만 등록할 수 있습니다. 파일 형식을 확인해주세요.');
+            return;
+        }
 
         const btn = document.getElementById('menuUploadBtn');
         const origLabel = btn.textContent;
@@ -2007,8 +2139,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             canvas.height = vp.height;
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
 
-            const key = menuWeekKey(currentMenuMonday);
-            const storagePath = `${key}.jpg`;
+            const key = uploadWeekKey;
+            // 메타데이터 저장에 실패해도 기존 주간 식단 이미지는 보존한다.
+            const storagePath = `${key}-${crypto.randomUUID()}.jpg`;
 
             if (sb) {
                 // Supabase Storage에 업로드
@@ -2044,8 +2177,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             renderMenuWeek();
+            window.dispatchEvent(new CustomEvent('bti:menu-store-updated'));
         } catch(err) {
-            alert('PDF 처리 중 오류가 발생했습니다: ' + err.message);
+            const message = /Invalid PDF|Missing PDF|password/i.test(err.message)
+                ? 'PDF를 읽지 못했습니다. 파일이 손상되었거나 암호로 보호되어 있는지 확인해주세요.'
+                : 'PDF 처리 중 오류가 발생했습니다: ' + err.message;
+            alert(message);
         } finally {
             btn.textContent = origLabel;
             btn.disabled = false;
@@ -2061,11 +2198,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const storagePath = menuStore[key].storagePath || `${key}.jpg`;
 
         if (sb) {
-            try {
-                await sb.storage.from('menu-images').remove([storagePath]);
-                await sb.from('menu_weeks').delete().eq('week_key', key);
-            } catch(e) {
-                console.warn('삭제 오류:', e.message);
+            // 정식 주차 행을 먼저 삭제하고 성공을 확인한 뒤 이미지를 비운다.
+            // 정식 행 삭제가 실패하면 이미지와 화면을 그대로 두어 반쪽 삭제 상태를 만들지 않는다.
+            const { error: rowError } = await sb.from('menu_weeks').delete().eq('week_key', key);
+            if (rowError) {
+                alert('식단을 삭제하지 못했습니다. 기존 식단은 그대로 유지됩니다. 잠시 후 다시 시도해주세요.\n' + (rowError.message || ''));
+                return;
+            }
+            // 자동 반영 식단은 이미지가 정식 행(storage_path = 주차 키)에 함께 저장되어 정식 행 삭제로 이미 제거된다.
+            // 이 경우 이미지 정리 요청을 보내지 않아, 그사이 자동 반영이 다시 만든 새 이미지를 비우지 않게 한다.
+            if (storagePath !== key) {
+                // 별도 이미지 행 정리가 실패해도 정식 행이 없어 화면에는 다시 나타나지 않으므로 기록만 남긴다.
+                const { error: imageError } = await sb.storage.from('menu-images').remove([storagePath]);
+                if (imageError) console.warn('식단 이미지 정리 실패(화면 영향 없음):', imageError.message);
             }
         } else {
             try { localStorage.setItem('menuWeekStore', JSON.stringify(menuStore)); } catch(_) {}
@@ -2073,6 +2218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         delete menuStore[key];
         renderMenuWeek();
+        window.dispatchEvent(new CustomEvent('bti:menu-store-updated'));
     });
 
     // 초기 렌더링
@@ -2083,34 +2229,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── 이벤트 배경색 저장 (사내 DB event_colors 테이블) ──
     async function saveEventColor(eventId, colorInfo) {
-        // localStorage 동기 저장 (즉시 반영)
-        try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
-        // 서버 비동기 저장 (다른 사용자와 공유)
         if (!eventId) return;
-        try {
-            await fetch('/api/event_colors', {
+        const response = await fetch('/api/event_colors', {
                 method: 'POST',
                 headers: {'Content-Type':'application/json'},
                 body: JSON.stringify({ event_id: eventId, bg: colorInfo.bg, text_color: colorInfo.text })
-            });
-        } catch(e) { console.warn('색상 저장 실패:', e.message); }
+        });
+        if (!response.ok) throw new Error('색상을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.');
     }
 
     async function deleteEventColor(eventId) {
-        try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
         if (!eventId) return;
-        try {
-            await fetch(`/api/event_colors/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
-        } catch(e) { console.warn('색상 삭제 실패:', e.message); }
+        const response = await fetch(`/api/event_colors/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('색상을 초기화하지 못했습니다. 잠시 후 다시 시도해주세요.');
     }
 
-    // 배경 밝기에 따라 텍스트색 자동 결정 (WCAG 대비)
+    // 상대 휘도로 실제 대비가 높은 글자색을 선택한다.
     function contrastColor(hex) {
-        const r = parseInt(hex.slice(1,3),16);
-        const g = parseInt(hex.slice(3,5),16);
-        const b = parseInt(hex.slice(5,7),16);
-        const lum = 0.299*r + 0.587*g + 0.114*b;
-        return lum > 145 ? '#1e293b' : '#ffffff';
+        if (!/^#[0-9a-f]{6}$/i.test(hex)) return '#172b4d';
+        const luminance = color => [1, 3, 5].map(start => parseInt(color.slice(start, start + 2), 16) / 255)
+            .map(value => value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4))
+            .reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+        const bg = luminance(hex), ink = luminance('#172b4d');
+        const darkContrast = (Math.max(bg, ink) + 0.05) / (Math.min(bg, ink) + 0.05);
+        const whiteContrast = 1.05 / (bg + 0.05);
+        if (darkContrast >= whiteContrast && darkContrast >= 4.5) return '#172b4d';
+        if (whiteContrast >= 4.5) return '#ffffff';
+        return '#000000';
     }
 
     function applyEventColorToDiv(div, colorInfo) {
@@ -2119,10 +2264,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         div.style.color = colorInfo.text;
     }
 
+    function calendarDisplayColor(bg) {
+        if (!/^#[0-9a-f]{6}$/i.test(bg)) return bg;
+        const key = bg.toLowerCase();
+        return LEGACY_DARK_EVENT_COLORS.has(key) ? PRIORITY_EVENT_BG : LEGACY_EVENT_COLORS[key] || bg;
+    }
+
     function updateColorPreview(bg, titleText) {
         const preview = document.getElementById('eventColorPreview');
-        const text = contrastColor(bg);
-        preview.style.background = bg;
+        const displayBg = calendarDisplayColor(bg);
+        const text = contrastColor(displayBg);
+        preview.style.background = displayBg;
         preview.style.color = text;
         preview.textContent = titleText || '미리보기';
     }
@@ -2130,15 +2282,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     function syncColorPickerUI(colorInfo, defaultBg) {
         const picker = document.getElementById('eventColorPicker');
         const presets = document.querySelectorAll('.preset-swatch');
-        const activeBg = colorInfo ? colorInfo.bg : defaultBg;
+        const activeBg = calendarDisplayColor(colorInfo ? colorInfo.bg : defaultBg);
         picker.value = activeBg;
         presets.forEach(s => {
             s.classList.toggle('selected', s.dataset.color === activeBg);
+            s.setAttribute('aria-pressed', String(s.dataset.color === activeBg));
         });
     }
-
-    // 기본 배경색 (회사별)
-    const DEFAULT_EVENT_BG = { Group: '#eff8ff', NBT: '#f0fdf4', BIO: '#fff7ed' };
 
     // ── 영업일 계산 유틸 ──
     function isHolidayDate(date) {
@@ -2371,9 +2521,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 색상 UI 초기화
         const colorInfo = eventColorMap[evt.id];
-        const defaultBg = DEFAULT_EVENT_BG[evt.company] || '#f1f5f9';
-        syncColorPickerUI(colorInfo, defaultBg);
-        updateColorPreview(colorInfo ? colorInfo.bg : defaultBg, evt.title);
+        const presentation = getEventPresentation(evt, colorInfo);
+        syncColorPickerUI(null, presentation.bg);
+        updateColorPreview(presentation.bg, evt.title);
 
         eventModal.classList.add('active');
     }
@@ -2387,19 +2537,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     eventModal.addEventListener('click', (e) => { if (e.target === eventModal) closeEventModal(); });
 
     // ── 색상 피커 이벤트 ──
+    let colorSavePending = false;
+    async function commitEventColor(colorInfo) {
+        if (!currentEventId || colorSavePending) return;
+        const eventId = currentEventId;
+        const controls = [...document.querySelectorAll('#eventColorPresets button, #eventColorPicker, #eventColorResetBtn')];
+        colorSavePending = true;
+        controls.forEach(control => { control.disabled = true; });
+        try {
+            if (colorInfo) await saveEventColor(eventId, colorInfo);
+            else await deleteEventColor(eventId);
+            if (colorInfo) eventColorMap[eventId] = colorInfo;
+            else delete eventColorMap[eventId];
+            try { localStorage.setItem('eventCustomColors', JSON.stringify(eventColorMap)); } catch(_) {}
+            renderCalendar();
+        } catch (error) {
+            alert('색상 변경 실패: ' + error.message);
+        } finally {
+            colorSavePending = false;
+            controls.forEach(control => { control.disabled = false; });
+            if (currentEventId === eventId) {
+                const evt = allEvents.find(e => e.id === eventId);
+                const saved = eventColorMap[eventId];
+                const presentation = getEventPresentation(evt, saved);
+                syncColorPickerUI(saved, presentation.bg);
+                updateColorPreview(presentation.bg, evt ? evt.title : '미리보기');
+            }
+        }
+    }
     function applyColorSelection(bg) {
-        if (!currentEventId) return;
-        const text = contrastColor(bg);
-        const colorInfo = { bg, text };
-        eventColorMap[currentEventId] = colorInfo;
-        saveEventColor(currentEventId, colorInfo); // Supabase + localStorage
-        syncColorPickerUI(colorInfo, bg);
-        const evt = allEvents.find(e => e.id === currentEventId);
-        updateColorPreview(bg, evt ? evt.title : '미리보기');
-        renderCalendar(); // 캘린더 즉시 반영
+        return commitEventColor({ bg, text: contrastColor(bg) });
     }
 
-    document.getElementById('eventColorPicker').addEventListener('input', e => {
+    document.getElementById('eventColorPicker').addEventListener('change', e => {
         applyColorSelection(e.target.value);
     });
 
@@ -2410,14 +2580,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('eventColorResetBtn').addEventListener('click', () => {
-        if (!currentEventId) return;
-        delete eventColorMap[currentEventId];
-        deleteEventColor(currentEventId); // Supabase + localStorage
-        const evt = allEvents.find(e => e.id === currentEventId);
-        const defaultBg = evt ? (DEFAULT_EVENT_BG[evt.company] || '#f1f5f9') : '#f1f5f9';
-        syncColorPickerUI(null, defaultBg);
-        updateColorPreview(defaultBg, evt ? evt.title : '미리보기');
-        renderCalendar();
+        commitEventColor(null);
     });
 
     // Edit button → switch to edit mode
@@ -2439,6 +2602,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Save edit
     document.getElementById('saveEditBtn').addEventListener('click', async () => {
+        const saveButton = document.getElementById('saveEditBtn');
+        if (saveButton.disabled) return;
         const company = document.getElementById('editCompanyInput').value;
         const date = document.getElementById('editDateInput').value;
         const title = document.getElementById('editTitleInput').value.trim();
@@ -2449,7 +2614,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const prev = { ...allEvents[idx] };
         const updated = { ...allEvents[idx], company, date, title };
-
+        saveButton.disabled = true;
         try {
             if (sb) {
                 const { error } = await sb.from('schedules').upsert(updated, { onConflict: 'id' });
@@ -2463,6 +2628,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             update();
         } catch (err) {
             alert('저장 오류: ' + err.message);
+        } finally {
+            saveButton.disabled = false;
         }
     });
 
@@ -2518,6 +2685,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Direct save
     document.getElementById('directSaveBtn').addEventListener('click', async () => {
+        const saveButton = document.getElementById('directSaveBtn');
+        if (saveButton.disabled) return;
         const company = document.getElementById('directCompany').value;
         const date = document.getElementById('directDate').value;
         const title = document.getElementById('directTitle').value.trim();
@@ -2527,6 +2696,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             id: `${company}-direct-${Date.now()}`,
             company, date, title
         };
+        saveButton.disabled = true;
         try {
             if (sb) {
                 const { error } = await sb.from('schedules').upsert(newEvt, { onConflict: 'id' });
@@ -2542,6 +2712,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert(`✅ [${company}] ${date} 일정이 추가되었습니다.`);
         } catch (err) {
             alert('저장 오류: ' + err.message);
+        } finally {
+            saveButton.disabled = false;
         }
     });
 
@@ -2555,8 +2727,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Confirm review → save to Supabase
     confirmReviewBtn.addEventListener('click', async () => {
+        if (confirmReviewBtn.disabled) return;
         const rows = reviewTableBody.querySelectorAll('tr');
         const isRequest = (uploadDestination === 'Request');
+        for (const [index, row] of [...rows].entries()) {
+            const dateInput = row.querySelector('.edit-date');
+            const titleInput = row.querySelector('.edit-title');
+            if (!isCalendarDate(dateInput?.value)) {
+                alert(`${index + 1}번째 일정의 날짜를 YYYY-MM-DD 형식의 실제 날짜로 입력해주세요.`);
+                dateInput?.focus(); return;
+            }
+            if (!titleInput?.value.trim()) {
+                alert(`${index + 1}번째 일정의 내용을 입력해주세요.`);
+                titleInput?.focus(); return;
+            }
+        }
 
         if (isRequest) {
             // ── 요청자료 일정 저장 ──
@@ -2666,6 +2851,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         update();
     });
 
+    // 공통 조회 도구는 기존 저장 및 렌더링 흐름을 사용한다.
+    window.BTIScheduleUI = {
+        showCalendar: switchToCalendar,
+        addEvent: openDirectInputForDate,
+        month: () => ({ year: currentYear, month: currentMonth + 1 }),
+        goToMonth(year, month) {
+            if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return;
+            currentYear = year; currentMonth = month - 1;
+            if (panelLeave && panelLeave.style.display === 'flex') { leaveYear = year; leaveMonth = month - 1; }
+            update();
+        }
+    };
+
     // ========== INITIAL RENDER ==========
     update();
     // 최초 렌더 완료 → 로딩 오버레이 해제
@@ -2770,30 +2968,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 두 가지 레이아웃 지원:
     //  A) Group/BIO: 숫자 날짜(1~31) + 같은 열 아래 이벤트(시간 내장)
     //  B) NBT: Date 객체 날짜 + 인접 열(col+1) 이벤트 + 같은 열 time 객체
+    function isCalendarDate(value) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
+        const [year, month, day] = value.split('-').map(Number);
+        const date = new Date(Date.UTC(year, month - 1, day));
+        return year >= 1000 && date.getUTCFullYear() === year
+            && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+    }
+    function importYearMonth(...sources) {
+        for (const source of sources) {
+            const match = String(source || '').match(/(?:^|\D)(20\d{2})\s*(?:년\s*|[.\/-]\s*)(1[0-2]|0?[1-9])(?:월|\D|$)/);
+            if (match) return { year: Number(match[1]), month: Number(match[2]) };
+        }
+        return { year: currentYear, month: currentMonth + 1 };
+    }
     function parseExcelFile(file, company) {
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
                 const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                // Excel 날짜/시간은 브라우저 시간대를 거치지 않는 직렬값으로 읽는다.
+                const workbook = XLSX.read(data, { type: 'array', cellDates: false, cellNF: true });
                 const newEvents = [];
+                const headerText = workbook.SheetNames.flatMap(name => {
+                    const sheet = workbook.Sheets[name];
+                    return [name, ...Object.keys(sheet).filter(key => !key.startsWith('!')).slice(0, 30).map(key => typeof sheet[key].v === 'string' ? sheet[key].v : '')];
+                }).join(' ');
+                const importMonth = importYearMonth(file.name, headerText);
+                const dateOptions = { date1904: !!workbook.Workbook?.WBProps?.date1904 };
 
                 // 헬퍼: 셀에서 날짜(YYYY-MM-DD) 추출
                 function extractDate(v) {
+                    if (typeof v === 'number' && v >= 25569 && v <= 2958465) {
+                        const parts = XLSX.SSF.parse_date_code(v, dateOptions);
+                        if (parts) return `${parts.y}-${String(parts.m).padStart(2,'0')}-${String(parts.d).padStart(2,'0')}`;
+                    }
                     if (v instanceof Date) {
                         const y = v.getFullYear();
                         if (y < 1970) return null; // 시간 전용 셀
                         return `${y}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
                     }
                     if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 31) {
-                        return `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(v).padStart(2,'0')}`;
+                        return `${importMonth.year}-${String(importMonth.month).padStart(2,'0')}-${String(v).padStart(2,'0')}`;
                     }
                     if (typeof v === 'string') {
                         const s = v.trim();
                         let m;
                         if (m = s.match(/^(\d{1,2})\s*일?$/)) {
                             const d = parseInt(m[1]);
-                            if (d >= 1 && d <= 31) return `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                            if (d >= 1 && d <= 31) return `${importMonth.year}-${String(importMonth.month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                         }
                         if (m = s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/)) {
                             return `${m[1]}-${String(parseInt(m[2])).padStart(2,'0')}-${String(parseInt(m[3])).padStart(2,'0')}`;
@@ -2804,6 +3027,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 헬퍼: 셀에서 시간(HH:MM) 추출
                 function extractTime(v) {
+                    if (typeof v === 'number' && v >= 0 && v < 1) {
+                        const totalMinutes = Math.round(v * 24 * 60) % (24 * 60);
+                        return `${String(Math.floor(totalMinutes / 60)).padStart(2,'0')}:${String(totalMinutes % 60).padStart(2,'0')}`;
+                    }
                     if (v instanceof Date && v.getFullYear() < 1970) {
                         return `${String(v.getHours()).padStart(2,'0')}:${String(v.getMinutes()).padStart(2,'0')}`;
                     }
@@ -2892,6 +3119,69 @@ document.addEventListener('DOMContentLoaded', async () => {
         reader.readAsArrayBuffer(file);
     }
 
+    // 달력 PDF는 같은 높이의 서로 다른 날짜를 합치지 않고 날짜 셀별로 읽는다.
+    function parseCalendarPdfPage(items, company, month) {
+        const words = items.filter(item => item.str.trim()).map(item => ({
+            text: item.str.trim(), x: item.transform[4], y: item.transform[5],
+            width: item.width || 0, height: Math.abs(item.transform[3]) || item.height || 8
+        }));
+        const weekday = /^(日|月|火|水|木|金|土|일|월|화|수|목|금|토|SUN|MON|TUE|WED|THU|FRI|SAT)$/i;
+        const headerCandidates = words.filter(word => weekday.test(word.text.normalize('NFKC')));
+        const headers = headerCandidates.map(word => headerCandidates.filter(other => Math.abs(other.y - word.y) < 3))
+            .find(row => row.length === 7)?.sort((a, b) => a.x - b.x);
+        if (!headers) return null;
+        const centers = headers.map(word => word.x + word.width / 2);
+        const intervals = centers.slice(1).map((x, i) => x - centers[i]).sort((a, b) => a - b);
+        const half = intervals[Math.floor(intervals.length / 2)] / 2;
+        const edges = [centers[0] - half, centers[1] - half,
+            ...centers.slice(2, 6).map((x, i) => (x + centers[i + 1]) / 2),
+            centers[5] + half, centers[6] + half];
+        const columnFor = word => {
+            const x = word.x + Math.min(word.width / 2, 4);
+            for (let col = 0; col < 7; col++) if (x >= edges[col] - 2 && x < edges[col + 1] - 2) return col;
+            return -1;
+        };
+        const anchors = words.filter(word => /^(?:0?[1-9]|[12]\d|3[01])$/.test(word.text)
+            && word.y < headers[0].y - 3 && columnFor(word) >= 0);
+        const rows = [];
+        for (const anchor of anchors.sort((a, b) => b.y - a.y)) {
+            let row = rows.find(row => Math.abs(row.y - anchor.y) < 3);
+            if (!row) { row = { y: anchor.y, anchors: [] }; rows.push(row); }
+            row.anchors.push(anchor);
+        }
+        if (anchors.length < 20 || rows.length < 4 || rows.length > 6) return null;
+        const firstWeekday = ['日','月','火','水','木','金','土'].indexOf(headers[0].text.normalize('NFKC'));
+        const startWeekday = firstWeekday >= 0 ? firstWeekday : (/^(MON|월)$/i.test(headers[0].text) ? 1 : 0);
+        const monthOffset = (new Date(Date.UTC(month.year, month.month - 1, 1)).getUTCDay() - startWeekday + 7) % 7;
+        const output = [];
+        rows.forEach((row, rowIndex) => {
+            const nextY = rows[rowIndex + 1]?.y ?? row.y - (rows[rowIndex - 1]?.y - row.y || 80);
+            row.anchors.forEach(anchor => {
+                const col = columnFor(anchor);
+                const date = new Date(Date.UTC(month.year, month.month - 1, rowIndex * 7 + col - monthOffset + 1));
+                if (date.getUTCDate() !== Number(anchor.text) || date.getUTCMonth() + 1 !== month.month || date.getUTCFullYear() !== month.year) return;
+                const dateStr = date.toISOString().slice(0, 10);
+                const lines = [];
+                words.filter(word => word.y < row.y - 3 && word.y > nextY + 3 && columnFor(word) === col)
+                    .sort((a, b) => b.y - a.y || a.x - b.x).forEach(word => {
+                        let line = lines.find(line => Math.abs(line.y - word.y) < 2);
+                        if (!line) { line = { y: word.y, words: [] }; lines.push(line); }
+                        line.words.push(word);
+                    });
+                let previous = null;
+                lines.forEach(line => {
+                    const title = line.words.sort((a, b) => a.x - b.x).map(word => word.text).join(' ').trim();
+                    if (!title || /생산일수|근무일수|휴무일수|공휴일수/.test(title) || weekday.test(title)) return;
+                    const startsEvent = /^(?:\d{1,2}:\d{2}|\d{4})\s/.test(title);
+                    const continuation = previous && !startsEvent && (/^\(/.test(title) || previous.y - line.y < line.words[0].height * 2);
+                    if (continuation) { previous.event.title += ' ' + title; previous.y = line.y; }
+                    else { const event = { company, date: dateStr, title, category: '정기요청자료' }; output.push(event); previous = { event, y: line.y }; }
+                });
+            });
+        });
+        return output;
+    }
+
     // ========== PDF PARSING (PDF.js, client-side) ==========
     async function parsePdfFile(file, company) {
         await ensurePdfJs();
@@ -2899,10 +3189,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             const newEvents = [];
+            let importMonth = importYearMonth(file.name);
 
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 const page = await pdf.getPage(pageNum);
                 const textContent = await page.getTextContent();
+                if (pageNum === 1) importMonth = importYearMonth(file.name, textContent.items.map(item => item.str).join(' '));
+                const calendarEvents = parseCalendarPdfPage(textContent.items, company, importMonth);
+                if (calendarEvents !== null) {
+                    newEvents.push(...calendarEvents);
+                    continue;
+                }
+                const dateItems = textContent.items.filter(item => /^(?:0?[1-9]|[12]\d|3[01])$/.test(item.str.trim()));
+                if (dateItems.some(item => dateItems.filter(other => Math.abs(other.transform[5] - item.transform[5]) < 3).length >= 3)) {
+                    throw new Error('달력 표의 날짜 열을 정확히 구분하지 못했습니다. 같은 자료의 엑셀 파일로 등록하거나 일정을 직접 입력해주세요.');
+                }
 
                 // Group text items by approximate Y position (rows)
                 const items = textContent.items;
@@ -2921,9 +3222,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const rowTexts = rowMap[y].sort((a, b) => a.x - b.x).map(i => i.text.trim()).filter(t => t.length > 0);
                     const fullRow = rowTexts.join(' ');
 
-                    const ym = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
+                    const ym = `${importMonth.year}-${String(importMonth.month).padStart(2,'0')}`;
                     // Check if line starts with a day number (1-31)
-                    const dayMatch = fullRow.match(/^(\d{1,2})\b/);
+                    const dayMatch = fullRow.match(/^(\d{1,2})(?:\s*일)?(?=\s|\([일월화수목금토]\)|$)/);
                     if (dayMatch) {
                         const d = parseInt(dayMatch[1]);
                         if (d >= 1 && d <= 31) {
@@ -3199,7 +3500,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             dayLeaves.forEach(leave => {
                 const chip = document.createElement('div');
                 chip.className = `leave-chip ${LEAVE_TYPE_CLASS[leave.leave_type] || 'ltype-연차'}`;
-                chip.innerHTML = `<span class="lc-name">${leave.employee_name}</span><span class="lc-type">${leave.leave_type}</span>`;
+                chip.innerHTML = `<span class="lc-name">${escHtml(leave.employee_name)}</span><span class="lc-type">${escHtml(leave.leave_type)}</span>`;
                 chip.title = `[${leave.team}] ${leave.rank} ${leave.employee_name} · ${leave.leave_type}${leave.note ? ' / ' + leave.note : ''}`;
                 chip.addEventListener('click', e => { e.stopPropagation(); openLeaveModal(dateStr); });
                 dayDiv.appendChild(chip);
@@ -3398,19 +3699,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 try {
                     if (isPeriod) {
-                        // 기간 수정: 기존 항목 삭제 후 새 기간으로 일괄 upsert
+                        // 새 기간 저장이 확인된 뒤 기존 항목을 교체하여 저장 실패 시 원본을 보존한다.
                         const ps = editForm.querySelector('.ef-period-start').value;
                         const pe = editForm.querySelector('.ef-period-end').value;
                         const newDates = getDateRange(ps, pe);
                         if (!newDates.length) { alert('유효한 기간이 없습니다.'); return; }
                         if (!confirm(`기존 항목을 삭제하고 ${ps}~${pe} 평일 ${newDates.length}일로 재등록하시겠습니까?`)) return;
-
-                        // 기존 항목 삭제
-                        if (sb) {
-                            const { error } = await sb.from('leave_plans').delete().eq('id', leave.id);
-                            if (error) throw error;
-                        }
-                        allLeaves = allLeaves.filter(l => l.id !== leave.id);
 
                         // 새 기간 insert — UUID 클라이언트 생성
                         const payloads = newDates.map(date => ({
@@ -3421,7 +3715,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (sb) {
                             const { error } = await sb.from('leave_plans').insert(payloads);
                             if (error) throw error;
+                            try {
+                                const { error: deleteError } = await sb.from('leave_plans').delete().eq('id', leave.id);
+                                if (deleteError) throw deleteError;
+                            } catch (deleteError) {
+                                // 기존 항목 교체에 실패하면 이번 작업의 추가분만 되돌린다.
+                                let rollbackFailed = false;
+                                for (const payload of payloads) {
+                                    try {
+                                        const result = await sb.from('leave_plans').delete().eq('id', payload.id);
+                                        if (result.error) rollbackFailed = true;
+                                    } catch (_) { rollbackFailed = true; }
+                                }
+                                if (rollbackFailed) {
+                                    await loadLeaves();
+                                    renderLeaveCalendar();
+                                    renderLeaveModalEntries(leaveModalDate);
+                                    throw new Error('기존 연차는 보존되었습니다. 추가 항목 일부를 되돌리지 못하여 목록을 다시 불러왔습니다. 날짜별 항목을 확인해주세요.');
+                                }
+                                throw deleteError;
+                            }
                         }
+                        allLeaves = allLeaves.filter(l => l.id !== leave.id);
                         payloads.forEach(p => allLeaves.push(p));
                         allLeaves.sort((a, b) => a.date.localeCompare(b.date));
                     } else {
@@ -3447,6 +3762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     renderLeaveModalEntries(leaveModalDate);
                 } catch(err) {
                     console.error(err); alert('수정 오류: ' + err.message);
+                } finally {
                     saveBtn.textContent = '저장'; saveBtn.disabled = false;
                 }
             });
@@ -3499,6 +3815,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function submitLeaveAdd() {
+        if (document.getElementById('leaveAddBtn').disabled) return;
         const team  = document.getElementById('leaveTeamInput').value.trim();
         const rank  = document.getElementById('leaveRankInput').value;
         const name  = document.getElementById('leaveNameInput').value.trim();
@@ -3558,7 +3875,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // 단일 날짜 모드 — leaveSingleDate 필드 우선 사용
-        const singleDateVal = (document.getElementById('leaveSingleDate') || {}).value || leaveModalDate;
+        const singleDateInput = document.getElementById('leaveSingleDate');
+        const singleDateVal = singleDateInput ? singleDateInput.value : leaveModalDate;
         if (!singleDateVal) { alert('입력 날짜를 선택해주세요.'); return; }
         // crypto.randomUUID()로 클라이언트에서 UUID 생성 → DB uuid 컬럼과 호환
         const newId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -3852,9 +4170,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const info = document.createElement('div');
             info.className = 'leave-entry-info';
             info.innerHTML =
-                `<span class="leave-entry-badge ${catCls}" style="font-size:10px;">${req.category}</span>` +
-                `<span class="leave-entry-name" style="font-weight:700;">${req.title}</span>` +
-                (req.note ? `<span class="leave-entry-note">· ${req.note}</span>` : '');
+                `<span class="leave-entry-badge ${catCls}" style="font-size:10px;">${escHtml(req.category)}</span>` +
+                `<span class="leave-entry-name" style="font-weight:700;">${escHtml(req.title)}</span>` +
+                (req.note ? `<span class="leave-entry-note">· ${escHtml(req.note)}</span>` : '');
 
             const actions = document.createElement('div');
             actions.style.cssText = 'display:flex; gap:4px;';
@@ -3894,10 +4212,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             .map(c => `<option value="${c}"${c===req.category?' selected':''}>${c}</option>`).join('');
         rowEl.innerHTML = `
             <div style="flex:1; display:flex; flex-direction:column; gap:6px;">
-                <input type="date" class="form-input req-edit-date" value="${(req.date||'').slice(0,10)}" style="font-size:12px; padding:5px 8px;">
-                <input type="text" class="form-input req-edit-title" value="${req.title.replace(/"/g,'&quot;')}" placeholder="일정 내용" style="font-size:12px; padding:5px 8px;">
+                <input type="date" class="form-input req-edit-date" value="${escHtml((req.date||'').slice(0,10))}" style="font-size:12px; padding:5px 8px;">
+                <input type="text" class="form-input req-edit-title" value="${escHtml(req.title)}" placeholder="일정 내용" style="font-size:12px; padding:5px 8px;">
                 <select class="form-input req-edit-cat" style="font-size:12px; padding:5px 8px;">${catOptions}</select>
-                <input type="text" class="form-input req-edit-note" value="${(req.note||'').replace(/"/g,'&quot;')}" placeholder="비고 (선택)" style="font-size:12px; padding:5px 8px;">
+                <input type="text" class="form-input req-edit-note" value="${escHtml(req.note)}" placeholder="비고 (선택)" style="font-size:12px; padding:5px 8px;">
             </div>
             <div style="display:flex; flex-direction:column; gap:4px;">
                 <button class="leave-entry-del req-save-btn" style="background:#d1fae5; color:#065f46;">💾 저장</button>
@@ -3942,7 +4260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (error) {
                 alert('삭제 오류: ' + error.message);
                 if (rowEl) {
-                    const btn = rowEl.querySelector('.leave-entry-del');
+                    const btn = rowEl.querySelector('[title="이 항목 삭제"]');
                     if (btn) { btn.disabled = false; btn.innerHTML = '🗑️ 삭제'; }
                 }
                 return;
@@ -3959,6 +4277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ---- 요청자료 추가 ----
     async function submitRequestAdd() {
+        if (document.getElementById('requestAddBtn').disabled) return;
         const category = document.getElementById('requestCategoryInput').value;
         const title    = document.getElementById('requestTitleInput').value.trim();
         const note     = document.getElementById('requestNoteInput').value.trim();

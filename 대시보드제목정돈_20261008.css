@@ -1,0 +1,107 @@
+/* 화면용 제목 체계: 기간 20px, 소제목 16px, 표 머리글 12px, 대화상자 18px. */
+@media screen {
+  :root {
+    --dashboard-period-size: 20px;
+    --dashboard-section-size: 16px;
+    --dashboard-table-heading-size: 12px;
+    --dashboard-dialog-title-size: 18px;
+  }
+
+  /* 공통 월 선택, 연차 월 선택, 목표관리 연도, 식단 주 선택 */
+  #monthTitle,
+  #leaveMonthLabel,
+  #panelGoals .bti-gx-year,
+  #panelMenuView .local-menu-range {
+    font-size: var(--dashboard-period-size) !important;
+    font-weight: 700 !important;
+    line-height: 1.4;
+    letter-spacing: -.35px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ui-ink, #26364a) !important;
+  }
+
+  /* 현재 표시하는 콘텐츠 소제목만 정돈하고 숨긴 페이지 제목은 유지합니다. */
+  #panelThanks .bti-thanks-chart-label,
+  #panelThanks .thanks-form-header,
+  #panelMenuView .local-menu-meal-card h3 {
+    font-size: var(--dashboard-section-size);
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: -.2px;
+    color: var(--ui-ink, #26364a);
+  }
+
+  /* 카드 제목은 소제목 크기를 공유하되 내용 계층을 조금 가볍게 구분합니다. */
+  #panelGoals .goals-task-name,
+  #panelThanks .thanks-card-to {
+    font-size: var(--dashboard-section-size);
+    font-weight: 650;
+    line-height: 1.5;
+    letter-spacing: -.2px;
+    color: var(--ui-ink, #172b4d);
+  }
+
+  #panelMenuView .local-menu-corner h4 {
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.5;
+    letter-spacing: 0;
+    color: var(--ui-muted, #50627b);
+  }
+
+  /* 각 대시보드의 요일, 목록 열, 목표 표, 식단 표 머리글 */
+  #panelCalendar .calendar-header > div,
+  #panelLeave .calendar-header > div,
+  #panelRequest:not(:has(.request-grid:is(.req-print-sim, .req-print-measure))) .calendar-header > div,
+  .calendar-list th,
+  #panelLeave .rl-list-head,
+  #panelRequest .rl-list-head,
+  #panelGoals .goals-table-wrap th,
+  #panelMenuView .menu-table thead th {
+    font-size: var(--dashboard-table-heading-size);
+    font-weight: 650;
+    line-height: 1.4;
+    letter-spacing: 0;
+  }
+
+  /* 평일 및 표 머리글의 대비를 통일하고 휴일 색상은 기존 규칙을 따릅니다. */
+  #panelCalendar .calendar-header > div:not(.sun):not(.sat),
+  #panelLeave .calendar-header > div:not(.sun):not(.sat),
+  #panelRequest:not(:has(.request-grid:is(.req-print-sim, .req-print-measure))) .calendar-header > div:not(.sun):not(.sat),
+  .calendar-list th,
+  #panelLeave .rl-list-head,
+  #panelRequest .rl-list-head,
+  #panelGoals .goals-table-wrap th,
+  #panelMenuView .menu-table thead th:not(.sun):not(.sat):not(.holiday) {
+    color: var(--ui-muted, #50627b);
+  }
+
+  /* 입력 대화상자의 기존 인라인 크기 차이를 화면에서만 통일합니다. */
+  .modal-overlay .modal-header > h3,
+  #eventModal #modalTitle,
+  #eventModal #modalEditMode > h3,
+  #calendarDayDialog .day-dialog-heading {
+    font-size: var(--dashboard-dialog-title-size) !important;
+    font-weight: 700 !important;
+    line-height: 1.5;
+    letter-spacing: -.2px;
+    color: var(--ui-ink, #26364a) !important;
+  }
+}
+
+@media screen and (max-width: 650px) {
+  :root { --dashboard-period-size: 18px; }
+
+  #monthTitle { min-width: 120px; }
+
+  #panelGoals .bti-gx-views { flex-wrap: wrap; }
+  #panelGoals .bti-gx-year { flex-shrink: 0; }
+
+  #panelMenuView .local-menu-range {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+}

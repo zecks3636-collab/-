@@ -1,0 +1,59 @@
+/* 식단화면개편_20261007.css: 기존 원본 자료와 동작을 유지한 간결한 식단 화면 */
+#panelMenuView.local-menu-panel { padding: 0 !important; overflow: visible !important; border: 0 !important; background: transparent !important; box-shadow: none !important; gap: 6px; min-height: 520px; }
+.local-menu-panel .local-menu-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin:0 0 6px !important; padding:12px 16px !important; border:1px solid #dce6f0; border-radius:10px; background:#fff; }
+.local-menu-week-nav,.local-menu-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.local-menu-range { color:#17334a; font-size:17px; font-weight:750; white-space:nowrap; padding:0 4px; }
+.local-menu-panel #prevWeekBtn,.local-menu-panel #nextWeekBtn,.local-menu-panel .local-menu-btn,.local-menu-archive { display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 12px; margin:0; border:1px solid #d8e3ee; border-radius:6px; background:#fff; color:#254863; font-size:13px; font-family:inherit; font-weight:600; text-decoration:none; white-space:nowrap; cursor:pointer; box-shadow:none; }
+.local-menu-panel #prevWeekBtn,.local-menu-panel #nextWeekBtn {width:34px; padding:0; font-size:24px;}
+.local-menu-panel .local-menu-btn:hover,.local-menu-panel #prevWeekBtn:hover,.local-menu-panel #nextWeekBtn:hover {background:#f3f7fb; border-color:#b8cddd;}
+.local-menu-panel .local-menu-upload {background:#215f89; border-color:#215f89; color:#fff;}
+.local-menu-panel .local-menu-upload:hover {background:#174b70;}
+.local-menu-panel .local-menu-remove {color:#aa3b42; border-color:#e6ced1; font-size:12px;}
+.local-menu-panel [hidden] {display:none !important;}
+.local-menu-date-picker {position:relative; overflow:hidden;}
+.local-menu-date-picker input {position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer;}
+.local-menu-modes {display:flex; gap:2px; padding:3px; border:1px solid #dce6f0; border-radius:7px; background:#f4f7fa;}
+.local-menu-modes button {min-height:29px; padding:0 10px; border:0; border-radius:4px; background:transparent; color:#587083; font-size:12px; font-weight:600; font-family:inherit; cursor:pointer;}
+.local-menu-modes button.active {color:#215f89; background:#fff; box-shadow:0 1px 3px #18365015;}
+.local-menu-modes button:disabled {opacity:.45; cursor:default;}
+.local-menu-panel .menu-title,.local-menu-panel .menu-logo-icon,.local-menu-panel .menu-badge,.local-menu-panel #menuNotice {display:none !important;}
+.local-menu-panel .menu-table-wrapper {margin:0; border:1px solid #dce6f0; border-radius:10px; background:#fff; box-shadow:none; overflow-x:auto;}
+.local-menu-panel .menu-table {width:100%; min-width:760px; border-collapse:collapse; font-size:13px; line-height:1.55;}
+.local-menu-panel .menu-table th {background:#f4f7fa; color:#354c60; border-color:#e4ebf2; padding:12px 8px;}
+.local-menu-panel .menu-table th span {color:#6d8192; font-size:12px;}
+.local-menu-panel .menu-table td {border-color:#e4ebf2; padding:10px 8px; color:#354c60; background:#fff;}
+.local-menu-panel .menu-table .menu-meal-label {background:#f4f7fa; color:#215f89; font-size:14px; font-weight:700;}
+.local-menu-panel .menu-table .menu-section-label {background:#f9fbfd; color:#577084; font-size:12px;}
+.local-menu-panel .menu-table .menu-item.highlight {color:#183950; font-size:13px;}
+.local-menu-panel .menu-table .menu-item.sub {color:#718293; font-size:12px;}
+.local-menu-panel #menuContentImage {padding:14px !important; border:1px solid #dce6f0; border-radius:10px; background:#fff;}
+.local-menu-panel #menuUploadedImg {width:100% !important; max-width:1180px !important; border-radius:0 !important; box-shadow:none !important;}
+.local-menu-panel #menuContentImage>div {display:none;}
+.local-menu-panel #menuContentEmpty {min-height:300px !important; padding:40px 20px !important; border:1px solid #dce6f0; border-radius:10px; background:#fff;}
+.local-menu-panel #menuContentEmpty p {font-size:14px !important; color:#7890a3 !important;}
+.local-menu-daily {display:none;}
+.local-menu-day-mode .menu-table-wrapper {display:none !important;}
+.local-menu-day-mode .local-menu-daily {display:block;}
+.local-menu-weekdays {display:flex; gap:6px; margin:0 0 10px;}
+.local-menu-day {flex:1; padding:12px 8px; border:1px solid #dce6f0; border-radius:7px; background:#fff; color:#567184; font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;}
+.local-menu-day.active {background:#eaf3f9; border-color:#9cbdd3; color:#215f89;}
+.local-menu-meal-cards {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+.local-menu-meal-card {padding:20px; border:1px solid #dce6f0; border-radius:10px; background:#fff;}
+.local-menu-meal-card h3 {margin:0 0 16px; padding:0 0 12px; border-bottom:1px solid #e4ebf2; color:#173c58; font-size:16px; font-weight:700;}
+.local-menu-corner+.local-menu-corner {border-top:1px solid #edf2f6; margin-top:14px; padding-top:14px;}
+.local-menu-corner h4 {color:#6e8496; font-size:12px; font-weight:650; margin:0 0 6px;}
+.local-menu-corner ul {margin:0; padding:0; list-style:none; color:#536a7b; font-size:13px; line-height:1.9;}
+.local-menu-main-dish {font-weight:700; color:#1c3a50;}
+.local-menu-image-dialog {position:fixed; inset:0; margin:auto; width:min(1500px,96vw); max-width:96vw; max-height:95vh; max-height:95dvh; padding:0; overflow:hidden; border:1px solid #d3dfeb; border-radius:10px; background:#fff;}
+.local-menu-image-dialog[open] {display:flex; flex-direction:column;}
+.local-menu-image-dialog::backdrop {background:#17344c77;}
+.local-menu-image-toolbar {display:flex; justify-content:flex-end; flex-shrink:0; padding:10px 12px; border-bottom:1px solid #e4ebf2; background:#fff;}
+.local-menu-image-scroll {min-height:0; padding:16px; overflow:auto; overscroll-behavior:contain;}
+.local-menu-image-dialog img {display:block; width:100%; height:auto;}
+.local-menu-image-dialog .local-menu-zoom-close {position:static; padding:8px 14px; border:1px solid #d5e0eb; border-radius:6px; background:#fff; color:#32576e; font-family:inherit; cursor:pointer;}
+.local-menu-panel button:focus-visible,.local-menu-panel select:focus-visible {outline:3px solid #9cc6e4; outline-offset:2px;}
+@media(max-width:1100px){.local-menu-panel .local-menu-toolbar {align-items:flex-start;}.local-menu-week-nav {width:100%;}.local-menu-range {font-size:15px;}.local-menu-actions {margin-left:auto;}}
+@media(max-width:650px){.local-menu-panel .local-menu-toolbar {padding:10px !important;}.local-menu-week-nav {gap:6px;}.local-menu-range {order:-1; width:100%; padding:2px 0; font-size:16px;}.local-menu-archive {max-width:155px;}.local-menu-panel .local-menu-btn {padding:0 9px;}.local-menu-actions {width:100%; margin-left:0;}.local-menu-weekdays {overflow-x:auto;}.local-menu-day {white-space:nowrap; padding:10px 8px; font-size:12px;}.local-menu-meal-cards {grid-template-columns:1fr;}.local-menu-meal-card {padding:16px;}}
+@media print{.local-menu-panel .local-menu-toolbar {border:0; padding:0 !important;}.local-menu-actions,.local-menu-date-picker,.local-menu-archive,.local-menu-panel #prevWeekBtn,.local-menu-panel #nextWeekBtn,.local-menu-week-nav>.local-menu-btn {display:none !important;}.local-menu-panel .menu-table {min-width:0; font-size:10px;}}
+
+.local-menu-closed {margin:0; padding:18px 0; color:#718596; font-size:14px;}

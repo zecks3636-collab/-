@@ -1,0 +1,168 @@
+/* 6개 대시보드 상단 조회 행의 공통 규격. 데이터 표와 입력 대화상자는 제외한다. */
+@media screen {
+  :root {
+    --toolbar-control-height: 36px;
+    --toolbar-control-font: 13px;
+    --toolbar-control-radius: 8px;
+    --toolbar-gap: 10px;
+  }
+  :is(#dashboardToolbar, #panelLeave .rl-toolbar, #panelGoals .bti-gx-toolbar, #panelMenuView .local-menu-toolbar) {
+    box-sizing: border-box;
+    min-height: 50px;
+    padding: 6px 14px !important;
+    gap: var(--toolbar-gap);
+    border: 1px solid #dce2e9;
+    border-radius: 13px !important;
+    background: #fff;
+    box-shadow: 0 3px 14px #253d5b04;
+    align-items: center;
+    font-family: 'Pretendard Variable', Pretendard, sans-serif;
+  }
+  :is(#dashboardToolbar, #panelLeave .rl-toolbar, #panelGoals .bti-gx-toolbar, #panelMenuView .local-menu-toolbar)
+  :where(button, select, input:not([type="date"]):not([type="month"]), .local-menu-date-picker, a.local-menu-btn) {
+    box-sizing: border-box;
+    height: var(--toolbar-control-height) !important;
+    min-height: var(--toolbar-control-height) !important;
+    font-family: inherit;
+    font-size: var(--toolbar-control-font) !important;
+    font-weight: 600;
+    line-height: 1.3 !important;
+    letter-spacing: 0;
+    border-radius: var(--toolbar-control-radius) !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  :is(#dashboardToolbar, #panelLeave .rl-toolbar, #panelGoals .bti-gx-toolbar, #panelMenuView .local-menu-toolbar) button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  :is(#dashboardToolbar, #panelLeave .rl-toolbar, #panelGoals .bti-gx-toolbar, #panelMenuView .local-menu-toolbar) :is(select, input:not([type="date"]):not([type="month"])) {
+    font-weight: 400;
+    color: #405773;
+  }
+  :is(#dashboardToolbar .dashboard-button, #dashboardToolbar .rl-button, #dashboardToolbar select,
+    #panelLeave .rl-button, #panelLeave .rl-select, #panelLeave .rl-search input,
+    #panelGoals .bti-gx-toolbar select, #panelGoals .bti-gx-search,
+    #panelMenuView .local-menu-btn, #panelMenuView .local-menu-archive) {
+    border-color: #dce5ee;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  :is(#calendarAddBtn, #thanksToolbarActions .bti-thanks-write, #requestDashboardTools .rl-primary,
+    #panelLeave .rl-primary, #panelGoals .bti-gx-toolbar .goals-primary, #panelMenuView .local-menu-upload) {
+    color: #fff !important;
+    background: #4a668b;
+    border-color: #4a668b;
+    font-weight: 650;
+  }
+  :is(#calendarAddBtn, #thanksToolbarActions .bti-thanks-write, #requestDashboardTools .rl-primary,
+    #panelLeave .rl-primary, #panelGoals .bti-gx-toolbar .goals-primary, #panelMenuView .local-menu-upload):hover {
+    background: #3c5779;
+    border-color: #3c5779;
+  }
+  :is(#dashboardToolbar .month-selector, #panelLeave .rl-month-nav, #panelGoals .bti-gx-views,
+    #panelGoals .bti-gx-filters, #panelGoals .bti-gx-actions, #panelMenuView .local-menu-week-nav,
+    #panelMenuView .local-menu-actions, #requestDashboardTools, #calendarActions, #thanksToolbarActions) { gap: 8px; }
+  :is(#monthTitle, #leaveMonthLabel) { min-width: 150px !important; text-align: center; }
+  :is(#monthTitle, #leaveMonthLabel, #panelGoals .bti-gx-year, #panelMenuView .local-menu-range) {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    line-height: 1.4 !important;
+    letter-spacing: -.35px;
+    color: #172b4d !important;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+  #dashboardToolbar :is(#prevMonth, #nextMonth),
+  #panelLeave :is(#leavePrevMonth, #leaveNextMonth),
+  #panelMenuView :is(#prevWeekBtn, #nextWeekBtn) {
+    width: var(--toolbar-control-height) !important;
+    min-width: var(--toolbar-control-height);
+    flex-shrink: 0;
+    padding: 0 !important;
+    font-size: 24px !important;
+    font-weight: 400 !important;
+    color: #536b81;
+    border: 1px solid #dce5ee;
+    background: #fff;
+  }
+  :is(#calendarCompanyFilters, #calendarActions .dashboard-segment, #panelLeave .rl-view-switch,
+    #requestDashboardTools .rl-view-switch, #panelGoals .bti-gx-toolbar .goals-nav,
+    #panelGoals .bti-gx-toolbar .goals-segmented, #panelMenuView .local-menu-modes) {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    height: var(--toolbar-control-height);
+    padding: 3px;
+    gap: 2px;
+    background: #f0f3f7;
+    border: 0;
+    border-radius: var(--toolbar-control-radius);
+  }
+  :is(#calendarCompanyFilters, #calendarActions .dashboard-segment, #panelLeave .rl-view-switch,
+    #requestDashboardTools .rl-view-switch, #panelGoals .bti-gx-toolbar .goals-nav,
+    #panelGoals .bti-gx-toolbar .goals-segmented, #panelMenuView .local-menu-modes) button {
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 12px !important;
+    border: 0;
+    border-radius: 6px !important;
+    color: #60758d;
+    background: transparent;
+  }
+  :is(#calendarCompanyFilters, #calendarActions .dashboard-segment, #panelLeave .rl-view-switch,
+    #requestDashboardTools .rl-view-switch, #panelGoals .bti-gx-toolbar .goals-nav,
+    #panelGoals .bti-gx-toolbar .goals-segmented, #panelMenuView .local-menu-modes)
+  button:is(.active, .selected, [aria-pressed="true"]) {
+    color: #345477;
+    background: #fff;
+    box-shadow: 0 1px 3px #183b5810;
+    font-weight: 650;
+  }
+  #calendarSearch { box-sizing: border-box; height: var(--toolbar-control-height); border-radius: var(--toolbar-control-radius); border-color: #dce5ee; }
+  #calendarSearch input { height: 38px !important; min-height: 0 !important; padding: 0; }
+  #thanksToolbarActions .thanks-me-label { font-size: var(--toolbar-control-font); }
+  :is(#dashboardToolbar, #panelLeave .rl-toolbar, #panelGoals .bti-gx-toolbar, #panelMenuView .local-menu-toolbar) :is(button, select, input):focus-visible {
+    outline: 2px solid #7a9cc4;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+@media screen and (max-width: 650px) {
+  :is(#dashboardToolbar, #panelLeave .rl-toolbar, #panelGoals .bti-gx-toolbar, #panelMenuView .local-menu-toolbar) { padding: 10px !important; gap: 8px; }
+  :is(#monthTitle, #leaveMonthLabel, #panelGoals .bti-gx-year, #panelMenuView .local-menu-range) { font-size: 18px !important; }
+  :is(#monthTitle, #leaveMonthLabel) { min-width: 108px !important; }
+  :is(#calendarCompanyFilters, #calendarActions .dashboard-segment, #panelLeave .rl-view-switch,
+    #requestDashboardTools .rl-view-switch, #panelGoals .bti-gx-toolbar .goals-nav,
+    #panelGoals .bti-gx-toolbar .goals-segmented, #panelMenuView .local-menu-modes) button { padding-left: 9px !important; padding-right: 9px !important; }
+}
+/* 600px 이하: 상단 메뉴 6개를 3열 2줄로 배치하여 가로 스크롤 없이 모두 노출 */
+@media screen and (max-width: 600px) {
+  .dashboard-gnb .dashboard-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%; overflow: visible; padding-bottom: 0; }
+  .dashboard-gnb .dashboard-nav button.dashboard-nav-btn { width: 100%; padding: 8px 4px; font-size: 12px; text-align: center; }
+}
+/* 로고 심볼: 세로형 심볼에 맞춰 박스 가로폭을 줄여 좌우 여백을 위아래 여백과 비슷하게 정돈 */
+@media screen {
+  .dashboard-brand .brand-symbol { width: 28px; }
+  .dashboard-brand .brand-symbol img { flex-shrink: 0; }
+}
+@media screen and (max-width: 600px) {
+  .dashboard-brand .brand-symbol { width: 25px; }
+}
+/* 페이지 안 스크롤 영역은 끝에 닿으면 페이지 스크롤로 이어지게 함 (달력 위에서 휠이 멈추는 현상 해소, 식단 확대 대화상자 등 모달은 제외) */
+#calendarGrid .cal-day, .cal-day, .leave-cal-day, #panelLeave .calendar-grid .cal-day,
+#panelLeave .leave-chips-scroll, .req-chips-scroll, .bti-thanks-people-scroll {
+  overscroll-behavior: auto !important;
+}
+/* 상단 머리글과 월 선택 영역 사이 간격 축소 (PC) */
+@media screen and (min-width: 901px) {
+  .dashboard-gnb { min-height: 60px; margin-bottom: 6px; }
+}
+/* 생일 표시: 모바일 달력에서도 노출(긴 이름은 말줄임), 목록 보기 생일 행 */
+@media screen and (max-width: 600px) {
+  .cal-date-row .birthday-label, #calendarGrid .birthday-label { display: block !important; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 9px; }
+}
+.calendar-list .list-birthday { color: #8a7891; font-size: 12px; }
+.calendar-list .list-birthday-row td { color: #8a7891; }
