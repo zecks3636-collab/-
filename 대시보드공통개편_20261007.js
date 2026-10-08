@@ -150,6 +150,15 @@
       const table = document.createElement('table'); table.innerHTML = '<thead><tr><th scope="col">일자</th><th scope="col">회사</th><th scope="col">시간</th><th scope="col">일정</th></tr></thead><tbody></tbody>';
       const tbody = table.querySelector('tbody');
       days.forEach(day => {
+        // 생일은 달력의 날짜 행 라벨로만 표시되므로 목록 보기에도 같은 날짜의 첫 행으로 추가한다.
+        [...day.querySelectorAll('.birthday-label')].forEach(label => {
+          const tr = document.createElement('tr'); tr.className = 'list-birthday-row';
+          const date = document.createElement('td'); date.textContent = dayTitle(day.dataset.date); if (day.querySelector('.date-num.sun,.date-num.sat')) date.className = 'red-date';
+          const comp = document.createElement('td'); comp.textContent = '생일';
+          const time = document.createElement('td');
+          const content = document.createElement('td'); const span = document.createElement('span'); span.className = 'list-birthday'; span.textContent = label.textContent.trim(); content.append(span);
+          tr.append(date, comp, time, content); tbody.append(tr);
+        });
         [...day.querySelectorAll('.event')].forEach(source => {
           const tr = document.createElement('tr');
           tr.dataset.priority = source.dataset.priority || 'false';

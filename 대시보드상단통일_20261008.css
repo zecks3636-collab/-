@@ -160,3 +160,9 @@
 @media screen and (min-width: 901px) {
   .dashboard-gnb { min-height: 60px; margin-bottom: 6px; }
 }
+/* 생일 표시: 모바일 달력에서도 노출(긴 이름은 말줄임), 목록 보기 생일 행 */
+@media screen and (max-width: 600px) {
+  .cal-date-row .birthday-label, #calendarGrid .birthday-label { display: block !important; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 9px; }
+}
+.calendar-list .list-birthday { color: #8a7891; font-size: 12px; }
+.calendar-list .list-birthday-row td { color: #8a7891; }
