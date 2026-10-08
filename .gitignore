@@ -30,3 +30,16 @@ _backfill_auto_request.py
 
 # 로컬 원본 파일 (DB에 저장, git에는 제외)
 schedules/
+
+# Python 캐시
+__pycache__/
+
+# 로컬 검토 도구와 작업 부산물 (운영은 .js 등 정적 파일을 로그인 없이 공개하므로 커밋 금지)
+로컬개편서버_*.js
+로컬개편실행_*.bat
+.playwright-mcp/
+output/
+.bkit/
+
+# 원본 자료 보관 폴더 (커밋 제외)
+reference/

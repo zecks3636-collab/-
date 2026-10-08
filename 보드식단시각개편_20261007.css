@@ -1,0 +1,337 @@
+/* 목표관리, 칭찬보드, 주간식단표의 공통 시각 체계. 기존 데이터와 동작은 유지합니다. */
+#panelGoals,
+#panelThanks,
+#panelMenuView {
+  --board-ink: var(--ui-ink, #26364a);
+  --board-muted: #64758a;
+  --board-line: var(--ui-border, #e8edf4);
+  --board-accent: var(--ui-primary, #315d8c);
+  --board-soft: var(--ui-canvas, #f8fafc);
+  --board-tint: #edf3fa;
+  color: var(--board-ink);
+}
+
+@media screen {
+/* 간결한 보조 도구와 입력 */
+#panelGoals .bti-gx-toolbar,
+#panelMenuView .local-menu-toolbar {
+  border-color: var(--board-line);
+  border-radius: 12px;
+  padding: 13px 16px !important;
+  gap: 12px;
+  box-shadow: none;
+}
+#panelGoals .bti-gx-toolbar { margin-bottom: 0; }
+#panelGoals .bti-gx-year { font-size: 16px; font-weight: 720; color: var(--board-ink); }
+#panelGoals .goals-nav,
+#panelGoals .goals-segmented,
+#panelThanks .bti-thanks-tabs,
+#panelMenuView .local-menu-modes {
+  background: var(--board-soft);
+  border: 1px solid var(--board-line);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 3px;
+  box-shadow: none;
+}
+#panelGoals .goals-nav-item,
+#panelGoals .goals-segmented button,
+#panelThanks .bti-thanks-tabs button,
+#panelMenuView .local-menu-modes button {
+  min-height: 40px;
+  border-radius: 7px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--board-muted);
+  box-shadow: none;
+  transition: color 140ms, background-color 140ms;
+}
+#panelGoals .goals-nav-item.active,
+#panelThanks .bti-thanks-tabs button.selected {
+  color: var(--board-accent);
+  background: var(--board-tint);
+}
+#panelGoals .goals-segmented button.selected,
+#panelMenuView .local-menu-modes button.active {
+  color: var(--board-accent);
+  background: #fff;
+  box-shadow: none;
+}
+#panelGoals .bti-gx-search,
+#panelThanks .bti-gx-search,
+#panelThanks .thanks-input,
+#panelGoals #goalsQuarterSelect,
+#panelMenuView .local-menu-archive {
+  min-height: 38px;
+  border-color: var(--board-line);
+  border-radius: 8px;
+  color: var(--board-ink);
+  font-size: 13px;
+  background: #fff;
+}
+#panelGoals .goals-primary,
+#panelThanks .bti-thanks-write,
+#panelThanks .thanks-submit-btn,
+#panelMenuView .local-menu-upload {
+  min-height: 38px;
+  border-radius: 8px;
+  background: var(--board-accent);
+  border-color: var(--board-accent);
+  padding: 9px 14px;
+  font-weight: 650;
+  box-shadow: none;
+}
+#panelGoals .goals-primary:hover,
+#panelThanks .bti-thanks-write:hover,
+#panelThanks .thanks-submit-btn:hover,
+#panelMenuView .local-menu-upload:hover { background: #254d79; border-color: #254d79; }
+
+/* 목표는 숫자와 내용의 위계를 분명히 하며 표로만 표시 */
+#panelGoals[data-compact-goals-ready] { gap: 12px; }
+#panelGoals .goals-panel {
+  border: 1px solid var(--board-line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+#panelGoals .goals-table-wrap { overflow-x: auto; scrollbar-color: #d0dae3 transparent; }
+#panelGoals .goals-table-wrap table { border-collapse: collapse; color: var(--board-ink); font-size: 13px; }
+#panelGoals .goals-table-wrap th {
+  padding: 14px 16px;
+  background: var(--board-soft);
+  color: var(--board-muted);
+  font-size: 12px;
+  font-weight: 650;
+  border-bottom: 1px solid var(--board-line);
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+#panelGoals .goals-table-wrap td {
+  padding: 16px 16px;
+  border-bottom: 1px solid var(--board-line);
+  color: #4f6075;
+  line-height: 1.6;
+}
+#panelGoals .goals-table-wrap tbody tr:last-child td { border-bottom: 0; }
+#panelGoals .goals-table-wrap tbody tr:hover { background: #f8fafd; }
+#panelGoals .goals-table-wrap .goals-td-name {
+  color: #4f6075;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 200px;
+}
+#panelGoals .goals-table-wrap .goals-td-detail {
+  color: var(--board-ink);
+  font-size: 14px;
+  font-weight: 650;
+  min-width: 230px;
+}
+#panelGoals .goals-table-wrap .goals-td-num { color: #263d50; font-variant-numeric: tabular-nums; }
+#panelGoals .goals-table-wrap .goals-td-num b { color: var(--board-accent) !important; font-weight: 750; }
+#panelGoals .goals-table-wrap .goals-td-note,
+#panelGoals .goals-table-wrap .goals-td-cycle,
+#panelGoals .goals-table-wrap .goals-td-sub { color: var(--board-muted); font-size: 12px; line-height: 1.7; }
+#panelGoals .goals-table-wrap .goals-team-chip,
+#panelGoals .goals-task-team {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  color: var(--board-muted);
+  background: var(--board-soft);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+#panelGoals .bti-goals-kr-detail,
+#panelGoals .bti-goals-note-detail { margin-top: 8px; }
+#panelGoals .bti-goals-kr-detail summary,
+#panelGoals .bti-goals-note-detail summary { color: var(--board-muted); font-size: 12px; font-weight: 500; line-height: 1.6; min-height: 36px; padding: 8px 0; box-sizing: border-box; }
+#panelGoals .bti-goals-kr-detail[open] summary,
+#panelGoals .bti-goals-note-detail[open] summary { color: var(--board-accent); }
+#panelGoals .goals-btn-edit-goal,
+#panelGoals .goals-btn-input,
+#panelGoals .goals-btn-edit-task {
+  min-height: 36px;
+  padding: 7px 10px;
+  border-color: var(--board-line);
+  border-radius: 7px;
+  color: var(--board-accent);
+  background: #fff;
+  white-space: nowrap;
+}
+#panelGoals .goals-btn-edit-goal:hover,
+#panelGoals .goals-btn-input:hover,
+#panelGoals .goals-btn-edit-task:hover { color: var(--board-accent); border-color: #c7d8eb; background: var(--board-tint); }
+#panelGoals #goalsTaskTabs { padding: 13px 16px; border-bottom-color: var(--board-line); }
+#panelGoals #goalsTaskTabs button { min-height: 38px; border-radius: 7px; padding: 8px 12px; background: var(--board-soft); color: var(--board-muted); }
+#panelGoals #goalsTaskTabs button.selected { background: var(--board-tint); color: var(--board-accent); }
+#panelGoals .goals-task-card { padding: 20px; border-bottom-color: var(--board-line); }
+#panelGoals .goals-task-name { font-size: 15px; font-weight: 650; color: var(--board-ink); }
+#panelGoals .goals-task-status { border-radius: 6px; }
+#panelGoals .goals-task-meta { margin-top: 10px; gap: 8px 24px; color: var(--board-muted); }
+#panelGoals .goals-task-summary { color: #42566a; margin-top: 12px; line-height: 1.75; }
+
+/* 칭찬보드에만 KPI와 차트를 표시 */
+#panelThanks[data-compact-thanks-ready] { gap: 12px; }
+#panelThanks .thanks-panel-header { padding: 2px 0; gap: 10px; }
+#panelThanks .thanks-me-label { color: var(--board-muted); font-weight: 500; }
+#panelThanks .bti-thanks-insights { gap: 12px; grid-template-columns: 1fr 1fr; align-items: stretch; }
+#panelThanks .bti-thanks-kpis { gap: 10px; }
+#panelThanks .bti-thanks-kpi {
+  padding: 20px;
+  min-height: 94px;
+  border-color: var(--board-line);
+  border-radius: 12px;
+  gap: 10px;
+  box-shadow: none;
+}
+#panelThanks .bti-thanks-kpi span { color: var(--board-muted); font-size: 12px; font-weight: 550; }
+#panelThanks .bti-thanks-kpi strong { color: var(--board-ink); font-size: 34px; font-weight: 650; letter-spacing: -1px; }
+#panelThanks .bti-thanks-chart { padding: 18px 20px; border-color: var(--board-line); border-radius: 12px; }
+#panelThanks .bti-thanks-chart-label { color: #42596c; font-size: 12px; margin-bottom: 14px; }
+#panelThanks .bti-thanks-chart-header .bti-thanks-chart-label { margin: 0; }
+#panelThanks .bti-thanks-people .bti-thanks-chart-label { margin: 0 0 8px; }
+#panelThanks .bti-thanks-people { border-color: var(--board-line); }
+#panelThanks .bti-thanks-chart-rows { gap: 22px; }
+#panelThanks .bti-thanks-chart-row { grid-template-columns: 100px minmax(0, 1fr); gap: 12px; color: var(--board-muted); }
+#panelThanks .bti-thanks-chart-track { height: 7px; background: var(--board-soft); border-radius: 6px; }
+#panelThanks .bti-thanks-chart-track i { background: #6786ad; border-radius: 6px; }
+#panelThanks .is-received .bti-thanks-chart-track i { background: #538c83; }
+#panelThanks .bti-thanks-filter { padding: 2px 0; }
+#panelThanks .thanks-card-grid { gap: 14px; grid-template-columns: repeat(auto-fill, minmax(295px, 1fr)); }
+#panelThanks .thanks-card {
+  padding: 22px;
+  gap: 16px;
+  border-color: var(--board-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: none;
+  transition: border-color 160ms, background-color 160ms;
+}
+#panelThanks .thanks-card:hover { border-color: #c7d8eb; box-shadow: none; transform: none; }
+#panelThanks .thanks-card-to { color: var(--board-ink); font-size: 15px; font-weight: 650; }
+#panelThanks .thanks-card-tag { border-radius: 20px; font-weight: 600; font-size: 11px; padding: 5px 8px; }
+#panelThanks .thanks-card-msg { color: #4f6075; font-size: 14px; line-height: 1.8; min-height: 64px; }
+#panelThanks .thanks-card-bottom { border-top: 0; padding-top: 2px; gap: 8px; flex-wrap: wrap; }
+#panelThanks .thanks-card-from { color: #60768a; font-size: 12px; font-weight: 500; }
+#panelThanks .thanks-card-date { color: #77879a; font-size: 11px; font-weight: 400; background: none; padding: 0; letter-spacing: 0; }
+#panelThanks .thanks-reactions { padding-top: 14px; margin-top: 0; border-top: 1px solid var(--board-line); gap: 6px; }
+#panelThanks .thanks-reaction { min-height: 36px; padding: 6px 9px; border: 1px solid #e8edf2; border-radius: 8px; background: #f8fafc; opacity: 1; }
+#panelThanks .thanks-reaction:hover { background: var(--board-tint); border-color: #c7d8eb; transform: none; }
+#panelThanks .thanks-reaction.is-mine { background: var(--board-tint); border-color: #c7d8eb; color: var(--board-accent); }
+#panelThanks .thanks-reaction.is-mine .thanks-reaction-count { color: var(--board-accent); }
+#panelThanks .thanks-form-card,
+#panelThanks .thanks-empty { border-color: var(--board-line); border-radius: 12px; }
+#panelThanks .thanks-form-card { padding: 20px; }
+#panelThanks .thanks-form-header { font-size: 15px; font-weight: 650; color: var(--board-ink); }
+#panelThanks .thanks-empty { padding: 50px 24px; }
+#panelThanks .thanks-empty-title { color: #738496; font-size: 14px; font-weight: 500; }
+
+/* 식단 원본 표와 일자별 식단에 동일한 표면과 문자 위계 적용 */
+#panelMenuView .local-menu-range { color: var(--board-ink); font-size: 17px; font-weight: 700; }
+#panelMenuView .local-menu-btn,
+#panelMenuView #prevWeekBtn,
+#panelMenuView #nextWeekBtn { min-height: 40px; height: 40px; border-radius: 8px; border-color: var(--board-line); color: var(--board-accent); }
+#panelMenuView .local-menu-upload { color: #fff; border-color: var(--board-accent); }
+#panelMenuView .local-menu-remove { color: #b26369; border-color: #efdee0; }
+#panelMenuView .menu-table-wrapper,
+#panelMenuView #menuContentImage,
+#panelMenuView #menuContentEmpty { border-color: var(--board-line); border-radius: 12px; }
+#panelMenuView .menu-table { color: #42596c; font-size: 13px; line-height: 1.75; }
+#panelMenuView .menu-table th { background: var(--board-soft); color: var(--board-ink); padding: 15px 10px; border-color: var(--board-line); font-weight: 650; }
+#panelMenuView .menu-table td { padding: 14px 10px; border-color: var(--board-line); color: #4f6075; }
+#panelMenuView .menu-table .menu-meal-label { background: #f4f7fb; color: var(--board-accent); font-size: 14px; font-weight: 700; }
+#panelMenuView .menu-table .menu-section-label { color: var(--board-muted); background: #fcfdff; font-size: 12px; font-weight: 500; }
+#panelMenuView .menu-table .menu-item.highlight { color: var(--board-ink); font-size: 14px; font-weight: 650; }
+#panelMenuView .menu-table .menu-item.sub { color: #77879a; }
+#panelMenuView .local-menu-weekdays { margin-bottom: 12px; gap: 8px; }
+#panelMenuView .local-menu-day { border-color: var(--board-line); border-radius: 9px; padding: 14px 12px; color: var(--board-muted); font-size: 13px; font-weight: 550; }
+#panelMenuView .local-menu-day.active { border-color: #c7d8eb; background: var(--board-tint); color: var(--board-accent); }
+#panelMenuView .local-menu-meal-cards { gap: 14px; }
+#panelMenuView .local-menu-meal-card { border-color: var(--board-line); border-radius: 12px; padding: 24px; }
+#panelMenuView .local-menu-meal-card h3 { margin-bottom: 18px; padding-bottom: 16px; border-bottom-color: var(--board-line); color: var(--board-ink); font-size: 18px; font-weight: 700; }
+#panelMenuView .local-menu-corner + .local-menu-corner { padding-top: 16px; margin-top: 16px; border-top-color: #eff3f6; }
+#panelMenuView .local-menu-corner h4 { color: var(--board-muted); font-size: 12px; font-weight: 550; margin-bottom: 8px; }
+#panelMenuView .local-menu-corner ul { color: #536b7e; font-size: 14px; line-height: 1.85; }
+#panelMenuView .local-menu-main-dish { color: var(--board-ink); font-weight: 650; }
+#panelMenuView .local-menu-closed { color: #8a99a6; font-size: 14px; }
+.local-menu-image-dialog { border-color: #e8edf4; border-radius: 12px; }
+.local-menu-image-dialog .local-menu-zoom-close { border-color: #e0e7ee; border-radius: 8px; }
+
+
+/* 동일한 선택 상태와 명확한 키보드 초점 */
+#panelGoals .goals-nav-item:not(.active):hover,
+#panelGoals .goals-segmented button:not(.selected):hover,
+#panelThanks .bti-thanks-tabs button:not(.selected):not(:disabled):hover,
+#panelMenuView .local-menu-modes button:not(.active):not(:disabled):hover { color: var(--board-accent); background: #f0f4fa; }
+#panelGoals :is(button, select, input, summary):focus-visible,
+#panelThanks :is(button, select, input, textarea):focus-visible,
+#panelMenuView :is(button, select):focus-visible,
+#panelMenuView .local-menu-date-picker:focus-within { outline: 2px solid #7a9cc4; outline-offset: 3px; box-shadow: none; }
+#panelGoals .bti-gx-search::placeholder,
+#panelThanks .bti-gx-search::placeholder { color: #77879a; }
+#panelGoals .goals-task-card:hover { background: #f8fafd !important; }
+#panelThanks .thanks-form-label { color: var(--board-muted); }
+#panelMenuView .local-menu-day { min-height: 40px; transition: border-color 140ms, background-color 140ms; }
+#panelMenuView .local-menu-day:not(.active):hover { background: #f8fafd; border-color: #c7d8eb; color: var(--board-accent); }
+#panelMenuView .menu-table td { vertical-align: top; }
+#panelMenuView .menu-table th span { color: var(--board-muted); font-size: 12px; }
+#panelMenuView .local-menu-meal-card { box-shadow: none; }
+}
+@media screen and (max-width: 1100px) {
+  #panelGoals .bti-gx-toolbar { gap: 10px; }
+  #panelGoals .bti-gx-filters { flex-wrap: wrap; }
+  #panelThanks .bti-thanks-insights { grid-template-columns: 1fr; }
+  #panelThanks .bti-thanks-kpi { min-height: 94px; }
+}
+@media screen and (max-width: 650px) {
+  #panelGoals .bti-gx-toolbar,
+  #panelMenuView .local-menu-toolbar { padding: 12px !important; border-radius: 10px; gap: 10px; }
+  #panelGoals .bti-gx-views { width: 100%; gap: 10px; }
+  #panelGoals .bti-gx-year { font-size: 14px; }
+  #panelGoals .goals-nav { flex: 1; min-width: 0; }
+  #panelGoals .goals-nav-item { flex: 1; font-size: 12px; padding: 7px 8px; }
+  #panelGoals .bti-gx-filters { flex: 1 1 100%; width: 100%; gap: 9px; }
+  #panelGoals .bti-gx-search { width: 100%; min-width: 0; }
+  #panelGoals .bti-gx-actions { margin-left: 0; width: 100%; justify-content: flex-end; }
+  #panelGoals .goals-table-wrap td { padding: 16px 13px; }
+  #panelGoals .goals-table-wrap th { padding: 13px; }
+  #panelGoals .goals-task-card { padding: 18px; }
+  #panelGoals .goals-task-name { min-width: 150px; }
+  #panelGoals #goalsTaskTabs { overflow-x: auto; flex-wrap: nowrap; }
+  #panelGoals #goalsTaskTabs button { flex-shrink: 0; }
+  #panelThanks .thanks-panel-header { justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  #panelThanks .thanks-panel-header > div:not([hidden]) { min-width: 0; flex: 1; }
+  #panelThanks #thanksMeSelect { min-width: 0; width: 100%; }
+  #panelThanks .bti-thanks-kpis { gap: 8px; }
+  #panelThanks .bti-thanks-kpi { min-height: 88px; padding: 14px 12px; border-radius: 10px; }
+  #panelThanks .bti-thanks-kpi strong { font-size: 29px; }
+  #panelThanks .bti-thanks-kpi span { font-size: 11px; }
+  #panelThanks .bti-thanks-chart { padding: 16px; }
+  #panelThanks .bti-thanks-chart-row { grid-template-columns: 92px minmax(0, 1fr); gap: 8px; }
+  #panelThanks .bti-thanks-people { padding: 16px 16px 0; }
+  #panelThanks .bti-thanks-people-table th, #panelThanks .bti-thanks-people-table td { padding: 11px 4px; }
+  #panelThanks .bti-thanks-filter { gap: 10px; }
+  #panelThanks .bti-thanks-filter .bti-gx-search { width: 100%; }
+  #panelThanks .thanks-card-grid { grid-template-columns: 1fr; }
+  #panelThanks .thanks-card { padding: 20px; }
+  #panelThanks .thanks-form-card { padding: 18px; }
+  #panelGoals .goals-btn-edit-goal,
+  #panelGoals .goals-btn-input,
+  #panelGoals .goals-btn-edit-task,
+  #panelThanks .thanks-reaction { min-height: 40px; }
+  #panelMenuView .local-menu-week-nav { gap: 8px; }
+  #panelMenuView .local-menu-range { font-size: 17px; width: 100%; padding: 2px 0 6px; }
+  #panelMenuView .local-menu-actions { gap: 8px; }
+  #panelMenuView .local-menu-weekdays { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; overflow: visible; }
+  #panelMenuView .local-menu-day { white-space: normal; font-size: 12px; padding: 10px 4px; line-height: 1.5; }
+  #panelMenuView .local-menu-meal-card { padding: 20px; }
+}
+@media screen and (prefers-reduced-motion: reduce) {
+  #panelGoals button,
+  #panelThanks button,
+  #panelThanks .thanks-card { transition: none; }
+}

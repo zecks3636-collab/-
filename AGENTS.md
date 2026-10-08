@@ -7,7 +7,8 @@
 
 ## 구성
 - 백엔드: FastAPI `server.py` (인증 `auth.py`, 감사 로그 `audit_*.py`, 사용량 집계 `usage_tracker.py`)
-- 프론트: 정적 파일 `index.html`, `app.js`, `styles.css`, `db.js`, `data.js` (빌드 단계 없음)
+- 프론트: 정적 파일 `index.html`, `app.js`, `styles.css`, `db.js`, `data.js`와 화면별 개편 파일 `*개편_*.css`, `*개편_*.js`, `*정돈_*.css`, `*통일_*.css` (빌드 단계 없음)
+- 글꼴: Pretendard 공식 배포 WOFF2를 `assets/`에 두고 사용 (OFL 예약 글꼴 이름이 있어 직접 변환한 파일은 쓰지 않음)
 - 운영: AWS App Runner (`apprunner.yaml`), DB는 RDS PostgreSQL (Secrets Manager `DB_SECRET_ARN`)
 - 인증: Microsoft Entra SSO. 운영 `/api/*`는 로그인 세션 없이 호출하면 401
 
@@ -25,7 +26,13 @@
 - `reference/`는 원본 자료 보관 폴더이며 커밋하지 않습니다.
 
 ## 수정 시 규칙
-- 정적 파일(`app.js`, `styles.css`, `db.js`, `data.js`)을 고치면 `index.html`의 `?v=YYYYMMDDx` 캐시 버전을 함께 올립니다.
+- 정적 파일(`app.js`, `styles.css`, `db.js`, `data.js`, 개편 CSS와 JS)을 고치면 `index.html`의 `?v=YYYYMMDDx` 캐시 버전을 모두 같은 값으로 올립니다.
+- 새 정적 파일을 추가하면 git에 함께 등록합니다. 수정 파일만 커밋하면 운영에서 404가 나 화면이 깨집니다.
+- 운영은 `.js`, `.css`, `.png` 등 정적 파일을 로그인 없이 공개합니다. 로컬 검토 도구나 민감 정보가 담긴 정적 파일은 커밋하지 않습니다.
+- 모바일 화면(320px, 390px)에서 가로 넘침과 상단 메뉴 노출을 확인합니다.
+- 식단 이미지: 운영 `/api/menu_weeks` 목록에는 날짜 키(`YYYY-MM-DD`) 정식 행과 이미지 저장 경로를 키로 쓰는 행이 섞여 옵니다. 화면은 정식 행의 `storage_path`만 사용합니다. 이미지 삭제 API(`DELETE /api/storage/menu-images/{key}`)는 행을 지우지 않고 `image_data`만 비우므로 이미지 행은 남습니다. 삭제는 정식 행을 먼저 지우고 성공을 확인한 뒤 이미지를 비우며, 각 응답의 오류를 확인합니다.
+- 로컬 검토 서버(`로컬개편서버_*.js`)는 운영 저장 계약을 그대로 재현하지 않습니다. 저장, 업로드, 삭제 로직을 바꾸면 `server.py`의 실제 처리 방식 기준으로 다시 검증합니다.
+- `schedules/`는 커밋하지 않으므로 운영에 없습니다. 화면에서 이 경로로 링크하지 않습니다.
 - API를 추가하거나 바꾸면 `docs/AUDIT-ACTIONS.md`의 감사 이벤트 계약과 `audit_registry.py` 등록을 함께 맞춥니다.
 - 요청자료 자동 생성 로직은 `요청자료일정자동생성규칙_20260521.md`, `app.js`의 `syncAutoRequestForMonth()`, `_backfill_auto_request.py`를 함께 맞춥니다.
 

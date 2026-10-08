@@ -1,0 +1,139 @@
+/* 요청자료 및 연차 화면 전용 UI. 공통 월 선택과 6px 간격을 유지합니다. */
+@media screen {
+    #panelLeave, #panelRequest { overflow: visible !important; min-width: 0; }
+    #panelLeave > .panel-title-row { margin: 0 0 6px !important; }
+    #panelLeave > .panel-title-row > .panel-title,
+    #panelRequest .request-panel-header.rl-obsolete-header { display: none !important; }
+    .rl-toolbar, .rl-toolbar-extra {
+        display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+        font-family: 'Pretendard Variable', Pretendard, sans-serif;
+    }
+    .rl-toolbar-extra[hidden] { display: none !important; }
+    .rl-toolbar { padding: 10px 12px !important; border: 1px solid #dfe7ef; border-radius: 8px; background: #fff; justify-content: flex-start !important; }
+    .rl-month-nav { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    #leaveMonthLabel { color: #18364e !important; font-size: 20px !important; font-weight: 750 !important; min-width: 105px !important; }
+    #leaveMonthPicker { z-index: 1; }
+    #leavePrevMonth, #leaveNextMonth { height: 36px; width: 34px; color: #18364e; background: #fff; }
+    .rl-button, .rl-select, #requestPrintBtn.rl-button {
+        height: 36px; border: 1px solid #dfe7ef; border-radius: 6px; background: #fff;
+        color: #234760; font: 600 13px 'Pretendard Variable', Pretendard, sans-serif;
+        padding: 0 12px; cursor: pointer; flex-shrink: 0; box-shadow: none;
+    }
+    .rl-select { max-width: 165px; padding: 0 28px 0 10px; }
+    .rl-button:hover, #requestPrintBtn.rl-button:hover { background: #f1f5f8; border-color: #c6d5df; transform: none; }
+    .rl-button.rl-primary { background: #235d7d; color: #fff; border-color: #235d7d; }
+    .rl-button.rl-primary:hover { background: #184e6b; }
+    .rl-search { min-width: 125px; width: 170px; display: block; }
+    .rl-search input {
+        width: 100%; height: 36px; background: #fff; border: 1px solid #dfe7ef; border-radius: 6px;
+        color: #19384f; padding: 0 11px; font: 400 13px 'Pretendard Variable', Pretendard, sans-serif;
+    }
+    .rl-search input::placeholder { color: #7b8d9b; }
+    .rl-search input:focus { outline: 2px solid #bad4e4; outline-offset: 1px; }
+    .rl-view-switch { display: flex; gap: 2px; padding: 2px; border: 1px solid #dfe7ef; border-radius: 6px; height: 36px; background: #fff; }
+    .rl-view-switch .rl-button { height: 30px; border: 0; border-radius: 4px; padding: 0 10px; background: transparent; }
+    .rl-view-switch .rl-button[aria-pressed='true'] { background: #eaf2f7; color: #235d7d; }
+    #panelLeave .calendar-header, #panelRequest .calendar-header { background: #fff; border-color: #e4eaf0; }
+    #panelLeave .calendar-header > .sun, #panelLeave .calendar-header > .sat,
+    #panelRequest .calendar-header > .sun, #panelRequest .calendar-header > .sat,
+    #panelLeave .date-num.sun, #panelLeave .date-num.sat,
+    #panelRequest .date-num.sun, #panelRequest .date-num.sat { color: #ce3c46 !important; }
+    #panelLeave .calendar-grid, #panelRequest .calendar-grid { gap: 0; background: #fff; border-radius: 0 0 8px 8px; overflow: hidden; }
+    #panelLeave .cal-day, #panelRequest .cal-day { border-radius: 0; border-right: 1px solid #e7edf2; border-bottom: 1px solid #e7edf2; padding: 8px; background: #fff; box-shadow: none; }
+    #panelLeave .cal-day:nth-child(7n), #panelRequest .cal-day:nth-child(7n) { border-right: none; }
+    #panelLeave .cal-day.empty, #panelRequest .cal-day.empty { background: #fafbfc; }
+    #panelLeave .cal-day.holiday-day, #panelLeave .cal-day.saturday-day,
+    #panelRequest .cal-day.holiday-day, #panelRequest .cal-day.saturday-day { background: #fdfafa !important; border-color: #e7edf2 !important; }
+    #panelLeave .cal-day { min-height: 112px; height: auto; }
+    #panelLeave #leaveGrid .cal-day:not(.empty) { display: flex; flex-direction: column; overflow: hidden; }
+    #panelLeave #leaveGrid .cal-day > .date-num { flex-shrink: 0; }
+    #panelLeave .leave-chips-scroll {
+        flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
+        overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin; scrollbar-color: #ccd6e4 transparent;
+    }
+    #panelLeave .leave-chips-scroll::-webkit-scrollbar { width: 3px; }
+    #panelLeave .leave-chips-scroll::-webkit-scrollbar-thumb { background: #ccd6e4; border-radius: 3px; }
+    #panelRequest .calendar-grid.request-grid:not(.req-print-sim) .cal-day { height: 118px !important; }
+    #panelLeave .cal-day:hover:not(.empty), #panelRequest .cal-day:hover:not(.empty) { background: #f3f7fa !important; box-shadow: none; }
+    #panelLeave .date-num, #panelRequest .date-num { font-size: 13px; font-weight: 650; margin-bottom: 5px; }
+    #panelLeave .leave-chip, #panelRequest .request-chip {
+        padding: 5px 6px; margin-top: 4px; font-size: 12px; font-weight: 500; line-height: 1.35;
+        border-radius: 4px; background: #edf3f7; color: #294c65;
+    }
+    #panelLeave .leave-chip[hidden], #panelRequest .request-chip[hidden] { display: none !important; }
+    #panelLeave .lc-name { max-width: none; font-size: 12px; font-weight: 650; }
+    #panelLeave .lc-type { font-size: 11px; color: #587185; opacity: 1; overflow: hidden; text-overflow: ellipsis; }
+    #panelLeave .ltype-반차오전, #panelLeave .ltype-반차오후,
+    #panelLeave .ltype-반반차오전, #panelLeave .ltype-반반차오후 { background: #eef5f2; color: #2d6b59; }
+    #panelLeave .ltype-교육, #panelLeave .ltype-하기휴가, #panelLeave .ltype-특별휴가, #panelLeave .ltype-병가 { background: #f5f0e9; color: #7e6139; }
+    #panelRequest .rcat-meeting { background: #edf3f8; color: #315d7e; }
+    #panelRequest .rcat-related { background: #f1eef8; color: #645084; }
+    #panelRequest .rcat-regular { background: #ecf5f1; color: #2f705c; }
+    #panelLeave.rl-list-mode > .calendar-header, #panelLeave.rl-list-mode > .calendar-grid,
+    #panelRequest.rl-list-mode > #requestCalendarWrap { display: none !important; }
+    .rl-list { border: 1px solid #dfe7ef; border-radius: 8px; background: #fff; overflow: hidden; }
+    .rl-list[hidden] { display: none !important; }
+    .rl-list-head, .rl-list-row { display: grid; grid-template-columns: 100px 155px minmax(0, 1fr) 18px; align-items: center; gap: 12px; padding: 11px 16px; }
+    .rl-list-head { background: #f6f8fa; color: #6b7f8e; font-size: 12px; border-bottom: 1px solid #e7edf2; }
+    .rl-list-row { width: 100%; border: 0; border-bottom: 1px solid #edf1f4; border-radius: 0; background: #fff; color: #28465b; text-align: left; font: 400 13px 'Pretendard Variable', Pretendard, sans-serif; cursor: pointer; }
+    .rl-list-row:last-child { border-bottom: none; }
+    .rl-list-row:hover { background: #f5f9fc; }
+    .rl-list-date { font-weight: 600; white-space: nowrap; }
+    .rl-list-date.rl-holiday { color: #ce3c46; }
+    .rl-list-scope { color: #6b7d8b; font-size: 12px; }
+    .rl-list-content { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .rl-list-main { color: #203f55; line-height: 1.5; overflow-wrap: anywhere; }
+    .rl-list-note { color: #7b8d9b; font-size: 12px; line-height: 1.4; }
+    .rl-list-arrow { color: #8da0af; font-size: 20px; }
+    .rl-empty { color: #7b8d9b; text-align: center; padding: 44px 16px; margin: 0; font-size: 13px; }
+    .rl-button:focus-visible, .rl-list-row:focus-visible,
+    #panelLeave [role='button']:focus-visible, #panelRequest [role='button']:focus-visible { outline: 2px solid #7eaac6; outline-offset: -2px; }
+    .rl-modal-content { width: 560px !important; max-width: calc(100vw - 28px) !important; border-radius: 10px !important; background: #fff !important; padding: 22px !important; box-shadow: 0 18px 60px #19384f25 !important; }
+    #leaveModal .leave-form-label, #requestModal .leave-form-label { font-size: 12px; text-transform: none; letter-spacing: 0; color: #607584; font-weight: 500; }
+    #leaveModal .form-input, #requestModal .form-input { font-family: inherit; font-size: 13px !important; border-radius: 6px; background: #fff; border: 1px solid #dce5ed; color: #274a62; min-height: 36px; }
+    #leaveModal .leave-entry-row, #requestModal .leave-entry-row { border-radius: 6px; padding: 10px; background: #f7f9fb; align-items: flex-start; }
+    #leaveModal .leave-entry-name, #requestModal .leave-entry-name { font-size: 13px; font-weight: 600 !important; }
+    #leaveModal .leave-entry-note, #requestModal .leave-entry-note { font-size: 12px; font-style: normal; color: #748894; }
+    #leaveModal .leave-entry-edit, #leaveModal .leave-entry-del,
+    #requestModal .leave-entry-del { font-size: 12px; padding: 5px 9px; border-radius: 5px; background: #fff !important; color: #557083 !important; border-color: #dbe5ed; }
+    #leaveModal .leave-entry-badge, #requestModal .leave-entry-badge { border-radius: 4px; font-size: 11px !important; padding: 3px 6px; }
+    #leaveModal .leave-entry-date-badge { display: none; }
+    #leaveModal .save-btn, #requestModal .save-btn { background: #235d7d; box-shadow: none; border-radius: 6px; }
+    #leaveModal .leave-period-toggle-row { border-top: 1px solid #e7edf2; }
+    #leaveModal .leave-period-preview { background: #f0f5f8; border-color: #dce8ef; color: #496d83; }
+}
+@media screen and (max-width: 1000px) {
+    .rl-toolbar-extra { gap: 6px; }
+    .rl-search { width: 145px; }
+    .rl-toolbar { gap: 6px; }
+}
+@media screen and (max-width: 680px) {
+    .rl-toolbar { padding: 8px !important; }
+    .rl-month-nav { width: 100%; }
+    .rl-toolbar-extra { width: 100%; }
+    .rl-search { flex: 1; width: auto; min-width: 120px; }
+    .rl-select { max-width: 145px; }
+    #panelLeave .calendar-grid, #panelRequest .calendar-grid { min-width: 0; }
+    #panelLeave .cal-day, #panelRequest .cal-day { padding: 5px 3px; }
+    #panelLeave .leave-chip, #panelRequest .request-chip { font-size: 12px; padding: 3px; overflow-wrap: anywhere; word-break: break-all; }
+    #panelLeave .leave-chip { flex-direction: column; align-items: flex-start; gap: 1px; }
+    #panelLeave .lc-name { font-size: 12px; } #panelLeave .lc-type { font-size: 10px; width: 100%; }
+    .rl-list-head, .rl-list-row { grid-template-columns: 80px minmax(0, 1fr) 14px; padding: 10px; gap: 8px; }
+    .rl-list-head > span:nth-child(2), .rl-list-row > .rl-list-scope { display: none; }
+    .rl-list-head > span:nth-child(3) { grid-column: 2; }
+    #leaveModal .leave-entry-row, #requestModal .leave-entry-row { flex-direction: column; align-items: stretch; }
+    #leaveModal .leave-edit-grid { grid-template-columns: 1fr 1fr; }
+    .rl-modal-content { padding: 18px !important; }
+}
+@media print {
+    .rl-toolbar, .rl-toolbar-extra, .rl-list { display: none !important; }
+    #panelRequest.rl-list-mode > #requestCalendarWrap, #panelLeave.rl-list-mode > .calendar-header,
+    #panelLeave.rl-list-mode > .calendar-grid { display: block !important; }
+    #panelLeave.rl-list-mode > .calendar-grid { display: grid !important; }
+    #panelLeave .leave-chip[hidden], #panelRequest .request-chip[hidden] { display: block !important; }
+    #panelLeave .date-num.sun, #panelLeave .date-num.sat,
+    #panelRequest .date-num.sun, #panelRequest .date-num.sat,
+    #panelLeave .calendar-header .sun, #panelLeave .calendar-header .sat,
+    #panelRequest .calendar-header .sun, #panelRequest .calendar-header .sat { color: #ce3c46 !important; }
+}

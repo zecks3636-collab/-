@@ -7,6 +7,7 @@
     const BASE = '/api';
 
     async function req(method, path, body) {
+        try {
         const res = await fetch(BASE + path, {
             method,
             headers: body ? { 'Content-Type': 'application/json' } : {},
@@ -18,6 +19,9 @@
         }
         const data = await res.json().catch(() => null);
         return { data, error: null };
+        } catch (error) {
+            return { data: null, error: { message: '서버에 연결하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도해주세요.' } };
+        }
     }
 
     // ── 테이블별 API 매핑 ──
@@ -97,7 +101,12 @@
                 },
                 async remove(paths) {
                     for (const p of paths) {
-                        await fetch(`${BASE}/storage/${bucket}/${p}`, { method: 'DELETE' });
+                        try {
+                            const res = await fetch(`${BASE}/storage/${bucket}/${p}`, { method: 'DELETE' });
+                            if (!res.ok) return { error: { message: await res.text() || `HTTP ${res.status}` } };
+                        } catch (error) {
+                            return { error: { message: '서버에 연결하지 못했습니다. 연결 상태를 확인한 뒤 다시 시도해주세요.' } };
+                        }
                     }
                     return { error: null };
                 }

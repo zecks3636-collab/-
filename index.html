@@ -3,45 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>월간일정표 대시보드</title>
-    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/variable/pretendardvariable.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=20260928a">
+    <title>월간일정 대시보드</title>
+    <link rel="stylesheet" href="styles.css?v=20261008y">
+    <link rel="stylesheet" href="대시보드공통개편_20261007.css?v=20261008y">
+    <link rel="stylesheet" href="요청연차화면개편_20261007.css?v=20261008y">
+    <link rel="stylesheet" href="목표칭찬화면개편_20261007.css?v=20261008y">
+    <link rel="stylesheet" href="식단화면개편_20261007.css?v=20261008y">
+    <link rel="stylesheet" href="대시보드시각개편_20261007.css?v=20261008y">
+    <link rel="stylesheet" href="보드식단시각개편_20261007.css?v=20261008y">
+    <link rel="stylesheet" href="대시보드제목정돈_20261008.css?v=20261008y">
+    <link rel="stylesheet" href="대시보드상단통일_20261008.css?v=20261008y">
     <meta name="description" content="Group, NBT, BIO 통합 월간 경영 일정 대시보드">
     <style>
-    /* 최초 진입 로딩 오버레이 — styles.css 에 의존하지 않도록 값 직접 지정 */
-    #bootLoader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;
-        align-items:center;justify-content:center;gap:6px;
-        background:rgba(248,250,252,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
-        font-family:'Pretendard Variable',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-        transition:opacity .4s ease}
+    /* 첫 화면은 외부 스타일 로드 전에도 동일한 브랜드 톤을 유지한다. */
+    #bootLoader{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+        padding:24px;box-sizing:border-box;background:#f4f6f8;color:#172b4d;
+        font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        transition:opacity .3s ease}
     #bootLoader.is-hidden{opacity:0;pointer-events:none}
-    #bootLoader .bl-brand{font-size:34px;font-weight:900;letter-spacing:2px;line-height:1.1;
-        background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 50%,#06b6d4 100%);
-        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-    #bootLoader .bl-division{font-size:15px;font-weight:700;letter-spacing:.5px;
-        background:linear-gradient(135deg,#10b981 0%,#3b82f6 50%,#8b5cf6 100%);
-        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-    #bootLoader .bl-dots{display:flex;gap:8px;margin-top:18px}
-    #bootLoader .bl-dots i{width:8px;height:8px;border-radius:50%;display:block;
-        animation:blPulse 1.4s ease-in-out infinite}
-    #bootLoader .bl-dots i:nth-child(1){background:#3b82f6;animation-delay:0s}
-    #bootLoader .bl-dots i:nth-child(2){background:#10b981;animation-delay:.18s}
-    #bootLoader .bl-dots i:nth-child(3){background:#f59e0b;animation-delay:.36s}
-    #bootLoader .bl-text{font-size:12.5px;font-weight:600;letter-spacing:.3px;color:#94a3b8;margin-top:14px}
-    @keyframes blPulse{0%,80%,100%{opacity:.25;transform:scale(.85)}40%{opacity:1;transform:scale(1)}}
+    #bootLoader .bl-content{width:240px;max-width:100%;text-align:center}
+    #bootLoader .bl-identity{display:flex;align-items:center;justify-content:center;gap:12px;text-align:left}
+    #bootLoader .bl-symbol{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:42px;height:42px;
+        border-radius:12px;background:#ba2840;overflow:hidden}
+    #bootLoader .bl-symbol img{display:block;width:51px;height:51px;object-fit:contain}
+    #bootLoader .bl-brand{display:block;font-size:24px;font-weight:750;letter-spacing:-.7px;line-height:1.2;color:#172b4d}
+    #bootLoader .bl-division{display:block;margin-top:2px;font-size:13px;font-weight:500;line-height:1.3;letter-spacing:0;color:#63758b}
+    #bootLoader .bl-progress{display:block;width:210px;max-width:100%;height:2px;margin:28px auto 0;overflow:hidden;background:#dfe6ee;border-radius:2px}
+    #bootLoader .bl-progress i{display:block;width:38%;height:100%;background:#6a86a8;border-radius:inherit;transform:translateX(-110%);animation:blGlide 1.8s ease-in-out infinite}
+    #bootLoader .bl-text{margin:14px 0 0;color:#63758b;font-size:12px;font-weight:400;letter-spacing:0;line-height:1.6}
+    @keyframes blGlide{0%{transform:translateX(-110%)}100%{transform:translateX(365%)}}
     @media (prefers-reduced-motion:reduce){
         #bootLoader{transition:none}
-        #bootLoader .bl-dots i{animation:none;opacity:.7}
+        #bootLoader .bl-progress i{animation:none;transform:translateX(80%)}
     }
+    @media print{#bootLoader{display:none!important}}
     </style>
 </head>
 <body>
     <!-- 최초 진입 로딩 오버레이 (app.js 실행 전부터 표시되어야 하므로 인라인) -->
-    <div id="bootLoader">
-        <div class="bl-brand">COSMAX BTI</div>
-        <div class="bl-division">건강기능식품 사업부문</div>
-        <div class="bl-dots"><i></i><i></i><i></i></div>
-        <div class="bl-text">일정을 불러오는 중</div>
+    <div id="bootLoader" role="status" aria-live="polite" aria-atomic="true">
+        <div class="bl-content">
+            <div class="bl-identity">
+                <span class="bl-symbol" aria-hidden="true"><img src="assets/Cosmax_Symbol_White_RGB.png" alt="" width="51" height="51"></span>
+                <div><strong class="bl-brand">COSMAX BTI</strong><span class="bl-division">건강기능식품 사업부문</span></div>
+            </div>
+            <span class="bl-progress" aria-hidden="true"><i></i></span>
+            <p class="bl-text">대시보드를 불러오는 중</p>
+        </div>
     </div>
     <script>
     (function(){
@@ -51,6 +59,7 @@
         window.__hideBootLoader = function(){
             if (done) return;            // 멱등 — 중복 호출 안전
             done = true;
+            el.setAttribute('aria-hidden', 'true');
             el.classList.add('is-hidden');
             setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 450);
         };
@@ -60,84 +69,52 @@
         window.addEventListener('error', window.__hideBootLoader);
     })();
     </script>
-    <!-- Premium Decorative Orbs -->
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-orb orb-3"></div>
-
     <div class="dashboard-container">
-        <!-- Sidebar -->
-        <aside class="sidebar glass-panel">
-            <div class="logo-area">
-                <div class="logo-brand">COSMAX BTI</div>
-                <div class="logo-division">건강기능식품 사업부문</div>
-                <div class="logo-subtitle">Schedule Insight</div>
-            </div>
-            
-            <div class="filters">
-                <h3>회사별 일정 보기</h3>
-                <button class="filter-btn active" data-company="all">
-                    <span class="dot all-dot"></span> 전체 보기
-                </button>
-                <button class="filter-btn" data-company="Group">
-                    <span class="dot group-dot"></span> 그룹 (Group)
-                </button>
-                <button class="filter-btn" data-company="NBT">
-                    <span class="dot nbt-dot"></span> 엔비티 (NBT)
-                </button>
-                <button class="filter-btn" data-company="BIO">
-                    <span class="dot bio-dot"></span> 바이오 (BIO)
-                </button>
-            </div>
+        <header class="dashboard-gnb">
+            <a class="dashboard-brand" href="#" aria-label="월간일정 홈">
+                <span class="brand-symbol"><img src="assets/Cosmax_Symbol_White_RGB.png" alt="코스맥스 심볼"></span>
+                <span><strong>COSMAX BTI</strong><small>건강기능식품 사업부문</small></span>
+            </a>
+            <nav class="dashboard-nav" aria-label="대시보드 메뉴">
+                <button type="button" id="tabCalendar" class="dashboard-nav-btn active" aria-current="page">월간일정</button>
+                <button type="button" id="tabThanks" class="sidebar-menu-tab dashboard-nav-btn">칭찬보드</button>
+                <button type="button" id="tabLeave" class="sidebar-menu-tab dashboard-nav-btn">연차계획</button>
+                <button type="button" id="tabGoals" class="sidebar-menu-tab dashboard-nav-btn">목표관리</button>
+                <button type="button" id="tabMenu" class="sidebar-menu-tab dashboard-nav-btn">주간식단</button>
+                <button type="button" id="tabRequest" class="sidebar-menu-tab dashboard-nav-btn">정기요청</button>
+            </nav>
+        </header>
+        <div hidden><div class="upcoming-events"><h3></h3><ul id="upcomingList"></ul></div><button id="openSettingsBtn" type="button">데이터 연동 설정</button></div>
 
-            <div class="upcoming-events" style="display:none; flex: 1; min-height: 0;">
-                <h3>주요 하이라이트 일정</h3>
-                <ul id="upcomingList">
-                    <!-- Events will be populated here -->
-                </ul>
-            </div>
-
-            <!-- 탭 버튼 그룹 -->
-            <div style="display:flex; flex-direction:column; gap:6px; margin-top:40px;">
-                <button class="sidebar-menu-tab" id="tabGoals">🎯 목표관리</button>
-                <button class="sidebar-menu-tab" id="tabThanks">💌 COSMAX Thanks Board</button>
-                <button class="sidebar-menu-tab" id="tabMenu">🍽️ 주간식단표</button>
-                <button class="sidebar-menu-tab" id="tabLeave">📋 연차계획</button>
-                <button class="sidebar-menu-tab" id="tabRequest">📊 요청자료일정</button>
-            </div>
-
-            <!-- Settings / Upload Icon at Bottom Left (숨김) -->
-            <div class="sidebar-footer" style="display: none; margin-top: auto; justify-content: flex-start; padding-top: 16px;">
-                <button id="openSettingsBtn" class="icon-btn" title="데이터 연동 설정">
-                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
-                </button>
-            </div>
-        </aside>
 
         <!-- Main Content (Calendar + Menu) -->
         <main class="main-content">
-            <header class="top-header">
-                <div class="month-selector" style="display:flex; align-items:center; gap:15px;">
-                    <button class="nav-btn" id="prevMonth" style="background:transparent;border:none;font-size:24px;cursor:pointer;color:#777;">&lt;</button>
-                    <div>
-                        <h2 id="monthTitle"></h2>
-                        <script>(function(){var d=new Date();document.getElementById('monthTitle').textContent=d.getFullYear()+'. '+String(d.getMonth()+1).padStart(2,'0');})();</script>
-                    </div>
-                    <button class="nav-btn" id="nextMonth" style="background:transparent;border:none;font-size:24px;cursor:pointer;color:#777;">&gt;</button>
+            <header class="top-header" id="dashboardToolbar">
+                <div class="month-selector">
+                    <button class="nav-btn" id="prevMonth" type="button" aria-label="이전 달">‹</button>
+                    <h2 id="monthTitle"></h2>
+                    <button class="nav-btn" id="nextMonth" type="button" aria-label="다음 달">›</button>
+                    <button id="currentMonthBtn" class="dashboard-button" type="button">이번 달</button>
                 </div>
-<div class="search-bar glass-panel">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" id="searchInput" placeholder="키워드 혹은 회사명 검색...">
+                <div class="filters" id="calendarCompanyFilters" aria-label="회사 선택">
+                    <button class="filter-btn active" data-company="all" type="button">전체</button>
+                    <button class="filter-btn" data-company="Group" type="button"><span class="dot group-dot"></span>그룹</button>
+                    <button class="filter-btn" data-company="NBT" type="button"><span class="dot nbt-dot"></span>엔비티</button>
+                    <button class="filter-btn" data-company="BIO" type="button"><span class="dot bio-dot"></span>바이오</button>
+                </div>
+                <div id="dashboardToolbarExtra"></div>
+                <label class="search-bar" id="calendarSearch"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg><input type="search" id="searchInput" placeholder="일정명, 회사 검색" aria-label="일정 검색"></label>
+                <div id="calendarActions" class="dashboard-actions">
+                    <div class="dashboard-segment" aria-label="일정 보기 방식"><button id="calendarViewBtn" class="selected" type="button" aria-pressed="true">달력</button><button id="calendarListBtn" type="button" aria-pressed="false">목록</button></div>
+                    <button id="calendarAddBtn" type="button" class="dashboard-button primary">일정 추가</button>
+                    <button id="calendarImportBtn" type="button" class="dashboard-button">파일 가져오기</button>
                 </div>
             </header>
 
             <!-- Calendar Panel -->
             <div id="panelCalendar" class="calendar-wrapper glass-panel">
                 <div class="calendar-header">
-                    <div class="sun">SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div class="sat">SAT</div>
+                    <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
                 </div>
                 <div class="calendar-grid" id="calendarGrid">
                     <!-- Days will be generated by JS -->
@@ -1582,7 +1559,7 @@
 
                 <!-- 컨텐츠 2: 업로드된 PDF 이미지 표시 -->
                 <div id="menuContentImage" style="display:none; text-align:center; padding: 8px 0;">
-                    <img id="menuUploadedImg" style="width:100%;max-width:960px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);" alt="주간식단표">
+                    <img id="menuUploadedImg" style="width:100%;max-width:960px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);" alt="주간식단">
                     <div style="margin-top:10px;">
                         <button id="menuDeleteBtn" class="menu-delete-btn">🗑️ 이 주 메뉴 삭제</button>
                     </div>
@@ -1616,7 +1593,7 @@
                 <div class="calendar-grid leave-grid" id="leaveGrid"></div>
             </div>
 
-            <!-- Request / 요청자료일정 Panel -->
+            <!-- Request / 정기요청 Panel -->
             <div id="panelRequest" class="calendar-wrapper glass-panel" style="display:none; flex-direction:column; overflow-y:auto;">
                 <!-- 헤더: 업로드 버튼 -->
                 <div class="request-panel-header">
@@ -1684,6 +1661,7 @@
                                 <option value="성과">성과</option>
                                 <option value="응원">응원</option>
                                 <option value="감사">감사</option>
+                                <option value="축하">축하</option>
                             </select>
                         </div>
                     </div>
@@ -2108,16 +2086,16 @@
                     <div class="event-color-label">배경색 변경</div>
                     <div class="event-color-row">
                         <div class="event-color-presets" id="eventColorPresets">
-                            <button class="preset-swatch" data-color="#eff8ff" title="기본 파랑" style="background:#eff8ff;border:2px solid #bfdbfe;"></button>
-                            <button class="preset-swatch" data-color="#f0fdf4" title="기본 초록" style="background:#f0fdf4;border:2px solid #bbf7d0;"></button>
-                            <button class="preset-swatch" data-color="#fff7ed" title="기본 주황" style="background:#fff7ed;border:2px solid #fed7aa;"></button>
-                            <button class="preset-swatch" data-color="#1e293b" title="다크 네이비" style="background:#1e293b;border:2px solid #475569;"></button>
-                            <button class="preset-swatch" data-color="#7c3aed" title="보라" style="background:#7c3aed;border:2px solid #a78bfa;"></button>
-                            <button class="preset-swatch" data-color="#db2777" title="핑크" style="background:#db2777;border:2px solid #f9a8d4;"></button>
-                            <button class="preset-swatch" data-color="#0f766e" title="틸" style="background:#0f766e;border:2px solid #5eead4;"></button>
-                            <button class="preset-swatch" data-color="#b45309" title="황갈색" style="background:#b45309;border:2px solid #fde68a;"></button>
-                            <button class="preset-swatch" data-color="#dc2626" title="빨강" style="background:#dc2626;border:2px solid #fca5a5;"></button>
-                            <button class="preset-swatch" data-color="#111827" title="블랙" style="background:#111827;border:2px solid #6b7280;"></button>
+                            <button type="button" class="preset-swatch" data-color="#e4eaf5" title="블루" aria-label="블루" aria-pressed="false" style="background:#e4eaf5;"></button>
+                            <button type="button" class="preset-swatch" data-color="#dfeee5" title="민트" aria-label="민트" aria-pressed="false" style="background:#dfeee5;"></button>
+                            <button type="button" class="preset-swatch" data-color="#f3e7cf" title="앰버" aria-label="앰버" aria-pressed="false" style="background:#f3e7cf;"></button>
+                            <button type="button" class="preset-swatch" data-color="#e6eaf0" title="슬레이트" aria-label="슬레이트" aria-pressed="false" style="background:#e6eaf0;"></button>
+                            <button type="button" class="preset-swatch" data-color="#e8e1f1" title="라벤더" aria-label="라벤더" aria-pressed="false" style="background:#e8e1f1;"></button>
+                            <button type="button" class="preset-swatch" data-color="#f2e2e9" title="로즈" aria-label="로즈" aria-pressed="false" style="background:#f2e2e9;"></button>
+                            <button type="button" class="preset-swatch" data-color="#dfeef0" title="아쿠아" aria-label="아쿠아" aria-pressed="false" style="background:#dfeef0;"></button>
+                            <button type="button" class="preset-swatch" data-color="#efe4dc" title="테라코타" aria-label="테라코타" aria-pressed="false" style="background:#efe4dc;"></button>
+                            <button type="button" class="preset-swatch" data-color="#f3e1e1" title="코랄" aria-label="코랄" aria-pressed="false" style="background:#f3e1e1;"></button>
+                            <button type="button" class="preset-swatch" data-color="#dce6f4" title="주요 강조 (블루그레이)" aria-label="주요 강조 (블루그레이)" aria-pressed="false" style="background:#dce6f4;--swatch-ink:#172b4d;"></button>
                         </div>
                         <label class="event-color-custom-wrap" title="직접 선택">
                             <input type="color" id="eventColorPicker" class="event-color-input">
@@ -2265,8 +2243,12 @@
     <!-- Client-side parsing libs — 업로드 시점에 app.js 가 동적 로드 (초기 1.17MB 차단 제거) -->
 
     <!-- Supabase JS Client -->
-    <script src="db.js?v=20260930a"></script>
-    <script src="data.js?v=20260930a"></script>
-    <script src="app.js?v=20260930a"></script>
+    <script src="db.js?v=20261008y"></script>
+    <script src="data.js?v=20261008y"></script>
+    <script src="app.js?v=20261008y"></script>
+    <script src="대시보드공통개편_20261007.js?v=20261008y"></script>
+    <script src="요청연차화면개편_20261007.js?v=20261008y"></script>
+    <script src="목표칭찬화면개편_20261007.js?v=20261008y"></script>
+    <script src="식단화면개편_20261007.js?v=20261008y"></script>
 </body>
 </html>
