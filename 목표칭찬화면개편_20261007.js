@@ -203,7 +203,28 @@
     activityTitle.id = 'thanksActivityTitle';
     const legend = make('div', 'bti-thanks-legend');
     legend.append(make('span', 'is-sent', '보낸 칭찬'), make('span', 'is-received', '받은 칭찬'));
-    chartHeader.append(activityTitle, legend);
+    // 집계 기간: 당월(선택한 달) 또는 연간 누적(선택한 달의 해당 연도 전체)
+    let statsPeriod = 'month';
+    try { if (localStorage.getItem('thanksStatsPeriod') === 'year') statsPeriod = 'year'; } catch (e) { /* 저장소 사용 불가 시 당월 */ }
+    const periodTabs = make('div', 'bti-thanks-tabs bti-thanks-period');
+    periodTabs.setAttribute('role', 'group');
+    periodTabs.setAttribute('aria-label', '칭찬 현황 집계 기간');
+    const periodButtons = [['month', '당월'], ['year', '연간 누적']].map(([key, label]) => {
+      const button = make('button', '', label);
+      button.type = 'button';
+      button.dataset.thanksPeriod = key;
+      button.addEventListener('click', () => {
+        statsPeriod = key;
+        try { localStorage.setItem('thanksStatsPeriod', key); } catch (e) { /* 무시 */ }
+        refreshThanks();
+      });
+      periodTabs.append(button);
+      return button;
+    });
+    const periodCaption = make('span', 'bti-thanks-period-caption');
+    const titleGroup = make('div', 'bti-thanks-activity-title');
+    titleGroup.append(activityTitle, periodTabs, periodCaption);
+    chartHeader.append(titleGroup, legend);
     const groups = make('div', 'bti-thanks-team-groups');
     insights.append(chartHeader, groups);
     header.after(insights);
@@ -289,7 +310,20 @@
       const counts = new Map(['경영관리팀', '사업관리팀', '건기식관리부문'].map(team => [team, { sent: 0, received: 0 }]));
       const members = new Map(Array.from(me.options).filter(option => option.value)
         .map(option => [option.value, { sent: 0, received: 0 }]));
-      cards.forEach(card => {
+      const ui = window.BTIScheduleUI;
+      const selected = ui?.month?.() || { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+      const yearly = statsPeriod === 'year' && typeof ui?.thanksCards === 'function';
+      periodButtons.forEach(button => {
+        const on = button.dataset.thanksPeriod === (yearly ? 'year' : 'month');
+        button.classList.toggle('selected', on);
+        button.setAttribute('aria-pressed', String(on));
+      });
+      periodCaption.textContent = yearly ? `${selected.year}년 전체` : `${selected.year}년 ${selected.month}월`;
+      // 당월은 화면에 표시된 카드, 연간 누적은 해당 연도 전체 카드로 집계한다.
+      const statCards = yearly
+        ? ui.thanksCards(selected.year).map(c => ({ from: c.from_name || '', to: c.to_name || '' }))
+        : cards;
+      statCards.forEach(card => {
         [[card.from, 'sent'], [card.to, 'received']].forEach(([name, direction]) => {
           if (!name) return;
           const team = teams.get(name) || '기타';

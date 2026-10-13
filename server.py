@@ -1150,8 +1150,9 @@ def list_stickers(to_name: Optional[str] = None, card_id: Optional[str] = None):
                             "created_at::text FROM praise_stickers WHERE card_id=%s::uuid "
                             "ORDER BY created_at DESC", (card_id,))
             else:
+                # 화면은 전체 목록으로 카드별 반응 수를 계산하므로, 오래된 카드의 반응이 빠지지 않게 상한을 넉넉히 둔다.
                 cur.execute("SELECT id::text, card_id::text, from_name, to_name, sticker, "
-                            "created_at::text FROM praise_stickers ORDER BY created_at DESC LIMIT 200")
+                            "created_at::text FROM praise_stickers ORDER BY created_at DESC LIMIT 5000")
             return JSONResponse(cur.fetchall())
 
 @app.delete("/api/praise_stickers/{sticker_id}")

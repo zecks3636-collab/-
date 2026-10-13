@@ -777,8 +777,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     let thanksCards = [];
     let thanksReactions = [];  // 전체 리액션 캐시: [{id, card_id, from_name, to_name, sticker, created_at}, ...]
-    const REACTION_EMOJIS = ['👍', '❤️', '🎉'];  // 표준 3종: 좋아요·공감·축하
-    const REACTION_LABELS = { '👍': '좋아요', '❤️': '공감', '🎉': '축하' };
+    // 칭찬 반응 6종. 기존 저장값(👍 ❤️ 🎉)은 그대로 유지하고 표시 이름만 다듬었다.
+    const REACTION_EMOJIS = ['👍', '👏', '🙏', '💪', '🎉', '❤️'];
+    const REACTION_LABELS = { '👍': '최고예요', '👏': '대단해요', '🙏': '고마워요', '💪': '응원해요', '🎉': '축하해요', '❤️': '감동이에요' };
+
+    // 이름 뒤 조사: 받침이 있으면 '이', 없으면 '가'
+    function subjectParticle(name) {
+        const code = String(name || '').charCodeAt(String(name || '').length - 1) - 0xAC00;
+        return code >= 0 && code <= 11171 && code % 28 === 0 ? '가' : '이';
+    }
 
     function getThanksYM() {
         return `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}`;
@@ -845,21 +852,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             const canDelete = myName && myName === c.from_name;
             // 이 카드의 리액션 집계
-            const cardReactions = thanksReactions.filter(r => r.card_id === c.id);
+            const cardReactions = thanksReactions.filter(r => r.card_id === c.id && REACTION_LABELS[r.sticker]);
+            // 반응이 있는 이모티콘만 개수와 함께 보여주고, 나머지는 '반응' 버튼의 선택 창에서 고른다.
             const reactionBar = REACTION_EMOJIS.map(emoji => {
                 const users = cardReactions.filter(r => r.sticker === emoji);
                 const count = users.length;
+                if (!count) return '';
                 const myReacted = myName && users.some(r => r.from_name === myName);
-                const tooltip = users.length
-                    ? `${REACTION_LABELS[emoji]}: ${users.map(u => u.from_name).join(', ')}`
-                    : `${REACTION_LABELS[emoji]} 남기기`;
-                return `<button class="thanks-reaction${myReacted ? ' is-mine' : ''}${count === 0 ? ' is-empty' : ''}"
+                const tooltip = `${REACTION_LABELS[emoji]}: ${users.map(u => u.from_name).join(', ')}`;
+                return `<button type="button" class="thanks-reaction${myReacted ? ' is-mine' : ''}"
                     data-card-id="${c.id}" data-emoji="${emoji}"
                     title="${escapeHtml(tooltip)}">
                     <span class="thanks-reaction-emoji">${emoji}</span>
-                    ${count > 0 ? `<span class="thanks-reaction-count">${count}</span>` : ''}
+                    <span class="thanks-reaction-count">${count}</span>
                 </button>`;
             }).join('');
+            const people = [...new Set(cardReactions.map(r => r.from_name))];
+            const reactionSummary = people.length
+                ? `<span class="thanks-reaction-summary">${escapeHtml(people[0])}${people.length > 1 ? ` 외 ${people.length - 1}명이` : subjectParticle(people[0])} 반응했어요</span>`
+                : '';
+            const picker = REACTION_EMOJIS.map(emoji => {
+                const mine = myName && cardReactions.some(r => r.sticker === emoji && r.from_name === myName);
+                return `<button type="button" class="thanks-reaction-option${mine ? ' is-mine' : ''}" data-card-id="${c.id}" data-emoji="${emoji}" aria-pressed="${mine ? 'true' : 'false'}">
+                    <span class="thanks-reaction-emoji">${emoji}</span><span>${REACTION_LABELS[emoji]}</span></button>`;
+            }).join('');
+            const reactionControls = `${reactionBar}
+                <span class="thanks-reaction-add-wrap">
+                    <button type="button" class="thanks-reaction-add" aria-haspopup="true" aria-expanded="false" aria-label="반응 남기기" title="반응 남기기"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="13" r="8"/><path d="M8 15.5c1.6 1.7 4.4 1.7 6 0M8.5 11h.01M13.5 11h.01M19 2v6M16 5h6"/></svg></button>
+                    <span class="thanks-reaction-picker" role="group" aria-label="반응 선택" hidden>${picker}</span>
+                </span>${reactionSummary}`;
             return `
                 <div class="thanks-card">
                     <div class="thanks-card-top">
@@ -872,12 +893,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <span class="thanks-card-date">${created}</span>
                         ${canDelete ? `<button class="thanks-card-del" data-id="${c.id}" title="내가 쓴 카드 삭제">🗑</button>` : ''}
                     </div>
-                    <div class="thanks-reactions">${reactionBar}</div>
+                    <div class="thanks-reactions">${reactionControls}</div>
                 </div>`;
         }).join('');
 
-        // 리액션 버튼 바인딩 (토글)
-        grid.querySelectorAll('.thanks-reaction').forEach(btn => {
+        // 리액션 버튼 바인딩 (토글). 개수 칩과 선택 창의 이모티콘 모두 같은 토글을 쓴다.
+        grid.querySelectorAll('.thanks-reaction, .thanks-reaction-option').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const cardId = btn.getAttribute('data-card-id');
@@ -885,6 +906,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await toggleReaction(cardId, emoji);
             });
         });
+        const closePickers = except => grid.querySelectorAll('.thanks-reaction-picker').forEach(p => {
+            if (p === except) return;
+            p.hidden = true;
+            p.parentElement.querySelector('.thanks-reaction-add')?.setAttribute('aria-expanded', 'false');
+        });
+        grid.querySelectorAll('.thanks-reaction-add').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const picker = btn.nextElementSibling;
+                closePickers(picker);
+                picker.hidden = !picker.hidden;
+                btn.setAttribute('aria-expanded', String(!picker.hidden));
+                if (!picker.hidden) picker.querySelector('button')?.focus();
+            });
+        });
+        if (!grid.dataset.pickerCloseReady) {
+            grid.dataset.pickerCloseReady = 'true';
+            document.addEventListener('click', e => { if (!e.target.closest?.('.thanks-reaction-add-wrap')) closePickers(); });
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') closePickers(); });
+        }
 
         // 삭제 버튼 바인딩
         grid.querySelectorAll('.thanks-card-del').forEach(btn => {
@@ -2856,6 +2897,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         showCalendar: switchToCalendar,
         addEvent: openDirectInputForDate,
         month: () => ({ year: currentYear, month: currentMonth + 1 }),
+        // 칭찬 현황 연간 누적용 읽기 전용 목록(보낸 사람, 받은 사람, 연월만 제공)
+        thanksCards: year => thanksCards
+            .filter(c => String(c.ym || '').startsWith(`${year}-`))
+            .map(c => ({ ym: c.ym, from_name: c.from_name, to_name: c.to_name })),
         goToMonth(year, month) {
             if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return;
             currentYear = year; currentMonth = month - 1;
