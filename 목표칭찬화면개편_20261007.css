@@ -251,3 +251,9 @@ body[data-dashboard-panel="thanks"] #thanksToolbarActions { display: flex; align
   #panelThanks .bti-thanks-activity-header { margin-bottom: 20px; }
   #panelThanks .bti-thanks-legend { gap: 8px; font-size: 10px; }
 }
+
+/* 칭찬 현황 집계 기간: 제목 오른쪽 당월, 연간 누적 전환 */
+#panelThanks .bti-thanks-activity-title { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
+#panelThanks .bti-thanks-period { padding: 2px; }
+#panelThanks .bti-thanks-period button { padding: 5px 10px; font-size: 12px; }
+#panelThanks .bti-thanks-period-caption { color: #65758a; font-size: 12px; }
